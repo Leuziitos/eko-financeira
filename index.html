@@ -559,10 +559,15 @@ html,body{height:100%;background:var(--bg);font-family:'Plus Jakarta Sans',sans-
         <div class="hub-card-title">Objetivos</div>
         <div class="hub-card-sub">Planejamento de longo prazo</div>
       </div>
+      <div class="hub-card" onclick="abrirControleFinanceiro()">
+        <div class="hub-card-icon">💰</div>
+        <div class="hub-card-title">Controle Financeiro</div>
+        <div class="hub-card-sub" id="hub-controle-sub">Receitas e gastos</div>
+      </div>
       <div class="hub-card" onclick="abrirPlanilha()">
-        <div class="hub-card-icon">📥</div>
-        <div class="hub-card-title">Planilha</div>
-        <div class="hub-card-sub">Download + vídeo tutorial</div>
+        <div class="hub-card-icon">📊</div>
+        <div class="hub-card-title">Planilha Excel</div>
+        <div class="hub-card-sub">Controle financeiro offline</div>
       </div>
       <div class="hub-card" onclick="abrirAulas()">
         <div class="hub-card-icon">🎬</div>
@@ -1006,7 +1011,7 @@ html,body{height:100%;background:var(--bg);font-family:'Plus Jakarta Sans',sans-
   <div class="content">
     <div style="margin-bottom:1.25rem">
       <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Módulo</div>
-      <div style="font-size:22px;font-weight:800">📥 Planilha de Organização</div>
+      <div style="font-size:22px;font-weight:800">📊 Planilha Excel: Controle Financeiro</div>
     </div>
 
     <div class="planilha-hero">
@@ -1038,6 +1043,110 @@ html,body{height:100%;background:var(--bg);font-family:'Plus Jakarta Sans',sans-
         <span>Abrir pelo Drive (iPhone)</span>
       </button>
     </a>
+  </div>
+</div>
+
+<!-- ════ CONTROLE FINANCEIRO ════════════════════════════ -->
+<div id="screen-controle" class="screen">
+  <div class="topbar">
+    <button class="back-btn" onclick="ir('screen-hub')">← Voltar</button>
+    <button class="user-pill" onclick="logout()">Sair</button>
+  </div>
+  <div class="content">
+    <div style="margin-bottom:1.25rem">
+      <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Módulo</div>
+      <div style="font-size:22px;font-weight:800">💰 Controle Financeiro</div>
+      <div style="font-size:13px;color:var(--text-muted);margin-top:4px">Registre receitas e gastos, veja sua carteira</div>
+    </div>
+    <!-- Tabs -->
+    <div style="display:flex;gap:8px;margin-bottom:1.25rem">
+      <button id="tab-registrar" class="btn btn-primary" onclick="mostrarTabControle('registrar')" style="flex:1;font-size:13px;padding:.6rem">➕ Registrar</button>
+      <button id="tab-carteira" class="btn" onclick="mostrarTabControle('carteira')" style="flex:1;font-size:13px;padding:.6rem;background:var(--surface);border:1px solid var(--border);color:var(--text)">👜 Carteira</button>
+    </div>
+    <!-- TAB REGISTRAR -->
+    <div id="controle-tab-registrar">
+      <div class="card">
+        <div style="font-size:15px;font-weight:800;margin-bottom:1rem">Novo lançamento</div>
+        <!-- Tipo -->
+        <div style="display:flex;gap:8px;margin-bottom:1rem">
+          <button id="tipo-btn-gasto" onclick="selecionarTipoLancamento('gasto')" style="flex:1;padding:.625rem;border-radius:10px;border:2px solid var(--red);background:var(--red-light);color:var(--red);font-weight:700;font-size:13px;cursor:pointer;transition:all .2s">💸 Gasto</button>
+          <button id="tipo-btn-receita" onclick="selecionarTipoLancamento('receita')" style="flex:1;padding:.625rem;border-radius:10px;border:2px solid var(--border);background:var(--surface);color:var(--text-muted);font-weight:700;font-size:13px;cursor:pointer;transition:all .2s">💵 Receita</button>
+        </div>
+        <!-- Valor -->
+        <div style="margin-bottom:1rem">
+          <label style="font-size:12px;font-weight:700;color:var(--text-muted);display:block;margin-bottom:6px">VALOR</label>
+          <input id="cf-valor" type="text" inputmode="numeric" placeholder="R$ 0,00" class="input" style="font-size:20px;font-weight:800;text-align:center">
+        </div>
+        <!-- Categoria -->
+        <div style="margin-bottom:1.25rem">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <label style="font-size:12px;font-weight:700;color:var(--text-muted)">CATEGORIA</label>
+            <button onclick="abrirGerenciarCategorias()" style="background:none;border:none;color:var(--eko-green);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">⚙️ Gerenciar</button>
+          </div>
+          <div id="cf-categorias-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px"></div>
+        </div>
+        <div id="cf-msg" class="msg"></div>
+        <button onclick="salvarLancamento()" class="btn btn-primary" style="width:100%">Salvar lançamento</button>
+      </div>
+      <!-- Boas-vindas / dica -->
+      <div id="cf-boas-vindas" class="card" style="background:linear-gradient(135deg,var(--eko-green-light),var(--surface));border-color:var(--eko-green);display:none">
+        <div style="font-size:22px;margin-bottom:.5rem">💡</div>
+        <div style="font-size:14px;font-weight:700;margin-bottom:.375rem">Como usar o Controle</div>
+        <div style="font-size:13px;color:var(--text-muted);line-height:1.7">Toda vez que receber ou gastar algo, registre aqui. <strong>Quanto mais rápido após o gasto, melhor!</strong> O ideal é começar no dia 1° de cada mês para ter um histórico completo. 🌱</div>
+      </div>
+    </div>
+    <!-- TAB CARTEIRA -->
+    <div id="controle-tab-carteira" style="display:none">
+      <!-- Seletor de mês/ano -->
+      <div class="card" style="padding:1rem;margin-bottom:.75rem">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.875rem">
+          <button onclick="navegarMesControle(-1)" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--eko-green);padding:4px 8px">‹</button>
+          <div style="text-align:center">
+            <div id="cf-mes-label" style="font-size:16px;font-weight:800"></div>
+            <div id="cf-ano-label" style="font-size:12px;color:var(--text-muted)"></div>
+          </div>
+          <button onclick="navegarMesControle(1)" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--eko-green);padding:4px 8px">›</button>
+        </div>
+        <!-- Resumo do mês -->
+        <div id="cf-resumo-mes" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px"></div>
+      </div>
+      <!-- Categorias do mês -->
+      <div id="cf-categorias-mes"></div>
+      <!-- Resumo anual -->
+      <div class="card" style="margin-top:.75rem">
+        <div style="font-size:13px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.75rem">📅 Resumo anual <span id="cf-ano-resumo"></span></div>
+        <div id="cf-resumo-anual"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- OVERLAY: Gerenciar Categorias -->
+<div id="overlay-cf-categorias" class="overlay hidden">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+      <div style="font-size:17px;font-weight:800">⚙️ Gerenciar categorias</div>
+      <button onclick="fecharOverlay('overlay-cf-categorias')" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-muted);line-height:1;padding:4px">✕</button>
+    </div>
+    <div style="padding:0 0 1.25rem">
+      <div style="font-size:13px;color:var(--text-muted);margin-bottom:1rem">Oculte as que não usa ou adicione novas.</div>
+      <!-- Adicionar -->
+      <div style="margin-bottom:1rem">
+        <div style="display:flex;gap:6px;margin-bottom:8px">
+          <button id="cf-add-tipo-gasto" onclick="cfSetAddTipo('gasto')" style="flex:1;padding:.4rem;border-radius:8px;border:2px solid var(--red);background:var(--red-light);color:var(--red);font-weight:700;font-size:12px;cursor:pointer">💸 Gasto</button>
+          <button id="cf-add-tipo-receita" onclick="cfSetAddTipo('receita')" style="flex:1;padding:.4rem;border-radius:8px;border:2px solid var(--border);background:var(--surface);color:var(--text-muted);font-weight:700;font-size:12px;cursor:pointer">💵 Receita</button>
+        </div>
+        <div style="display:flex;gap:8px">
+          <input id="cf-nova-cat-nome" type="text" placeholder="Nome da categoria" class="input" style="flex:1;font-size:14px">
+          <button onclick="adicionarCategoria()" class="btn btn-primary" style="padding:.5rem .875rem;font-size:13px">+ Add</button>
+        </div>
+      </div>
+      <div style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.5rem">Gastos</div>
+      <div id="cf-lista-cats-gasto" style="margin-bottom:1rem"></div>
+      <div style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.5rem">Receitas</div>
+      <div id="cf-lista-cats-receita"></div>
+    </div>
   </div>
 </div>
 
@@ -1293,6 +1402,7 @@ function ir(id) {
     'screen-planilha':     'planilha',
     'screen-diagnosticos': 'diagnosticos',
     'screen-prontuario':   'prontuario',
+    'screen-controle':     'controle',
   };
   if (telas[id]) logEko('screen_view', { screen_name: telas[id] });
 }
@@ -1558,6 +1668,9 @@ async function renderHub() {
   // FASE 4 — Resumo mensal
   try { await renderResumoMensal(); } catch(e){ console.error('resumo mensal',e); }
 
+  // Controle Financeiro — resumo no hub
+  try { await renderHubControle(); } catch(e){}
+
   // FASE 4 — Dica financeira IA
   try { await renderDicaIA(); } catch(e){ console.error('dica ia',e); }
 
@@ -1571,6 +1684,9 @@ async function renderHub() {
     avDiv.innerHTML = '<div class="section-title" style="margin-bottom:8px">🔔 Avisos</div>' +
       avisos.map(a => `<div class="aviso-item ${a.tipo}"><span>${a.icon}</span><div><div style="font-size:13px;font-weight:600">${a.titulo}</div><div style="font-size:12px;color:var(--text-muted)">${a.desc}</div></div></div>`).join('');
   } else avDiv.innerHTML = '';
+
+  // Alerta controle financeiro
+  try { await gerarAvisoControle(); } catch(e){}
 
   // jornada
   await renderJornada(diags);
@@ -1609,6 +1725,31 @@ function gerarAvisos(diags) {
     }
   });
   return avisos.slice(0,3);
+}
+
+async function gerarAvisoControle() {
+  try {
+    const lancs = await getCFLancamentos();
+    const now = new Date();
+    const chave = cfChaveMes(now.getFullYear(), now.getMonth());
+    const doMes = lancs.filter(l=>l.chaveMes===chave);
+    if(!doMes.length) {
+      const avDiv = document.getElementById('hub-avisos');
+      if(!avDiv) return;
+      // Se ainda não tem cabeçalho de avisos, cria um
+      if(!avDiv.querySelector('.section-title')) {
+        const titulo = document.createElement('div');
+        titulo.className = 'section-title';
+        titulo.style.marginBottom = '8px';
+        titulo.textContent = '🔔 Avisos';
+        avDiv.prepend(titulo);
+      }
+      const alerta = document.createElement('div');
+      alerta.className = 'aviso-item warning';
+      alerta.innerHTML = '<span>💰</span><div><div style="font-size:13px;font-weight:600">Controle Financeiro vazio</div><div style="font-size:12px;color:var(--text-muted)">Você ainda não registrou nada este mês. Que tal começar agora? 🌱</div></div>';
+      avDiv.appendChild(alerta);
+    }
+  } catch(e){}
 }
 
 
@@ -2367,7 +2508,7 @@ window.abrirDeposito=function(i){
 };
 window.confirmarDeposito=async function(){
   const val=parseMoney(document.getElementById('dep-valor').value)||0;const meta=metaAtual;const previsto=meta.mensal;valorDepositado=val;
-  if(Math.abs(val-previsto)<0.01){meta.depositos[mesAtual]={pago:true,parcial:false,extra:false,valor:val};await saveMeta2(meta);fecharOverlay('overlay-deposito');const pct=Math.min(100,Math.round((calcAcumulado(meta)/meta.meta)*100));toast('🎉 Atualizado! Você concluiu '+pct+'% desta meta.');renderMetaDetalhe();}
+  if(Math.abs(val-previsto)<0.01){meta.depositos[mesAtual]={pago:true,parcial:false,extra:false,valor:val};await saveMeta2(meta);fecharOverlay('overlay-deposito');const pct=Math.min(100,Math.round((calcAcumulado(meta)/meta.meta)*100));toast('🎉 Atualizado! Você concluiu '+pct+'% desta meta.');renderMetaDetalhe();if(val>0)setTimeout(()=>cfSugerirLancamento('gasto',val,'metas','🎯 Metas'),600);}
   else if(val>previsto){meta.depositos[mesAtual]={pago:true,parcial:false,extra:true,valor:val};await saveMeta2(meta);mostrarFase2Extra(val-previsto);}
   else if(val>0){meta.depositos[mesAtual]={pago:true,parcial:true,extra:false,valor:val};await saveMeta2(meta);mostrarFase2Deficit(previsto-val);}
   else{window.naoConseguiu();}
@@ -2405,6 +2546,7 @@ window.aplicarAjuste=async function(){
   else if(v==='saldo-extra'){meta.saldoExtra=(meta.saldoExtra||0)+diff;}
   else if(v==='prazo'){const me=Math.ceil(diff/meta.mensal);for(let k=0;k<me;k++)meta.depositos.push({pago:false,parcial:false,extra:false,valor:0});}
   await saveMeta2(meta);fecharOverlay('overlay-deposito');const pct=Math.min(100,Math.round((calcAcumulado(meta)/meta.meta)*100));toast('✅ Meta ajustada! '+pct+'% concluído.');renderMetaDetalhe();
+  if(valorDepositado>0)setTimeout(()=>cfSugerirLancamento('gasto',valorDepositado,'metas','🎯 Metas'),600);
 };
 
 // ════════════════════════════════════════════════
@@ -2553,7 +2695,7 @@ window.confirmarPagamento=async function(){
   if(val>=div.parcela){div.parcelasRestantes=Math.max(0,(div.parcelasRestantes||1)-1);div.emAtraso=false;div.valorAtrasado=0;div.historicoPagamentos.push({tipo:'parcela',valor:val,data:new Date().toISOString()});}
   else if(val>0){div.emAtraso=true;div.valorAtrasado=div.parcela-val;div.historicoPagamentos.push({tipo:'parcela_parcial',valor:val,data:new Date().toISOString()});}
   await saveDivida2(div);const quitada=await verificarDividaQuitada(div);
-  if(!quitada){fecharOverlay('overlay-pagamento');await renderDividas();toast(val>=div.parcela?'✅ Parcela registrada! Restam '+div.parcelasRestantes+'x':'⚠️ Pagamento parcial registrado.');}
+  if(!quitada){fecharOverlay('overlay-pagamento');await renderDividas();toast(val>=div.parcela?'✅ Parcela registrada! Restam '+div.parcelasRestantes+'x':'⚠️ Pagamento parcial registrado.');if(val>0)setTimeout(()=>cfSugerirLancamento('gasto',val,'dividas','💳 Dívidas'),600);}
 };
 window.naoConseguiuPagar=async function(){const div=dividaAtual;div.emAtraso=true;div.valorAtrasado=(div.valorAtrasado||0)+div.parcela;if(!div.historicoPagamentos)div.historicoPagamentos=[];div.historicoPagamentos.push({tipo:'nao_pago',valor:0,data:new Date().toISOString()});await saveDivida2(div);fecharOverlay('overlay-pagamento');await renderDividas();const jurosExtra=div.parcela*(div.juros/100);toast('⚠️ Registrado. ~'+fmt(jurosExtra)+' em juros extras este mês.');};
 
@@ -3605,6 +3747,437 @@ document.addEventListener('DOMContentLoaded', () => {
     el.oninput = function() { applyMoneyMask(this); };
   });
 });
+// ════════════════════════════════════════════════
+
+// ════════════════════════════════════════════════
+// CONTROLE FINANCEIRO
+// ════════════════════════════════════════════════
+
+const CF_CATS_PADRAO = {
+  gasto: [
+    {id:'moradia',nome:'🏠 Moradia',visivel:true,padrao:true},
+    {id:'alimentacao',nome:'🍔 Alimentação',visivel:true,padrao:true},
+    {id:'transporte',nome:'🚗 Transporte',visivel:true,padrao:true},
+    {id:'saude',nome:'💊 Saúde',visivel:true,padrao:true},
+    {id:'educacao',nome:'📚 Educação',visivel:true,padrao:true},
+    {id:'lazer',nome:'🎮 Lazer',visivel:true,padrao:true},
+    {id:'compras',nome:'👗 Compras',visivel:true,padrao:true},
+    {id:'beleza',nome:'💈 Beleza',visivel:true,padrao:true},
+    {id:'viagem',nome:'✈️ Viagem',visivel:true,padrao:true},
+    {id:'servicos',nome:'📱 Serviços',visivel:true,padrao:true},
+    {id:'contas',nome:'💡 Contas fixas',visivel:true,padrao:true},
+    {id:'impostos',nome:'🏛️ Impostos',visivel:true,padrao:true},
+    {id:'empreendimento',nome:'💼 Negócio',visivel:true,padrao:true},
+    {id:'metas',nome:'🎯 Metas',visivel:true,padrao:true},
+    {id:'dividas',nome:'💳 Dívidas',visivel:true,padrao:true},
+    {id:'outras',nome:'📦 Outras',visivel:true,padrao:true},
+  ],
+  receita: [
+    {id:'salario',nome:'💼 Salário',visivel:true,padrao:true},
+    {id:'renda-extra',nome:'💡 Renda extra',visivel:true,padrao:true},
+    {id:'freelance',nome:'🖥️ Freelance',visivel:true,padrao:true},
+    {id:'investimentos',nome:'📈 Investimentos',visivel:true,padrao:true},
+    {id:'outros-rec',nome:'📦 Outros',visivel:true,padrao:true},
+  ]
+};
+
+let cfTipoAtual = 'gasto';
+let cfCatSelecionada = null;
+let cfMesVis = new Date().getMonth(); // 0-11
+let cfAnoVis = new Date().getFullYear();
+let cfAddTipo = 'gasto'; // tipo selecionado no overlay de gerenciar
+
+window.cfSetAddTipo = function(tipo) {
+  cfAddTipo = tipo;
+  const btnG = document.getElementById('cf-add-tipo-gasto');
+  const btnR = document.getElementById('cf-add-tipo-receita');
+  if(!btnG || !btnR) return;
+  if(tipo==='gasto') {
+    btnG.style.cssText='flex:1;padding:.4rem;border-radius:8px;border:2px solid var(--red);background:var(--red-light);color:var(--red);font-weight:700;font-size:12px;cursor:pointer';
+    btnR.style.cssText='flex:1;padding:.4rem;border-radius:8px;border:2px solid var(--border);background:var(--surface);color:var(--text-muted);font-weight:700;font-size:12px;cursor:pointer';
+  } else {
+    btnR.style.cssText='flex:1;padding:.4rem;border-radius:8px;border:2px solid var(--eko-green);background:var(--eko-green-light);color:var(--eko-green-dark);font-weight:700;font-size:12px;cursor:pointer';
+    btnG.style.cssText='flex:1;padding:.4rem;border-radius:8px;border:2px solid var(--border);background:var(--surface);color:var(--text-muted);font-weight:700;font-size:12px;cursor:pointer';
+  }
+};
+
+async function getCFCategorias() {
+  try {
+    const snap = await getDoc(doc(db,'users',sessao.email));
+    const data = snap.exists() ? snap.data() : {};
+    if (data.cfCategorias) return data.cfCategorias;
+  } catch(e){}
+  // Primeira vez: salva as padrão no Firestore para persistir alterações futuras
+  const padrao = JSON.parse(JSON.stringify(CF_CATS_PADRAO));
+  try { await saveCFCategorias(padrao); } catch(e){}
+  return padrao;
+}
+
+async function saveCFCategorias(cats) {
+  try { await setDoc(doc(db,'users',sessao.email), {cfCategorias: cats}, {merge:true}); } catch(e){}
+}
+
+async function getCFLancamentos() {
+  try {
+    const q = query(collection(db,'controle'), where('email','==',sessao.email));
+    const snap = await getDocs(q);
+    const r = [];
+    snap.forEach(d => r.push({...d.data(), _id:d.id}));
+    return r.filter(l => !l.excluido);
+  } catch(e) { return []; }
+}
+
+async function saveCFLancamento(lanc) {
+  try {
+    const {_id, ...data} = lanc;
+    if (_id) {
+      await setDoc(doc(db,'controle',_id), data);
+    } else {
+      data.email = sessao.email;
+      data.criadoEm = new Date().toISOString();
+      const ref = await addDoc(collection(db,'controle'), data);
+      lanc._id = ref.id;
+    }
+  } catch(e) {
+    console.error('saveCFLancamento:', e);
+    throw e; // repropaga para o chamador mostrar erro ao usuário
+  }
+}
+
+function cfChaveMes(ano, mes) {
+  return `${ano}-${String(mes+1).padStart(2,'0')}`;
+}
+
+function cfNomeMes(mes, ano) {
+  return new Date(ano, mes, 1).toLocaleDateString('pt-BR', {month:'long', year:'numeric'});
+}
+
+window.abrirControleFinanceiro = async function() {
+  await renderControleFinanceiro();
+  ir('screen-controle');
+};
+
+async function renderControleFinanceiro() {
+  cfTipoAtual = 'gasto';
+  cfCatSelecionada = null;
+  cfMesVis = new Date().getMonth();
+  cfAnoVis = new Date().getFullYear();
+  await mostrarTabControle('registrar');
+  await renderCategoriasBotoes();
+  // Boas-vindas se não tiver lançamentos ainda
+  try {
+    const lancs = await getCFLancamentos();
+    const bv = document.getElementById('cf-boas-vindas');
+    if (bv) bv.style.display = lancs.length === 0 ? 'block' : 'none';
+  } catch(e){}
+  // Limpa valor
+  const vEl = document.getElementById('cf-valor');
+  if(vEl) { vEl.value = ''; vEl.oninput = function(){ applyMoneyMask(this); }; }
+}
+
+window.mostrarTabControle = async function(tab) {
+  document.getElementById('controle-tab-registrar').style.display = tab==='registrar' ? 'block' : 'none';
+  document.getElementById('controle-tab-carteira').style.display  = tab==='carteira'  ? 'block' : 'none';
+  const btnR = document.getElementById('tab-registrar');
+  const btnC = document.getElementById('tab-carteira');
+  if(tab==='registrar') {
+    btnR.className='btn btn-primary'; btnR.style.cssText='flex:1;font-size:13px;padding:.6rem';
+    btnC.className='btn'; btnC.style.cssText='flex:1;font-size:13px;padding:.6rem;background:var(--surface);border:1px solid var(--border);color:var(--text)';
+  } else {
+    btnC.className='btn btn-primary'; btnC.style.cssText='flex:1;font-size:13px;padding:.6rem';
+    btnR.className='btn'; btnR.style.cssText='flex:1;font-size:13px;padding:.6rem;background:var(--surface);border:1px solid var(--border);color:var(--text)';
+    await renderCarteiraControle();
+  }
+};
+
+window.selecionarTipoLancamento = async function(tipo) {
+  cfTipoAtual = tipo;
+  cfCatSelecionada = null;
+  const btnG = document.getElementById('tipo-btn-gasto');
+  const btnR = document.getElementById('tipo-btn-receita');
+  if(tipo==='gasto') {
+    btnG.style.cssText='flex:1;padding:.625rem;border-radius:10px;border:2px solid var(--red);background:var(--red-light);color:var(--red);font-weight:700;font-size:13px;cursor:pointer;transition:all .2s';
+    btnR.style.cssText='flex:1;padding:.625rem;border-radius:10px;border:2px solid var(--border);background:var(--surface);color:var(--text-muted);font-weight:700;font-size:13px;cursor:pointer;transition:all .2s';
+  } else {
+    btnR.style.cssText='flex:1;padding:.625rem;border-radius:10px;border:2px solid var(--eko-green);background:var(--eko-green-light);color:var(--eko-green-dark);font-weight:700;font-size:13px;cursor:pointer;transition:all .2s';
+    btnG.style.cssText='flex:1;padding:.625rem;border-radius:10px;border:2px solid var(--border);background:var(--surface);color:var(--text-muted);font-weight:700;font-size:13px;cursor:pointer;transition:all .2s';
+  }
+  await renderCategoriasBotoes();
+};
+
+async function renderCategoriasBotoes() {
+  const cats = await getCFCategorias();
+  const lista = (cats[cfTipoAtual] || []).filter(c => c.visivel);
+  const grid = document.getElementById('cf-categorias-grid');
+  if (!grid) return;
+  grid.innerHTML = lista.map(c => {
+    const safeId = c.id.replace(/'/g,"\\'");
+    return `<button onclick="selecionarCategoriaCF('${safeId}')" id="cfcat-${c.id}"
+      style="padding:.5rem .25rem;border-radius:10px;border:2px solid var(--border);background:var(--surface);font-size:11px;font-weight:700;cursor:pointer;transition:all .2s;line-height:1.4;color:var(--text)">
+      ${c.nome}
+    </button>`;
+  }).join('');
+}
+
+window.selecionarCategoriaCF = function(id) {
+  cfCatSelecionada = id;
+  document.querySelectorAll('#cf-categorias-grid button').forEach(b => {
+    b.style.border = '2px solid var(--border)';
+    b.style.background = 'var(--surface)';
+    b.style.color = 'var(--text)';
+  });
+  const btn = document.getElementById('cfcat-'+id);
+  if(btn) {
+    btn.style.border = cfTipoAtual==='gasto' ? '2px solid var(--red)' : '2px solid var(--eko-green)';
+    btn.style.background = cfTipoAtual==='gasto' ? 'var(--red-light)' : 'var(--eko-green-light)';
+    btn.style.color = cfTipoAtual==='gasto' ? 'var(--red)' : 'var(--eko-green-dark)';
+  }
+};
+
+window.salvarLancamento = async function() {
+  limparMsg('cf-msg');
+  const valor = parseMoney(document.getElementById('cf-valor').value);
+  if (!valor || valor <= 0) { showMsg('cf-msg','error','Informe o valor.'); return; }
+  if (!cfCatSelecionada) { showMsg('cf-msg','error','Selecione uma categoria.'); return; }
+  const now = new Date();
+  const lanc = {
+    tipo: cfTipoAtual,
+    valor,
+    categoria: cfCatSelecionada,
+    mes: now.getMonth(),
+    ano: now.getFullYear(),
+    chaveMes: cfChaveMes(now.getFullYear(), now.getMonth()),
+  };
+  try {
+    await saveCFLancamento(lanc);
+  } catch(e) {
+    showMsg('cf-msg','error','Erro ao salvar. Verifique sua conexão.');
+    return;
+  }
+  logEko('cf_lancamento', {tipo: cfTipoAtual, categoria: cfCatSelecionada});
+  toast(cfTipoAtual==='gasto' ? '💸 Gasto registrado!' : '💵 Receita registrada!');
+  document.getElementById('cf-valor').value = '';
+  cfCatSelecionada = null;
+  document.querySelectorAll('#cf-categorias-grid button').forEach(b => {
+    b.style.border = '2px solid var(--border)';
+    b.style.background = 'var(--surface)';
+    b.style.color = 'var(--text)';
+  });
+  const bv = document.getElementById('cf-boas-vindas');
+  if(bv) bv.style.display = 'none';
+  await renderHubControle();
+};
+
+// ── Carteira ─────────────────────────────────────────────────
+window.navegarMesControle = async function(dir) {
+  cfMesVis += dir;
+  if (cfMesVis < 0) { cfMesVis = 11; cfAnoVis--; }
+  if (cfMesVis > 11) { cfMesVis = 0; cfAnoVis++; }
+  await renderCarteiraControle();
+};
+
+async function renderCarteiraControle() {
+  const lancs = await getCFLancamentos();
+  const cats  = await getCFCategorias();
+  const chave = cfChaveMes(cfAnoVis, cfMesVis);
+
+  // Labels
+  const mesEl = document.getElementById('cf-mes-label');
+  const anoEl = document.getElementById('cf-ano-label');
+  const anoResEl = document.getElementById('cf-ano-resumo');
+  if(mesEl) mesEl.textContent = new Date(cfAnoVis, cfMesVis, 1).toLocaleDateString('pt-BR',{month:'long'}).replace(/^\w/,c=>c.toUpperCase());
+  if(anoEl) anoEl.textContent = cfAnoVis;
+  if(anoResEl) anoResEl.textContent = cfAnoVis;
+
+  // Lançamentos do mês
+  const doMes = lancs.filter(l => l.chaveMes === chave);
+  const totalRec  = doMes.filter(l=>l.tipo==='receita').reduce((s,l)=>s+l.valor,0);
+  const totalGast = doMes.filter(l=>l.tipo==='gasto').reduce((s,l)=>s+l.valor,0);
+  const saldo = totalRec - totalGast;
+
+  // Resumo do mês
+  const resumoEl = document.getElementById('cf-resumo-mes');
+  if(resumoEl) resumoEl.innerHTML = `
+    <div class="stat-card" style="text-align:center;padding:.75rem .5rem">
+      <div class="slabel">Receitas</div>
+      <div style="font-size:13px;font-weight:800;color:var(--eko-green)">${fmt(totalRec)}</div>
+    </div>
+    <div class="stat-card" style="text-align:center;padding:.75rem .5rem">
+      <div class="slabel">Gastos</div>
+      <div style="font-size:13px;font-weight:800;color:var(--red)">${fmt(totalGast)}</div>
+    </div>
+    <div class="stat-card" style="text-align:center;padding:.75rem .5rem">
+      <div class="slabel">Saldo</div>
+      <div style="font-size:13px;font-weight:800;color:${saldo>=0?'var(--eko-green)':'var(--red)'}">${fmt(saldo)}</div>
+    </div>`;
+
+  // Por categoria
+  const catEl = document.getElementById('cf-categorias-mes');
+  if(catEl) {
+    const todasCats = [...(cats.gasto||[]), ...(cats.receita||[])];
+    const porCat = {};
+    doMes.forEach(l => {
+      porCat[l.categoria] = (porCat[l.categoria]||0) + l.valor;
+    });
+    if(Object.keys(porCat).length === 0) {
+      catEl.innerHTML = `<div class="card" style="text-align:center;padding:2rem;color:var(--text-muted)"><div style="font-size:32px;margin-bottom:.5rem">📭</div><div style="font-size:14px">Nenhum lançamento em ${cfNomeMes(cfMesVis,cfAnoVis)}</div></div>`;
+    } else {
+      const itens = Object.entries(porCat).sort((a,b)=>b[1]-a[1]).map(([id,val])=>{
+        const cat = todasCats.find(c=>c.id===id);
+        const nome = cat ? cat.nome : id;
+        const isReceita = (cats.receita||[]).some(c=>c.id===id);
+        return `<div style="display:flex;align-items:center;justify-content:space-between;padding:.625rem 0;border-bottom:1px solid var(--border)">
+          <div style="font-size:14px;font-weight:600">${nome}</div>
+          <div style="font-size:14px;font-weight:800;color:${isReceita?'var(--eko-green)':'var(--red)'}">${isReceita?'+':'-'}${fmt(val)}</div>
+        </div>`;
+      }).join('');
+      catEl.innerHTML = `<div class="card"><div style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.25rem">Por categoria</div>${itens}</div>`;
+    }
+  }
+
+  // Resumo anual
+  renderResumoAnualControle(lancs);
+}
+
+function renderResumoAnualControle(lancs) {
+  const el = document.getElementById('cf-resumo-anual');
+  if(!el) return;
+  const doAno = lancs.filter(l=>l.ano===cfAnoVis);
+  if(!doAno.length) { el.innerHTML='<div style="font-size:13px;color:var(--text-muted)">Nenhum lançamento em '+cfAnoVis+'</div>'; return; }
+  const meses = Array.from({length:12},(_,i)=>i);
+  const linhas = meses.map(m=>{
+    const chave = cfChaveMes(cfAnoVis,m);
+    const doMes = doAno.filter(l=>l.chaveMes===chave);
+    if(!doMes.length) return null;
+    const rec  = doMes.filter(l=>l.tipo==='receita').reduce((s,l)=>s+l.valor,0);
+    const gast = doMes.filter(l=>l.tipo==='gasto').reduce((s,l)=>s+l.valor,0);
+    const saldo = rec-gast;
+    const nomeMes = new Date(cfAnoVis,m,1).toLocaleDateString('pt-BR',{month:'short'}).replace('.','').replace(/^\w/,c=>c.toUpperCase());
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:.5rem 0;border-bottom:1px solid var(--border);font-size:12px">
+      <div style="font-weight:700;min-width:28px">${nomeMes}</div>
+      <div style="color:var(--eko-green);text-align:right;flex:1">${fmt(rec)}</div>
+      <div style="color:var(--red);text-align:right;flex:1">${fmt(gast)}</div>
+      <div style="font-weight:800;text-align:right;flex:1;color:${saldo>=0?'var(--eko-green)':'var(--red)'}">${fmt(saldo)}</div>
+    </div>`;
+  }).filter(Boolean);
+  const totalRec  = doAno.filter(l=>l.tipo==='receita').reduce((s,l)=>s+l.valor,0);
+  const totalGast = doAno.filter(l=>l.tipo==='gasto').reduce((s,l)=>s+l.valor,0);
+  const saldoTotal = totalRec-totalGast;
+  el.innerHTML = `
+    <div style="display:flex;justify-content:space-between;font-size:10px;font-weight:700;color:var(--text-muted);padding-bottom:.375rem;border-bottom:1px solid var(--border);margin-bottom:.125rem">
+      <span style="min-width:28px">MÊS</span><span style="color:var(--eko-green);text-align:right;flex:1">REC.</span><span style="color:var(--red);text-align:right;flex:1">GASTO</span><span style="text-align:right;flex:1">SALDO</span>
+    </div>
+    ${linhas.join('')}
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:.625rem 0;font-size:12px;font-weight:800;margin-top:.25rem;border-top:1px solid var(--border)">
+      <div style="min-width:28px">Total</div>
+      <div style="color:var(--eko-green);text-align:right;flex:1">${fmt(totalRec)}</div>
+      <div style="color:var(--red);text-align:right;flex:1">${fmt(totalGast)}</div>
+      <div style="text-align:right;flex:1;color:${saldoTotal>=0?'var(--eko-green)':'var(--red)'}">${fmt(saldoTotal)}</div>
+    </div>`;
+}
+
+// ── Gerenciar categorias ──────────────────────────────────────
+window.abrirGerenciarCategorias = async function() {
+  // Sempre reseta para 'gasto' ao abrir, mantendo consistência visual
+  cfAddTipo = 'gasto';
+  await renderListaCategorias();
+  abrirOverlay('overlay-cf-categorias');
+  // Sincroniza visual dos botões após o overlay estar visível
+  cfSetAddTipo('gasto');
+};
+
+async function renderListaCategorias() {
+  const cats = await getCFCategorias();
+  ['gasto','receita'].forEach(tipo => {
+    const el = document.getElementById('cf-lista-cats-'+tipo);
+    if(!el) return;
+    el.innerHTML = (cats[tipo]||[]).map(c=>{
+      const safeId = c.id.replace(/'/g,"\\'");
+      const safeTipo = tipo.replace(/'/g,"\\'");
+      return `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:.5rem 0;border-bottom:1px solid var(--border)">
+        <div style="font-size:14px;font-weight:600">${c.nome}</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button onclick="toggleCategoria('${safeTipo}','${safeId}')"
+            style="font-size:12px;font-weight:700;padding:3px 10px;border-radius:99px;border:1px solid var(--border);background:${c.visivel?'var(--eko-green-light)':'var(--surface)'};color:${c.visivel?'var(--eko-green-dark)':'var(--text-muted)'};cursor:pointer">
+            ${c.visivel?'Visível':'Oculta'}
+          </button>
+          ${!c.padrao?`<button onclick="removerCategoria('${safeTipo}','${safeId}')" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:15px">🗑️</button>`:''}
+        </div>
+      </div>`;
+    }).join('');
+  });
+}
+
+window.toggleCategoria = async function(tipo, id) {
+  const cats = await getCFCategorias();
+  const cat = (cats[tipo]||[]).find(c=>c.id===id);
+  if(cat) cat.visivel = !cat.visivel;
+  await saveCFCategorias(cats);
+  await renderListaCategorias();
+  await renderCategoriasBotoes();
+};
+
+window.removerCategoria = async function(tipo, id) {
+  if(!confirm('Remover esta categoria?')) return;
+  const cats = await getCFCategorias();
+  cats[tipo] = (cats[tipo]||[]).filter(c=>c.id!==id);
+  await saveCFCategorias(cats);
+  await renderListaCategorias();
+  await renderCategoriasBotoes();
+};
+
+window.adicionarCategoria = async function() {
+  const nomeEl = document.getElementById('cf-nova-cat-nome');
+  const nome = nomeEl.value.trim();
+  if(!nome) { toast('Digite o nome da categoria.'); return; }
+  const cats = await getCFCategorias();
+  const tipo = cfAddTipo;
+  const id = 'custom-'+Date.now();
+  (cats[tipo]||[]).push({id, nome, visivel:true, padrao:false});
+  await saveCFCategorias(cats);
+  nomeEl.value = '';
+  await renderListaCategorias();
+  await renderCategoriasBotoes();
+  toast('✅ Categoria adicionada em ' + (tipo==='gasto'?'Gastos':'Receitas') + '!');
+};
+
+// ── Alerta no hub ─────────────────────────────────────────────
+async function renderHubControle() {
+  try {
+    const lancs = await getCFLancamentos();
+    const now = new Date();
+    const chave = cfChaveMes(now.getFullYear(), now.getMonth());
+    const doMes = lancs.filter(l=>l.chaveMes===chave);
+    const totalRec  = doMes.filter(l=>l.tipo==='receita').reduce((s,l)=>s+l.valor,0);
+    const totalGast = doMes.filter(l=>l.tipo==='gasto').reduce((s,l)=>s+l.valor,0);
+    const saldo = totalRec-totalGast;
+    const sub = document.getElementById('hub-controle-sub');
+    if(!sub) return;
+    if(!doMes.length) {
+      sub.innerHTML = '<span style="color:var(--amber)">Nenhum lançamento ainda</span>';
+    } else {
+      sub.innerHTML = `Saldo: <strong style="color:${saldo>=0?'var(--eko-green)':'var(--red)'}">${fmt(saldo)}</strong>`;
+    }
+  } catch(e){}
+}
+
+// ── Integração: registrar gasto ao pagar dívida/meta ─────────
+async function cfSugerirLancamento(tipo, valor, categoriaId, categoriaNome) {
+  const ok = confirm(`💡 Deseja registrar ${fmt(valor)} como ${tipo==='gasto'?'gasto':'receita'} em "${categoriaNome}" no Controle Financeiro?`);
+  if(!ok) return;
+  const now = new Date();
+  await saveCFLancamento({
+    tipo, valor,
+    categoria: categoriaId,
+    mes: now.getMonth(),
+    ano: now.getFullYear(),
+    chaveMes: cfChaveMes(now.getFullYear(), now.getMonth()),
+  });
+  toast('✅ Registrado no Controle Financeiro!');
+  await renderHubControle();
+}
+
 // ════════════════════════════════════════════════
 
 async function init() {
