@@ -367,7 +367,29 @@ html,body{height:100%;background:var(--bg);font-family:'Plus Jakarta Sans',sans-
   <div class="loading"><span class="spinner"></span>Carregando Eko Financeira...</div>
 </div>
 
-<!-- ONBOARDING -->
+<!-- TELA DE ERRO GLOBAL -->
+<div id="screen-erro-global" style="display:none;position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem;text-align:center">
+  <div style="font-size:64px;margin-bottom:1rem">😅</div>
+  <div style="font-size:22px;font-weight:800;color:var(--text);margin-bottom:.75rem">Ops! Algo deu errado</div>
+  <div id="erro-global-msg" style="font-size:14px;color:var(--text-muted);line-height:1.6;margin-bottom:1.5rem;max-width:320px">Verifique sua conexão com a internet e tente novamente.</div>
+  <button onclick="location.reload()" style="background:linear-gradient(135deg,var(--eko-green),#00A87E);color:#fff;border:none;border-radius:14px;padding:14px 32px;font-family:inherit;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:.75rem;width:100%;max-width:280px">🔄 Tentar novamente</button>
+  <div style="font-size:12px;color:var(--text-muted)">Se o problema persistir, fale com a gente:<br><strong>@ekofinanceira</strong></div>
+</div>
+<!-- BANNER PWA — instalar app -->
+<div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:998;padding:.875rem 1.25rem;background:linear-gradient(135deg,#0D1B2A,#1A3A2A);border-top:2px solid var(--eko-green);box-shadow:0 -4px 24px rgba(0,0,0,.3)">
+  <div style="display:flex;align-items:center;gap:12px;max-width:480px;margin:0 auto">
+    <img src="/icons/icon-192x192.png" style="width:44px;height:44px;border-radius:10px;flex-shrink:0">
+    <div style="flex:1;min-width:0">
+      <div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:2px">Instalar Eko Financeira</div>
+      <div id="pwa-banner-instrucao" style="font-size:11px;color:rgba(255,255,255,.65);line-height:1.4"></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0">
+      <button id="pwa-btn-instalar" style="background:var(--eko-green);color:#fff;border:none;border-radius:8px;padding:7px 14px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">Instalar</button>
+      <button onclick="fecharBannerPWA()" style="background:transparent;color:rgba(255,255,255,.5);border:none;font-family:inherit;font-size:11px;cursor:pointer;text-align:center">Agora não</button>
+    </div>
+  </div>
+</div>
+
 <div id="screen-onboarding" class="screen">
   <div class="onboard-wrap">
     <div id="ob-icon" class="onboard-icon"></div>
@@ -1218,6 +1240,7 @@ html,body{height:100%;background:var(--bg);font-family:'Plus Jakarta Sans',sans-
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js';
 import { getFirestore, doc, getDoc, setDoc, collection, getDocs, addDoc, query, where, orderBy, runTransaction, onSnapshot } from 'https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js';
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail } from 'https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js';
+import { getAnalytics, logEvent } from 'https://www.gstatic.com/firebasejs/11.0.1/firebase-analytics.js';
 
 const firebaseConfig = {
   apiKey: "AIzaSyAu5cMIkf6zn6sTt3M5eTV5uoPE002ad2k",
@@ -1231,6 +1254,12 @@ const firebaseConfig = {
 const firebaseApp = initializeApp(firebaseConfig);
 const db = getFirestore(firebaseApp);
 const auth = getAuth(firebaseApp);
+const analytics = getAnalytics(firebaseApp);
+
+// Helper para logar eventos com segurança
+function logEko(evento, params = {}) {
+  try { logEvent(analytics, evento, params); } catch(e) {}
+}
 const SESS_KEY = 'eko_sess';
 let sessao = null;
 
@@ -1247,7 +1276,24 @@ window.toggleTheme = function() {
 };
 
 // ── HELPERS ──────────────────────────────────────────────
-function ir(id) { document.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); document.getElementById(id).classList.add('active'); window.scrollTo(0,0); }
+function ir(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+  // Analytics — registra navegação entre módulos
+  const telas = {
+    'screen-hub':          'hub',
+    'screen-metas':        'metas',
+    'screen-dividas':      'dividas',
+    'screen-objetivos':    'objetivos',
+    'screen-simulacoes':   'simulacoes',
+    'screen-aulas':        'aulas',
+    'screen-planilha':     'planilha',
+    'screen-diagnosticos': 'diagnosticos',
+    'screen-prontuario':   'prontuario',
+  };
+  if (telas[id]) logEko('screen_view', { screen_name: telas[id] });
+}
 window.ir = ir;
 // hashSenha mantido para migração de usuários legados (hash antigo no Firestore)
 async function hashSenha(s) { const e = new TextEncoder().encode(s); const b = await crypto.subtle.digest('SHA-256', e); return Array.from(new Uint8Array(b)).map(x => x.toString(16).padStart(2,'0')).join(''); }
@@ -1318,6 +1364,11 @@ window.finishOnboard = function() {
 
 // ── AUTH ──────────────────────────────────────────────
 async function carregarApp() {
+  // Timeout de 15s — se Firebase não responder, mostra erro
+  const timeout = setTimeout(() => {
+    mostrarErroGlobal('O servidor demorou para responder. Verifique sua conexão e tente novamente.');
+  }, 15000);
+
   try {
     const user = await getUser(sessao.email);
     if (!user) { localStorage.removeItem(SESS_KEY); ir('screen-login'); return; }
@@ -1326,7 +1377,8 @@ async function carregarApp() {
     const hora = new Date().getHours();
     const saud = hora < 12 ? 'Bom dia' : hora < 18 ? 'Boa tarde' : 'Boa noite';
     document.getElementById('hub-greeting').textContent = saud + ', ' + user.nome.split(' ')[0] + '! 👋';
-    setupMoneyInputs(); // FASE 4 BUG 5 — máscara monetária
+    setupMoneyInputs();
+    clearTimeout(timeout); // FASE 4 BUG 5 — máscara monetária
     // Item 1 — listener em tempo real para badge de metas no hub
     try {
       const metasQ = query(collection(db,'metas'), where('email','==',sessao.email));
@@ -1346,7 +1398,11 @@ async function carregarApp() {
     try { await renderProntuario(); } catch(e) { console.error('renderProntuario error:', e); }
     try { await renderDiagnosticos(); } catch(e) { console.error('renderDiagnosticos error:', e); }
     ir('screen-hub');
-  } catch(e) { console.error('carregarApp error:', e); ir('screen-hub'); }
+  } catch(e) {
+    clearTimeout(timeout);
+    console.error('carregarApp error:', e);
+    ir('screen-hub');
+  }
 }
 
 window.fazerLogin = async function() {
@@ -1358,6 +1414,7 @@ window.fazerLogin = async function() {
   // Tenta Firebase Auth primeiro (usuários novos)
   try {
     await signInWithEmailAndPassword(auth, email, senha);
+    logEko('login', { method: 'email' });
     return; // sucesso — onAuthStateChanged cuida do resto
   } catch(authErr) {
     // Se o erro não é de senha errada, pode ser usuário antigo (não migrado)
@@ -1418,6 +1475,7 @@ window.criarConta = async function() {
     await createUserWithEmailAndPassword(auth, email, senha);
     // Salva dados adicionais no Firestore (Firebase Auth só guarda email/senha)
     await setUser(email, {nome, email, whatsapp:whatsapp.replace(/\D/g,''), renda, criadoEm:new Date().toISOString()});
+    logEko('sign_up', { method: 'email' });
     // onAuthStateChanged cuida do resto
   } catch(e) {
     const erros = { 'auth/email-already-in-use':'E-mail já cadastrado.', 'auth/weak-password':'Senha fraca — use ao menos 6 caracteres.', 'auth/invalid-email':'E-mail inválido.' };
@@ -1984,6 +2042,7 @@ async function finalizarQuiz() {
   }
 
   await saveDiag({tipo: quizTipo, pontos, resultado, respostas: quizRespostas});
+  logEko('diagnostico_concluido', { tipo: quizTipo, resultado });
   await renderResultado(quizTipo, pontos, resultado);
   await renderHub();
   await renderProntuario();
@@ -2298,7 +2357,7 @@ window.salvarMeta=async function(){
   const nome=document.getElementById('meta-nome').value.trim();const val=parseMoney(document.getElementById('meta-valor').value);const meses=parseInt(document.getElementById('meta-meses').value);const inicio=document.getElementById('meta-inicio').value;const dia=parseInt(document.getElementById('meta-dia').value);
   if(!nome||!val||!meses||!inicio||!dia||dia<1||dia>28){showMsg('sheet-meta-msg','error','Preencha todos os campos. Dia entre 1 e 28.');return;}
   if(editandoMeta){const deps=metaAtual.depositos.slice(0,meses);while(deps.length<meses)deps.push({pago:false,parcial:false,extra:false,valor:0});Object.assign(metaAtual,{nome,meta:val,meses,dia,inicio,mensal:val/meses,catIcon:catSelecionada.icon,catNome:catSelecionada.nome,depositos:deps});await saveMeta2(metaAtual);fecharOverlay('overlay-meta');renderMetaDetalhe();}
-  else{const deps=Array(meses).fill(null).map(()=>({pago:false,parcial:false,extra:false,valor:0}));const nova={nome,meta:val,meses,dia,inicio,mensal:val/meses,catIcon:catSelecionada.icon,catNome:catSelecionada.nome,saldoExtra:0,depositos:deps,email:sessao.email};await saveMeta2(nova);fecharOverlay('overlay-meta');await renderMetas();toast('✅ Meta criada!');}
+  else{const deps=Array(meses).fill(null).map(()=>({pago:false,parcial:false,extra:false,valor:0}));const nova={nome,meta:val,meses,dia,inicio,mensal:val/meses,catIcon:catSelecionada.icon,catNome:catSelecionada.nome,saldoExtra:0,depositos:deps,email:sessao.email};await saveMeta2(nova);fecharOverlay('overlay-meta');await renderMetas();logEko('meta_criada');toast('✅ Meta criada!');}
   await renderProntuario();
 };
 window.resetarMetaAtual=async function(){if(!confirm('Resetar esta meta?'))return;const n=metaAtual.depositos.length;metaAtual.depositos=Array(n).fill(null).map(()=>({pago:false,parcial:false,extra:false,valor:0}));metaAtual.mensal=metaAtual.meta/n;metaAtual.saldoExtra=0;await saveMeta2(metaAtual);renderMetaDetalhe();toast('Meta resetada.');};
@@ -2909,6 +2968,7 @@ window.salvarSimulacaoAp = async function() {
   const patrimonioAlvo = rendaMensal * 12 / Math.max(0.01, ra);
   const pmt   = calcPMTparaFV(patrimonioAlvo, patrimonioAtual, r, meses);
   await addDoc(collection(db,'simulacoes'), { tipo:'aposentadoria', email:sessao.email, idadeAtual, idadeAposent, rendaMensal, patrimonioAtual, rent, infl, aliqIR, patrimonioAlvo, pmtMensal:pmt, criadoEm:new Date().toISOString() });
+  logEko('simulacao_salva', { tipo: 'aposentadoria' });
   const card = document.getElementById('ap-salvo-card');
   if(card){ card.style.display=''; setTimeout(()=>card.style.display='none', 4000); }
   toast('✅ Simulação salva!');
@@ -2935,6 +2995,7 @@ window.salvarSimulacaoAc = async function() {
   const juros   = Math.max(0, bruto - investido);
   const liquido = bruto - juros*(aliqIR/100);
   await addDoc(collection(db,'simulacoes'), { tipo:'acumulacao', email:sessao.email, inicial, aporte, anos, rent, infl, aliqIR, patrimonioFinal:bruto, totalInvestido:investido, patrimonioLiquido:liquido, criadoEm:new Date().toISOString() });
+  logEko('simulacao_salva', { tipo: 'acumulacao' });
   const card = document.getElementById('ac-salvo-card');
   if(card){ card.style.display=''; setTimeout(()=>card.style.display='none', 4000); }
   toast('✅ Simulação salva!');
@@ -3524,6 +3585,124 @@ onAuthStateChanged(auth, async (firebaseUser) => {
       ir('screen-login');
     }
   }
+});
+
+// ════════════════════════════════════════════════
+// PWA — Banner de instalação
+// ════════════════════════════════════════════════
+
+let _deferredPrompt = null;
+
+// Android — captura o evento de instalação nativo
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  _deferredPrompt = e;
+  mostrarBannerPWA('android');
+});
+
+function isIOS() {
+  return /iphone|ipad|ipod/i.test(navigator.userAgent);
+}
+
+function isEmStandalone() {
+  return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+}
+
+function mostrarBannerPWA(plataforma) {
+  // Não mostra se já instalou ou se já dispensou
+  if (isEmStandalone()) return;
+  if (localStorage.getItem('eko_pwa_dispensado')) return;
+
+  const banner = document.getElementById('pwa-banner');
+  const instrucao = document.getElementById('pwa-banner-instrucao');
+  const btnInstalar = document.getElementById('pwa-btn-instalar');
+
+  if (!banner) return;
+
+  if (plataforma === 'ios') {
+    instrucao.textContent = 'Toque em ⬆️ compartilhar → "Adicionar à Tela de Início"';
+    btnInstalar.style.display = 'none'; // iOS não tem instalação direta
+  } else {
+    instrucao.textContent = 'Adicione à tela inicial e use como um app nativo!';
+    btnInstalar.style.display = '';
+    btnInstalar.onclick = async () => {
+      if (_deferredPrompt) {
+        _deferredPrompt.prompt();
+        const result = await _deferredPrompt.userChoice;
+        if (result.outcome === 'accepted') {
+          localStorage.setItem('eko_pwa_dispensado', '1');
+          banner.style.display = 'none';
+        }
+        _deferredPrompt = null;
+      }
+    };
+  }
+
+  // Mostra o banner com pequeno delay
+  setTimeout(() => { banner.style.display = ''; }, 2000);
+}
+
+window.fecharBannerPWA = function() {
+  document.getElementById('pwa-banner').style.display = 'none';
+  // Não mostra novamente por 7 dias
+  localStorage.setItem('eko_pwa_dispensado', Date.now().toString());
+};
+
+// iOS — mostra banner após 3 segundos se não estiver instalado
+if (isIOS() && !isEmStandalone()) {
+  const dispensado = localStorage.getItem('eko_pwa_dispensado');
+  const seteDias = 7 * 24 * 60 * 60 * 1000;
+  if (!dispensado || (Date.now() - parseInt(dispensado)) > seteDias) {
+    setTimeout(() => mostrarBannerPWA('ios'), 3000);
+  }
+}
+
+// ════════════════════════════════════════════════
+// ERRO GLOBAL — captura falhas críticas
+// ════════════════════════════════════════════════
+
+function mostrarErroGlobal(msg) {
+  const el = document.getElementById('screen-erro-global');
+  const msgEl = document.getElementById('erro-global-msg');
+  if (el) {
+    el.style.display = 'flex';
+    if (msg && msgEl) msgEl.textContent = msg;
+  }
+}
+
+// Captura erros JS não tratados
+window.addEventListener('error', (e) => {
+  // Ignora erros de extensões do browser e erros menores
+  if (!e.filename || e.filename.includes('extension')) return;
+  console.error('Erro global:', e);
+  // Só mostra a tela para erros críticos (não poluir por bugs menores)
+});
+
+// Captura promises rejeitadas não tratadas
+window.addEventListener('unhandledrejection', (e) => {
+  const msg = e.reason?.message || '';
+  // Firebase offline
+  if (msg.includes('offline') || msg.includes('network') || msg.includes('Failed to fetch')) {
+    mostrarErroGlobal('Sem conexão com a internet. Verifique sua rede e tente novamente.');
+    e.preventDefault();
+  }
+  // Firebase indisponível
+  if (msg.includes('unavailable') || msg.includes('UNAVAILABLE')) {
+    mostrarErroGlobal('O servidor está temporariamente indisponível. Aguarde alguns minutos e tente novamente.');
+    e.preventDefault();
+  }
+});
+
+// Detecta quando fica offline/online
+window.addEventListener('offline', () => {
+  mostrarErroGlobal('Você está sem internet. Reconecte e tente novamente.');
+});
+
+window.addEventListener('online', () => {
+  // Esconde a tela de erro quando voltar a conexão
+  const el = document.getElementById('screen-erro-global');
+  if (el) el.style.display = 'none';
+  toast('✅ Conexão restaurada!');
 });
 
 // ════════════════════════════════════════════════
