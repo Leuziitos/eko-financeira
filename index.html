@@ -578,6 +578,44 @@ html,body{height:100%;background:var(--bg);font-family:'Plus Jakarta Sans',sans-
     <div style="text-align:center;font-size:12px;color:var(--text-muted);margin-top:.5rem">
       📱 Siga <strong>@ekofinanceira</strong> — novo vídeo toda semana
     </div>
+    <div onclick="abrirFeedback()" style="margin-top:1rem;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:.875rem 1rem;display:flex;align-items:center;justify-content:space-between;cursor:pointer;transition:opacity .2s" onmouseover="this.style.opacity='.7'" onmouseout="this.style.opacity='1'">
+      <div>
+        <div style="font-size:13px;font-weight:700">💬 Encontrou um bug ou tem uma sugestão?</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:2px">Sua opinião ajuda a melhorar o Eko</div>
+      </div>
+      <div style="font-size:16px;color:var(--eko-green);font-weight:700">→</div>
+    </div>
+  </div>
+</div>
+
+<!-- OVERLAY: Feedback -->
+<div id="overlay-feedback" class="overlay hidden">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+      <div style="font-size:17px;font-weight:800">💬 Feedback</div>
+      <button onclick="fecharOverlay('overlay-feedback')" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-muted);line-height:1;padding:4px">✕</button>
+    </div>
+    <div style="font-size:13px;color:var(--text-muted);margin-bottom:1rem">Sua opinião é muito importante para melhorar o Eko! 🌱</div>
+
+    <!-- Tipo -->
+    <div style="margin-bottom:1rem">
+      <div style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Tipo</div>
+      <div style="display:flex;gap:8px">
+        <button id="fb-tipo-bug" onclick="selecionarTipoFeedback('bug')" style="flex:1;padding:.5rem;border-radius:10px;border:2px solid var(--red);background:var(--red-light);color:var(--red);font-weight:700;font-size:12px;cursor:pointer">🐛 Bug</button>
+        <button id="fb-tipo-sugestao" onclick="selecionarTipoFeedback('sugestao')" style="flex:1;padding:.5rem;border-radius:10px;border:2px solid var(--border);background:var(--surface);color:var(--text-muted);font-weight:700;font-size:12px;cursor:pointer">💡 Sugestão</button>
+        <button id="fb-tipo-elogio" onclick="selecionarTipoFeedback('elogio')" style="flex:1;padding:.5rem;border-radius:10px;border:2px solid var(--border);background:var(--surface);color:var(--text-muted);font-weight:700;font-size:12px;cursor:pointer">👍 Elogio</button>
+      </div>
+    </div>
+
+    <!-- Mensagem -->
+    <div style="margin-bottom:1rem">
+      <div style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Mensagem</div>
+      <textarea id="fb-mensagem" placeholder="Descreva o que aconteceu ou sua sugestão..." class="input" style="width:100%;height:120px;resize:none;font-size:14px;line-height:1.6;font-family:inherit;box-sizing:border-box"></textarea>
+    </div>
+
+    <div id="fb-msg" class="msg"></div>
+    <button onclick="enviarFeedback()" class="btn btn-primary" style="width:100%">Enviar feedback</button>
   </div>
 </div>
 
@@ -1406,6 +1444,8 @@ function ir(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   window.scrollTo(0,0);
+  // Empurra estado no histórico para interceptar botão voltar do browser/celular
+  history.pushState({screen: id}, '', '#' + id);
   // Analytics — registra navegação entre módulos
   const telas = {
     'screen-hub':          'hub',
@@ -1422,6 +1462,22 @@ function ir(id) {
   if (telas[id]) logEko('screen_view', { screen_name: telas[id] });
 }
 window.ir = ir;
+
+// Intercepta botão voltar do browser/celular
+window.addEventListener('popstate', function(e) {
+  if (e.state && e.state.screen) {
+    // Volta para a tela anterior dentro do app
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    const el = document.getElementById(e.state.screen);
+    if (el) { el.classList.add('active'); window.scrollTo(0,0); }
+  } else {
+    // Se não tem estado, vai pro hub para não sair do app
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    const hub = document.getElementById('screen-hub');
+    if (hub) { hub.classList.add('active'); window.scrollTo(0,0); }
+    history.pushState({screen: 'screen-hub'}, '', '#screen-hub');
+  }
+});
 // hashSenha mantido para migração de usuários legados (hash antigo no Firestore)
 async function hashSenha(s) { const e = new TextEncoder().encode(s); const b = await crypto.subtle.digest('SHA-256', e); return Array.from(new Uint8Array(b)).map(x => x.toString(16).padStart(2,'0')).join(''); }
 function fmt(v) { return 'R$ ' + Number(v).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2}); }
@@ -4271,6 +4327,64 @@ async function cfSugerirLancamento(tipo, valor, categoriaId, categoriaNome) {
   toast('✅ Registrado no Controle Financeiro!');
   await renderHubControle();
 }
+
+// ════════════════════════════════════════════════
+
+// ════════════════════════════════════════════════
+// FEEDBACK
+// ════════════════════════════════════════════════
+let fbTipoAtual = 'bug';
+
+window.abrirFeedback = function() {
+  fbTipoAtual = 'bug';
+  selecionarTipoFeedback('bug');
+  const msg = document.getElementById('fb-mensagem');
+  if(msg) msg.value = '';
+  limparMsg('fb-msg');
+  abrirOverlay('overlay-feedback');
+};
+
+window.selecionarTipoFeedback = function(tipo) {
+  fbTipoAtual = tipo;
+  const tipos = {
+    bug:      {cor:'var(--red)',    bg:'var(--red-light)',        label:'🐛 Bug'},
+    sugestao: {cor:'var(--eko-green)', bg:'var(--eko-green-light)', label:'💡 Sugestão'},
+    elogio:   {cor:'#f59e0b',      bg:'#fef3c7',                 label:'👍 Elogio'},
+  };
+  ['bug','sugestao','elogio'].forEach(t => {
+    const btn = document.getElementById('fb-tipo-'+t);
+    if(!btn) return;
+    if(t === tipo) {
+      btn.style.border = `2px solid ${tipos[t].cor}`;
+      btn.style.background = tipos[t].bg;
+      btn.style.color = tipos[t].cor;
+    } else {
+      btn.style.border = '2px solid var(--border)';
+      btn.style.background = 'var(--surface)';
+      btn.style.color = 'var(--text-muted)';
+    }
+  });
+};
+
+window.enviarFeedback = async function() {
+  limparMsg('fb-msg');
+  const mensagem = document.getElementById('fb-mensagem').value.trim();
+  if(!mensagem) { showMsg('fb-msg','error','Escreva sua mensagem antes de enviar.'); return; }
+  try {
+    await addDoc(collection(db,'feedbacks'), {
+      email: sessao.email,
+      tipo: fbTipoAtual,
+      mensagem,
+      criadoEm: new Date().toISOString(),
+      lido: false,
+    });
+    fecharOverlay('overlay-feedback');
+    toast('💬 Feedback enviado! Obrigado! 🌱');
+    logEko('feedback_enviado', {tipo: fbTipoAtual});
+  } catch(e) {
+    showMsg('fb-msg','error','Erro ao enviar. Verifique sua conexão.');
+  }
+};
 
 // ════════════════════════════════════════════════
 
