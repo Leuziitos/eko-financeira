@@ -1150,6 +1150,21 @@ html,body{height:100%;background:var(--bg);font-family:'Plus Jakarta Sans',sans-
   </div>
 </div>
 
+<!-- OVERLAY: Lançamentos da categoria -->
+<div id="overlay-cf-lancamentos" class="overlay hidden">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+      <div>
+        <div id="cf-lanc-titulo" style="font-size:17px;font-weight:800"></div>
+        <div id="cf-lanc-subtitulo" style="font-size:12px;color:var(--text-muted);margin-top:2px"></div>
+      </div>
+      <button onclick="fecharOverlay('overlay-cf-lancamentos')" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-muted);line-height:1;padding:4px">✕</button>
+    </div>
+    <div id="cf-lanc-lista"></div>
+  </div>
+</div>
+
 <!-- ════ FASE 3: AULAS PEF ═══════════════════════════════ -->
 <div id="screen-aulas" class="screen">
   <div class="topbar">
@@ -4026,12 +4041,16 @@ async function renderCarteiraControle() {
         const cat = todasCats.find(c=>c.id===id);
         const nome = cat ? cat.nome : id;
         const isReceita = (cats.receita||[]).some(c=>c.id===id);
-        return `<div style="display:flex;align-items:center;justify-content:space-between;padding:.625rem 0;border-bottom:1px solid var(--border)">
+        const safeId = id.replace(/'/g,"\\'");
+        return `<div onclick="abrirLancamentosCat('${safeId}')" style="display:flex;align-items:center;justify-content:space-between;padding:.625rem 0;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s" onmouseover="this.style.opacity='.7'" onmouseout="this.style.opacity='1'">
           <div style="font-size:14px;font-weight:600">${nome}</div>
-          <div style="font-size:14px;font-weight:800;color:${isReceita?'var(--eko-green)':'var(--red)'}">${isReceita?'+':'-'}${fmt(val)}</div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="font-size:14px;font-weight:800;color:${isReceita?'var(--eko-green)':'var(--red)'}">${isReceita?'+':'-'}${fmt(val)}</div>
+            <div style="font-size:11px;color:var(--text-muted)">›</div>
+          </div>
         </div>`;
       }).join('');
-      catEl.innerHTML = `<div class="card"><div style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.25rem">Por categoria</div>${itens}</div>`;
+      catEl.innerHTML = `<div class="card"><div style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.25rem">Por categoria <span style="font-weight:400;text-transform:none;letter-spacing:0">· toque para ver lançamentos</span></div>${itens}</div>`;
     }
   }
 
@@ -4142,7 +4161,68 @@ window.adicionarCategoria = async function() {
   toast('✅ Categoria adicionada em ' + (tipo==='gasto'?'Gastos':'Receitas') + '!');
 };
 
-// ── Alerta no hub ─────────────────────────────────────────────
+// ── Lançamentos por categoria (excluir) ──────────────────────
+window.abrirLancamentosCat = async function(catId) {
+  const lancs = await getCFLancamentos();
+  const cats  = await getCFCategorias();
+  const chave = cfChaveMes(cfAnoVis, cfMesVis);
+  const todasCats = [...(cats.gasto||[]), ...(cats.receita||[])];
+  const cat = todasCats.find(c=>c.id===catId);
+  const isReceita = (cats.receita||[]).some(c=>c.id===catId);
+  const doMesCat = lancs.filter(l=>l.chaveMes===chave && l.categoria===catId);
+  const total = doMesCat.reduce((s,l)=>s+l.valor,0);
+
+  const tituloEl = document.getElementById('cf-lanc-titulo');
+  const subEl    = document.getElementById('cf-lanc-subtitulo');
+  if(tituloEl) tituloEl.textContent = cat ? cat.nome : catId;
+  if(subEl) subEl.textContent = `Total: ${isReceita?'+':'-'}${fmt(total)} · ${cfNomeMes(cfMesVis,cfAnoVis)}`;
+
+  renderLancamentosCat(doMesCat, isReceita);
+  abrirOverlay('overlay-cf-lancamentos');
+};
+
+function renderLancamentosCat(lancs, isReceita) {
+  const el = document.getElementById('cf-lanc-lista');
+  if(!el) return;
+  if(!lancs.length) {
+    el.innerHTML = '<div style="text-align:center;padding:1.5rem;color:var(--text-muted);font-size:14px">Nenhum lançamento nesta categoria.</div>';
+    return;
+  }
+  el.innerHTML = lancs.map((l,i) => {
+    const safeId = (l._id||'').replace(/'/g,"\\'");
+    const data = new Date(l.criadoEm).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
+    return `<div id="cf-lanc-item-${i}" style="display:flex;align-items:center;justify-content:space-between;padding:.75rem 0;border-bottom:1px solid var(--border)">
+      <div>
+        <div style="font-size:14px;font-weight:700;color:${isReceita?'var(--eko-green)':'var(--red)'}">${isReceita?'+':'-'}${fmt(l.valor)}</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${data}</div>
+      </div>
+      <button onclick="excluirLancamentoCF('${safeId}')"
+        style="background:var(--red-light);border:none;color:var(--red);border-radius:8px;padding:.4rem .75rem;font-size:13px;cursor:pointer;font-weight:700">
+        🗑️ Excluir
+      </button>
+    </div>`;
+  }).join('');
+}
+
+window.excluirLancamentoCF = async function(id) {
+  if(!confirm('Excluir este lançamento?')) return;
+  try {
+    const {deleteDoc, doc:docRef} = await import('https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js');
+    await deleteDoc(docRef(db,'controle',id));
+  } catch(e) {
+    // fallback: marca como excluído
+    try {
+      await setDoc(doc(db,'controle',id), {excluido:true}, {merge:true});
+    } catch(e2) {
+      toast('Erro ao excluir. Tente novamente.');
+      return;
+    }
+  }
+  toast('🗑️ Lançamento excluído!');
+  fecharOverlay('overlay-cf-lancamentos');
+  await renderCarteiraControle();
+  await renderHubControle();
+};
 async function renderHubControle() {
   try {
     const lancs = await getCFLancamentos();
