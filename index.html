@@ -4041,16 +4041,24 @@ async function renderCarteiraControle() {
         const cat = todasCats.find(c=>c.id===id);
         const nome = cat ? cat.nome : id;
         const isReceita = (cats.receita||[]).some(c=>c.id===id);
-        const safeId = id.replace(/'/g,"\\'");
-        return `<div onclick="abrirLancamentosCat('${safeId}')" style="display:flex;align-items:center;justify-content:space-between;padding:.625rem 0;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s" onmouseover="this.style.opacity='.7'" onmouseout="this.style.opacity='1'">
-          <div style="font-size:14px;font-weight:600">${nome}</div>
-          <div style="display:flex;align-items:center;gap:8px">
+        return `<div data-catid="${id}" class="cf-cat-item" style="display:flex;align-items:center;justify-content:space-between;padding:.625rem 0;border-bottom:1px solid var(--border);cursor:pointer">
+          <div style="font-size:14px;font-weight:600;pointer-events:none">${nome}</div>
+          <div style="display:flex;align-items:center;gap:8px;pointer-events:none">
             <div style="font-size:14px;font-weight:800;color:${isReceita?'var(--eko-green)':'var(--red)'}">${isReceita?'+':'-'}${fmt(val)}</div>
             <div style="font-size:11px;color:var(--text-muted)">›</div>
           </div>
         </div>`;
       }).join('');
-      catEl.innerHTML = `<div class="card"><div style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.25rem">Por categoria <span style="font-weight:400;text-transform:none;letter-spacing:0">· toque para ver lançamentos</span></div>${itens}</div>`;
+      catEl.innerHTML = `<div class="card" id="cf-cat-container"><div style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.25rem">Por categoria <span style="font-weight:400;text-transform:none;letter-spacing:0">· toque para ver lançamentos</span></div>${itens}</div>`;
+
+      // Event delegation — um único listener no container
+      const container = document.getElementById('cf-cat-container');
+      if(container) {
+        container.addEventListener('click', function(e) {
+          const item = e.target.closest('.cf-cat-item');
+          if(item) abrirLancamentosCat(item.dataset.catid);
+        });
+      }
     }
   }
 
@@ -4189,19 +4197,25 @@ function renderLancamentosCat(lancs, isReceita) {
     return;
   }
   el.innerHTML = lancs.map((l,i) => {
-    const safeId = (l._id||'').replace(/'/g,"\\'");
     const data = new Date(l.criadoEm).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
-    return `<div id="cf-lanc-item-${i}" style="display:flex;align-items:center;justify-content:space-between;padding:.75rem 0;border-bottom:1px solid var(--border)">
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:.75rem 0;border-bottom:1px solid var(--border)">
       <div>
         <div style="font-size:14px;font-weight:700;color:${isReceita?'var(--eko-green)':'var(--red)'}">${isReceita?'+':'-'}${fmt(l.valor)}</div>
         <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${data}</div>
       </div>
-      <button onclick="excluirLancamentoCF('${safeId}')"
+      <button data-lancid="${l._id}"
         style="background:var(--red-light);border:none;color:var(--red);border-radius:8px;padding:.4rem .75rem;font-size:13px;cursor:pointer;font-weight:700">
         🗑️ Excluir
       </button>
     </div>`;
   }).join('');
+
+  // Event delegation no container da lista
+  el.addEventListener('click', async function(e) {
+    const btn = e.target.closest('button[data-lancid]');
+    if(!btn) return;
+    await excluirLancamentoCF(btn.dataset.lancid);
+  });
 }
 
 window.excluirLancamentoCF = async function(id) {
