@@ -368,7 +368,7 @@ html,body{height:100%;background:var(--bg);font-family:'Plus Jakarta Sans',sans-
 </div>
 
 <!-- TELA DE ERRO GLOBAL -->
-<div id="screen-erro-global" style="display:none;position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem;text-align:center">
+<div id="screen-erro-global" style="display:none;position:fixed;inset:0;z-index:9999;background:var(--bg);flex-direction:column;align-items:center;justify-content:center;padding:2rem;text-align:center">
   <div style="font-size:64px;margin-bottom:1rem">😅</div>
   <div style="font-size:22px;font-weight:800;color:var(--text);margin-bottom:.75rem">Ops! Algo deu errado</div>
   <div id="erro-global-msg" style="font-size:14px;color:var(--text-muted);line-height:1.6;margin-bottom:1.5rem;max-width:320px">Verifique sua conexão com a internet e tente novamente.</div>
@@ -925,6 +925,7 @@ html,body{height:100%;background:var(--bg);font-family:'Plus Jakarta Sans',sans-
           <button class="btn btn-primary" onclick="salvarSimulacaoAp()">💾 Salvar aqui</button>
           <button class="btn" onclick="salvarSimulacaoApProntuario()">📋 Salvar no prontuário</button>
         </div>
+        <button class="btn" onclick="compartilharSimulacaoAp()" style="width:100%;margin-bottom:.5rem">📤 Compartilhar resultado</button>
       </div>
     </div>
 
@@ -983,6 +984,7 @@ html,body{height:100%;background:var(--bg);font-family:'Plus Jakarta Sans',sans-
           <button class="btn btn-primary" onclick="salvarSimulacaoAc()">💾 Salvar aqui</button>
           <button class="btn" onclick="salvarSimulacaoAcProntuario()">📋 Salvar no prontuário</button>
         </div>
+        <button class="btn" onclick="compartilharSimulacaoAc()" style="width:100%;margin-bottom:.5rem">📤 Compartilhar resultado</button>
         <button class="btn" onclick="criarMetaDeAcumulacao()" style="width:100%;margin-bottom:.5rem">🎯 Criar meta financeira com este valor</button>
       </div>
     </div>
@@ -1364,11 +1366,6 @@ window.finishOnboard = function() {
 
 // ── AUTH ──────────────────────────────────────────────
 async function carregarApp() {
-  // Timeout de 15s — se Firebase não responder, mostra erro
-  const timeout = setTimeout(() => {
-    mostrarErroGlobal('O servidor demorou para responder. Verifique sua conexão e tente novamente.');
-  }, 15000);
-
   try {
     const user = await getUser(sessao.email);
     if (!user) { localStorage.removeItem(SESS_KEY); ir('screen-login'); return; }
@@ -1377,8 +1374,7 @@ async function carregarApp() {
     const hora = new Date().getHours();
     const saud = hora < 12 ? 'Bom dia' : hora < 18 ? 'Boa tarde' : 'Boa noite';
     document.getElementById('hub-greeting').textContent = saud + ', ' + user.nome.split(' ')[0] + '! 👋';
-    setupMoneyInputs();
-    clearTimeout(timeout); // FASE 4 BUG 5 — máscara monetária
+    setupMoneyInputs(); // FASE 4 BUG 5 — máscara monetária
     // Item 1 — listener em tempo real para badge de metas no hub
     try {
       const metasQ = query(collection(db,'metas'), where('email','==',sessao.email));
@@ -1399,7 +1395,6 @@ async function carregarApp() {
     try { await renderDiagnosticos(); } catch(e) { console.error('renderDiagnosticos error:', e); }
     ir('screen-hub');
   } catch(e) {
-    clearTimeout(timeout);
     console.error('carregarApp error:', e);
     ir('screen-hub');
   }
@@ -2918,7 +2913,53 @@ window.calcularAcumulacao = function() {
   carregarHistoricoSimulacoes();
 };
 
-// Criar meta a partir da acumulação
+// ── Compartilhar simulações ───────────────────────────────
+function compartilhar(texto) {
+  if (navigator.share) {
+    navigator.share({ text: texto, url: 'https://eko-financeira.netlify.app' })
+      .then(() => logEko('simulacao_compartilhada'))
+      .catch(() => {});
+  } else {
+    // Fallback — copia para área de transferência
+    navigator.clipboard.writeText(texto + '\n\nhttps://eko-financeira.netlify.app')
+      .then(() => toast('✅ Copiado! Cole no WhatsApp ou Instagram.'))
+      .catch(() => toast('📋 Copie o texto manualmente.'));
+    logEko('simulacao_compartilhada');
+  }
+}
+
+window.compartilharSimulacaoAp = function() {
+  const patrimonio = document.getElementById('ap-patrimonio-alvo').textContent;
+  const pmt = document.getElementById('ap-pmt-mensal').textContent;
+  const prazo = document.getElementById('ap-prazo-anos').textContent;
+  const renda = document.getElementById('ap-renda-show').textContent;
+  const texto = `📊 Fiz minha simulação de aposentadoria na Eko Financeira!
+
+🏖️ Quero me aposentar com ${renda}/mês
+💰 Preciso acumular ${patrimonio}
+📅 Guardando ${pmt}/mês por ${prazo}
+
+Planeje o seu futuro também! 🌱
+👉 eko-financeira.netlify.app`;
+  compartilhar(texto);
+};
+
+window.compartilharSimulacaoAc = function() {
+  const total = document.getElementById('ac-total').textContent;
+  const liquido = document.getElementById('ac-liquido').textContent;
+  const aporte = document.getElementById('ac-aporte-show').textContent;
+  const anos = document.getElementById('ac-anos-show').textContent;
+  const renda = document.getElementById('ac-renda-mensal').textContent;
+  const texto = `📊 Fiz minha simulação de acumulação na Eko Financeira!
+
+💰 Guardando ${aporte}/mês por ${anos}
+📈 Vou acumular ${total} (${liquido} líquido)
+🏦 Gerando ${renda} de renda passiva
+
+Faça a sua simulação também! 🌱
+👉 eko-financeira.netlify.app`;
+  compartilhar(texto);
+};
 window.criarMetaDeAcumulacao = function() {
   const aporte = parseMoney(document.getElementById('ac-aporte').value) || 0;
   const anos   = parseInt(document.getElementById('ac-anos').value) || 0;
