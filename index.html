@@ -3641,7 +3641,7 @@ window.abrirReserva = async function() {
 };
 
 function mostrarOnboardingReserva() {
-  document.getElementById('reserva-onboarding').style.display = '';
+  document.getElementById('reserva-onboarding').style.display = 'block';
   document.getElementById('reserva-painel').style.display = 'none';
   reservaStep(1);
 }
@@ -3650,8 +3650,7 @@ function mostrarPainelReserva() {
   document.getElementById('reserva-onboarding').style.display = 'none';
   const painel = document.getElementById('reserva-painel');
   painel.style.display = '';
-  // Aguarda o DOM atualizar antes de renderizar
-  setTimeout(() => renderPainelReserva(), 0);
+  renderPainelReserva();
 }
 
 window.reservaStep = function(step) {
@@ -3862,7 +3861,7 @@ window.salvarConfigReserva = async function() {
   // Primeiro mostrar o painel (torna os elementos visíveis), depois renderizar
   try {
     document.getElementById('reserva-onboarding').style.display = 'none';
-    document.getElementById('reserva-painel').style.display = '';
+    document.getElementById('reserva-painel').style.display = 'block';
     renderPainelReserva();
   } catch(e) { console.error('mostrarPainelReserva', e); }
   try { atualizarHubReserva(); } catch(e) {}
@@ -4044,7 +4043,7 @@ window.excluirReserva = async function() {
 };
 
 window.reservaVerEducativo = function() {
-  document.getElementById('reserva-onboarding').style.display = '';
+  document.getElementById('reserva-onboarding').style.display = 'block';
   document.getElementById('reserva-painel').style.display = 'none';
   reservaStep(1);
 };
