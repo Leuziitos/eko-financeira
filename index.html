@@ -3662,10 +3662,9 @@ window.reservaStep = function(step) {
   if (el) el.style.display = 'block';
 
   if (step === 'config') {
-    renderMesesGrid();
-    renderOndeGrid();
+    // selecionarPerfilReserva já chama renderMesesGrid internamente
     selecionarPerfilReserva(reservaPerfilSelecionado);
-    // Não await para não bloquear — fonte manual é síncrona
+    renderOndeGrid();
     selecionarFonteReserva(reservaFonteSelecionada).catch(()=>{});
   }
 };
