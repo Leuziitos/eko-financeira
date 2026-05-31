@@ -1176,7 +1176,7 @@ html,body{height:100%;background:var(--bg);font-family:'Plus Jakarta Sans',sans-
             <button id="res-fonte-manual" onclick="selecionarFonteReserva('manual')" style="flex:1;padding:.5rem;border-radius:8px;border:2px solid var(--eko-green);background:var(--eko-green-light);color:var(--eko-green-dark);font-weight:700;font-size:12px;cursor:pointer">✏️ Informar</button>
             <button id="res-fonte-controle" onclick="selecionarFonteReserva('controle')" style="flex:1;padding:.5rem;border-radius:8px;border:2px solid var(--border);background:var(--surface);color:var(--text-muted);font-weight:700;font-size:12px;cursor:pointer">📊 Do Controle</button>
           </div>
-          <input id="res-gastos" type="text" inputmode="numeric" placeholder="R$ 0,00" class="input">
+          <input id="res-gastos" type="text" inputmode="numeric" placeholder="R$ 0,00" class="input" oninput="applyMoneyMask(this)" style="font-size:20px;font-weight:800;text-align:center;padding:1rem">
           <div id="res-gastos-hint" style="font-size:11px;color:var(--text-muted);margin-top:4px;display:none">💡 Média dos últimos 3 meses carregada do Controle Financeiro</div>
         </div>
         <!-- Meses meta -->
@@ -3723,17 +3723,21 @@ function renderMesesGrid() {
   opcoes.forEach(m => {
     const btn = document.createElement('button');
     btn.id = 'res-meses-' + m;
+    btn.dataset.meses = m;
     btn.textContent = m + ' meses' + (m === recomendado ? ' ⭐' : '');
     btn.style.cssText = 'padding:.625rem;border-radius:10px;border:2px solid var(--border);background:var(--surface);color:var(--text-muted);font-weight:700;font-size:12px;cursor:pointer;transition:all .2s';
     btn.onclick = () => {
       grid.querySelectorAll('button').forEach(b => {
+        b.dataset.selected = '';
         b.style.borderColor = 'var(--border)'; b.style.background = 'var(--surface)'; b.style.color = 'var(--text-muted)';
       });
+      btn.dataset.selected = 'true';
       btn.style.borderColor = 'var(--eko-green)';
       btn.style.background = 'var(--eko-green-light)';
       btn.style.color = 'var(--eko-green-dark)';
     };
     if (m === recomendado) {
+      btn.dataset.selected = 'true';
       btn.style.borderColor = 'var(--eko-green)';
       btn.style.background = 'var(--eko-green-light)';
       btn.style.color = 'var(--eko-green-dark)';
@@ -3749,16 +3753,23 @@ function renderOndeGrid() {
   ONDE_GUARDAR_OPCOES.forEach((op, i) => {
     const btn = document.createElement('button');
     btn.id = 'res-onde-' + op.id;
+    btn.dataset.onde = op.nome || op.label;
     btn.style.cssText = 'padding:.75rem;border-radius:10px;border:2px solid var(--border);background:var(--surface);text-align:left;cursor:pointer;transition:all .2s;width:100%';
     btn.innerHTML = `<div style="font-size:13px;font-weight:800">${op.label}</div><div style="font-size:11px;color:var(--text-muted);margin-top:2px">${op.desc}</div>`;
     btn.onclick = () => {
       grid.querySelectorAll('button').forEach(b => {
+        b.dataset.selected = '';
         b.style.borderColor = 'var(--border)'; b.style.background = 'var(--surface)';
       });
+      btn.dataset.selected = 'true';
       btn.style.borderColor = 'var(--eko-green)';
       btn.style.background = 'var(--eko-green-light)';
     };
-    if (i === 0) { btn.style.borderColor = 'var(--eko-green)'; btn.style.background = 'var(--eko-green-light)'; }
+    if (i === 0) {
+      btn.dataset.selected = 'true';
+      btn.style.borderColor = 'var(--eko-green)';
+      btn.style.background = 'var(--eko-green-light)';
+    }
     grid.appendChild(btn);
   });
 }
@@ -3769,31 +3780,31 @@ window.salvarConfigReserva = async function() {
   const gastos = parseMoney(gastoRaw);
   if (!gastos || gastos <= 0) { msg.textContent = 'Informe seus gastos mensais.'; msg.className = 'msg error'; return; }
 
-  // Pegar meses selecionado
+  // Pegar meses selecionado via data-selected
   const mesesGrid = document.getElementById('res-meses-grid');
   let mesesSel = null;
   if (mesesGrid) {
-    mesesGrid.querySelectorAll('button').forEach(b => {
-      if (b.style.borderColor === 'var(--eko-green)' || b.style.background === 'var(--eko-green-light)') {
-        const n = parseInt(b.textContent);
-        if (!isNaN(n)) mesesSel = n;
-      }
-    });
+    const btnSel = mesesGrid.querySelector('button[data-selected="true"]');
+    if (btnSel) mesesSel = parseInt(btnSel.dataset.meses);
+    // fallback: pegar o primeiro se nenhum marcado
+    if (!mesesSel) {
+      const primeiro = mesesGrid.querySelector('button');
+      if (primeiro) mesesSel = parseInt(primeiro.dataset.meses);
+    }
   }
   if (!mesesSel) { msg.textContent = 'Selecione quantos meses de cobertura.'; msg.className = 'msg error'; return; }
 
-  // Pegar onde guardar
+  // Pegar onde guardar via data-selected
   let ondeSel = 'Tesouro Selic';
   const ondeGrid = document.getElementById('res-onde-grid');
   if (ondeGrid) {
-    ondeGrid.querySelectorAll('button').forEach(b => {
-      if (b.style.borderColor === 'var(--eko-green)' || b.style.background === 'var(--eko-green-light)') {
-        const label = b.querySelector('div')?.textContent;
-        if (label?.includes('Tesouro')) ondeSel = 'Tesouro Selic';
-        else if (label?.includes('CDB')) ondeSel = 'CDB 100% CDI';
-        else if (label?.includes('Poupança')) ondeSel = 'Poupança';
-      }
-    });
+    const btnSel = ondeGrid.querySelector('button[data-selected="true"]');
+    if (btnSel) {
+      const label = btnSel.querySelector('div')?.textContent || '';
+      if (label.includes('Tesouro')) ondeSel = 'Tesouro Selic';
+      else if (label.includes('CDB')) ondeSel = 'CDB 100% CDI';
+      else if (label.includes('Poupança')) ondeSel = 'Poupança';
+    }
   }
 
   const meta = gastos * mesesSel;
