@@ -35,7 +35,7 @@
 }
 [data-theme="dark"]{
   --bg:#0D1117;--surface:#161B22;--surface2:#1C2333;--surface3:#243044;
-  --text:#E6EDF3;--text-muted:#8B949E;--text-hint:#484F58;
+  --text:#F0F6FC;--text-muted:#B0BEC5;--text-hint:#6E7F8D;
   --border:#30363D;--border-strong:#484F58;
   --shadow:0 2px 16px rgba(0,0,0,.4);--shadow-lg:0 8px 32px rgba(0,0,0,.5);
 }
@@ -583,12 +583,49 @@ html,body{height:100%;background:var(--bg);font-family:'Plus Jakarta Sans',sans-
     <div style="text-align:center;font-size:12px;color:var(--text-muted);margin-top:.5rem">
       📱 Siga <strong>@ekofinanceira</strong> — novo vídeo toda semana
     </div>
-    <div onclick="abrirFeedback()" style="margin-top:1rem;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:.875rem 1rem;display:flex;align-items:center;justify-content:space-between;cursor:pointer;transition:opacity .2s" onmouseover="this.style.opacity='.7'" onmouseout="this.style.opacity='1'">
-      <div>
-        <div style="font-size:13px;font-weight:700">💬 Encontrou um bug ou tem uma sugestão?</div>
-        <div style="font-size:12px;color:var(--text-muted);margin-top:2px">Sua opinião ajuda a melhorar o Eko</div>
+    <div style="margin-top:1rem;display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div onclick="abrirFeedback()" style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:.875rem 1rem;cursor:pointer;transition:opacity .2s" onmouseover="this.style.opacity='.7'" onmouseout="this.style.opacity='1'">
+        <div style="font-size:20px;margin-bottom:4px">💬</div>
+        <div style="font-size:12px;font-weight:700">Bug ou sugestão?</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:2px">Sua opinião melhora o Eko</div>
       </div>
-      <div style="font-size:16px;color:var(--eko-green);font-weight:700">→</div>
+      <div onclick="abrirIndicar()" style="background:var(--eko-green-light);border:1px solid var(--eko-green);border-radius:14px;padding:.875rem 1rem;cursor:pointer;transition:opacity .2s" onmouseover="this.style.opacity='.7'" onmouseout="this.style.opacity='1'">
+        <div style="font-size:20px;margin-bottom:4px">🌱</div>
+        <div style="font-size:12px;font-weight:700;color:var(--eko-green-dark)">Indique o app!</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:2px">Ajude mais pessoas</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- OVERLAY: Indicar app -->
+<div id="overlay-indicar" class="overlay hidden">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+      <div style="font-size:17px;font-weight:800">🌱 Indicar o Eko</div>
+      <button onclick="fecharOverlay('overlay-indicar')" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-muted);line-height:1;padding:4px">✕</button>
+    </div>
+    <div style="background:var(--eko-green-light);border:1px solid var(--eko-green);border-radius:12px;padding:1rem;margin-bottom:1.25rem;font-size:13px;color:var(--eko-green-dark);line-height:1.6">
+      Conhece alguém que precisa organizar as finanças? Compartilhe o Eko e ajude mais pessoas a planejarem o futuro! 🚀
+    </div>
+    <div style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.75rem">Compartilhar via</div>
+    <div style="display:grid;gap:8px">
+      <button onclick="indicarWhatsApp()" style="display:flex;align-items:center;gap:12px;padding:1rem;border-radius:12px;border:1px solid #25D366;background:#f0fdf4;cursor:pointer;font-family:inherit;transition:opacity .2s" onmouseover="this.style.opacity='.8'" onmouseout="this.style.opacity='1'">
+        <span style="font-size:28px">📱</span>
+        <div style="text-align:left">
+          <div style="font-size:14px;font-weight:800;color:#128C7E">WhatsApp</div>
+          <div style="font-size:12px;color:var(--text-muted)">Enviar mensagem com link</div>
+        </div>
+      </button>
+      <button onclick="indicarInstagram()" style="display:flex;align-items:center;gap:12px;padding:1rem;border-radius:12px;border:1px solid #E1306C;background:#fff0f5;cursor:pointer;font-family:inherit;transition:opacity .2s" onmouseover="this.style.opacity='.8'" onmouseout="this.style.opacity='1'">
+        <span style="font-size:28px">📸</span>
+        <div style="text-align:left">
+          <div style="font-size:14px;font-weight:800;color:#E1306C">Instagram</div>
+          <div style="font-size:12px;color:var(--text-muted)">Abrir perfil @ekofinanceira</div>
+        </div>
+      </button>
     </div>
   </div>
 </div>
@@ -1182,8 +1219,11 @@ html,body{height:100%;background:var(--bg);font-family:'Plus Jakarta Sans',sans-
         <div style="font-size:13px;font-weight:700;color:var(--amber);margin-bottom:.375rem">⚠️ Atenção</div>
         <div style="font-size:12px;color:var(--text-muted);line-height:1.6">Sua reserva ainda está incompleta. Considere priorizá-la antes de criar novas metas financeiras.</div>
       </div>
-      <!-- Reconfigurar -->
-      <button onclick="reservaReconfigurar()" class="btn" style="width:100%;margin-top:.75rem;background:var(--surface);border:1px solid var(--border);color:var(--text-muted);font-size:13px">⚙️ Reconfigurar reserva</button>
+      <!-- Entender + Reconfigurar -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:.75rem">
+        <button onclick="reservaVerEducativo()" class="btn" style="background:var(--surface);border:1px solid var(--border);color:var(--text-muted);font-size:13px;padding:.75rem">📚 Entender sobre reserva</button>
+        <button onclick="reservaReconfigurar()" class="btn" style="background:var(--surface);border:1px solid var(--border);color:var(--text-muted);font-size:13px;padding:.75rem">⚙️ Reconfigurar</button>
+      </div>
     </div>
   </div>
 </div>
@@ -1595,7 +1635,7 @@ html,body{height:100%;background:var(--bg);font-family:'Plus Jakarta Sans',sans-
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js';
-import { getFirestore, doc, getDoc, setDoc, collection, getDocs, addDoc, query, where, orderBy, runTransaction, onSnapshot } from 'https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js';
+import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, getDocs, addDoc, query, where, orderBy, runTransaction, onSnapshot } from 'https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js';
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail } from 'https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js';
 import { getAnalytics, logEvent } from 'https://www.gstatic.com/firebasejs/11.0.1/firebase-analytics.js';
 
@@ -1676,6 +1716,10 @@ window.addEventListener('popstate', function(e) {
 // hashSenha mantido para migração de usuários legados (hash antigo no Firestore)
 async function hashSenha(s) { const e = new TextEncoder().encode(s); const b = await crypto.subtle.digest('SHA-256', e); return Array.from(new Uint8Array(b)).map(x => x.toString(16).padStart(2,'0')).join(''); }
 function fmt(v) { return 'R$ ' + Number(v).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2}); }
+function esc(str) {
+  if (str === null || str === undefined) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#x27;');
+}
 function showMsg(id, tipo, txt) { const el = document.getElementById(id); el.className = 'msg '+tipo; el.textContent = txt; }
 function limparMsg(id) { const el = document.getElementById(id); el.className = 'msg'; el.textContent = ''; }
 function toast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 3200); }
@@ -1979,9 +2023,8 @@ function gerarAvisos(diags) {
   ];
   tipos.forEach(({tipo, nome, meses}) => {
     const d = diags.find(x => x.tipo === tipo);
-    if (!d) {
-      avisos.push({icon:'📊', tipo:'info', titulo:nome+' pendente', desc:'Você ainda não realizou este diagnóstico'});
-    } else {
+    if (d) {
+      // Só mostra aviso se o diagnóstico JÁ foi feito e está próximo de liberar ou já liberado
       const prox = new Date(d.criadoEm);
       prox.setMonth(prox.getMonth() + meses);
       const dias = diasAte(prox.toISOString());
@@ -1990,8 +2033,8 @@ function gerarAvisos(diags) {
       } else if (dias <= 0) {
         avisos.push({icon:'✅', tipo:'', titulo:nome+' disponível para refazer', desc:'Já se passaram '+meses+' meses desde o último teste'});
       }
-      // If done and blocked, no aviso needed
     }
+    // Diagnósticos pendentes NÃO aparecem nos avisos — ficam apenas na jornada
   });
   return avisos.slice(0,3);
 }
@@ -2050,9 +2093,9 @@ async function renderProntuario() {
       const sub = data + ' · ' + (dias > 0 ? 'Próximo em '+dias+'d' : 'Disponível para refazer');
       const res = d.resultado||'';
       const badgeClass = (res.includes('Expansão')||res.includes('Referência')||res.includes('Saudável')||res.includes('Acima')) ? 'badge-green' : (res.includes('Equilíbrio')||res.includes('Construção')||res.includes('Comum')) ? 'badge-amber' : 'badge-red';
-      elDiv.innerHTML = `<div class="pront-item-left"><div class="pront-item-icon">${icon}</div><div><div class="pront-item-title">${nome}</div><div class="pront-item-sub">${sub}</div></div></div><div style="display:flex;align-items:center;gap:6px"><span class="badge ${badgeClass}">${d.resultado||'Feito'}</span><span style="color:var(--eko-green);font-size:14px">→</span></div>`;
+      elDiv.innerHTML = `<div class="pront-item-left"><div class="pront-item-icon">${icon}</div><div><div class="pront-item-title">${esc(nome)}</div><div class="pront-item-sub">${esc(sub)}</div></div></div><div style="display:flex;align-items:center;gap:6px"><span class="badge ${badgeClass}">${d.resultado||'Feito'}</span><span style="color:var(--eko-green);font-size:14px">→</span></div>`;
     } else {
-      elDiv.innerHTML = `<div class="pront-item-left"><div class="pront-item-icon">${icon}</div><div><div class="pront-item-title">${nome}</div><div class="pront-item-sub">Não realizado — toque para iniciar</div></div></div><span style="color:var(--eko-green);font-size:14px">→</span>`;
+      elDiv.innerHTML = `<div class="pront-item-left"><div class="pront-item-icon">${icon}</div><div><div class="pront-item-title">${esc(nome)}</div><div class="pront-item-sub">Não realizado — toque para iniciar</div></div></div><span style="color:var(--eko-green);font-size:14px">→</span>`;
     }
   });
 
@@ -2290,8 +2333,7 @@ window.abrirDiagDetalhe = async function(tipo) {
 window.excluirMetaAtual = async function() {
   if(!confirm('Excluir esta meta permanentemente? Esta ação não pode ser desfeita.')) return;
   try {
-    const {deleteDoc, doc:docRef} = await import('https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js');
-    await deleteDoc(docRef(db, 'metas', metaAtual._id));
+    await deleteDoc(doc(db, 'metas', metaAtual._id));
   } catch(e) {
     metaAtual.excluida = true;
     await saveMeta2(metaAtual);
@@ -2325,8 +2367,7 @@ window.editarObjetivo = async function(id) {
 window.excluirObjetivo = async function(id) {
   if(!confirm('Excluir este objetivo? Esta ação não pode ser desfeita.')) return;
   try {
-    const {deleteDoc, doc:docRef} = await import('https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js');
-    await deleteDoc(docRef(db, 'objetivos', id));
+    await deleteDoc(doc(db, 'objetivos', id));
   } catch(e) {
     const objs = await getObjetivos();
     const obj = objs.find(o => o._id === id);
@@ -2342,7 +2383,7 @@ window.gerarMetaDeObjetivo = async function(id) {
   const objs = await getObjetivos();
   const obj = objs.find(o => o._id === id);
   if(!obj) return;
-  if(!confirm(`Criar meta financeira "${obj.nome}" com ${fmt(obj.pmt||0)}/mês?`)) return;
+  if(!confirm(`Criar meta financeira "${esc(obj.nome)}" com ${fmt(obj.pmt||0)}/mês?`)) return;
   const meses = obj.meses || 12;
   const deps = Array(meses).fill(null).map(() => ({pago:false, parcial:false, extra:false, valor:0}));
   const nova = {
@@ -2371,8 +2412,7 @@ async function verificarDividaQuitada(div) {
     const acao = confirm('🎉 Parabéns! Dívida quitada!\n\nDeseja excluir esta dívida da lista?');
     if(acao) {
       try {
-        const {deleteDoc, doc:docRef} = await import('https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js');
-        await deleteDoc(docRef(db, 'dividas', div._id));
+        await deleteDoc(doc(db, 'dividas', div._id));
       } catch(e) { div.excluida = true; await saveDivida2(div); }
       toast('🎉 Dívida quitada e removida!');
     } else {
@@ -2695,7 +2735,7 @@ async function renderMetas(pagina){
     const g=calcAcumulado(meta);const f=calcFaltante(meta);const pct=Math.min(100,Math.round((g/meta.meta)*100));
     const st=statusMeta(meta);const streak=calcStreak(meta);
     const c=document.createElement('div');c.className='meta-card '+st;
-    c.innerHTML=`<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:.5rem"><div style="display:flex;align-items:center;gap:8px"><span style="font-size:24px">${meta.catIcon||'🎯'}</span><div><div style="font-size:15px;font-weight:800">${meta.nome}</div><div style="font-size:11px;color:var(--text-muted)">${meta.catNome||'Outro'}</div></div></div><span class="badge ${st==='concluida'?'badge-green':st==='atrasada'?'badge-red':'badge-blue'}">${st==='concluida'?'✅ Concluída':st==='atrasada'?'⚠️ Atrasada':'🎯 Ativa'}</span></div><div class="prog-bg" style="height:7px;margin-bottom:5px"><div class="prog-fill" style="width:${pct}%"></div></div><div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-muted);margin-bottom:.75rem"><span>${pct}% concluído</span><span>${fmt(g)} de ${fmt(meta.meta)}</span></div>${streak>=2?`<div style="font-size:12px;font-weight:600;color:var(--amber);margin-bottom:.5rem">🔥 ${streak} meses consecutivos!</div>`:''}<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px"><div class="stat-card" style="padding:8px 10px"><div class="slabel">Acumulado</div><div style="font-size:12px;font-weight:700;color:var(--eko-green)">${fmt(g)}</div></div><div class="stat-card" style="padding:8px 10px"><div class="slabel">Faltante</div><div style="font-size:12px;font-weight:700;color:var(--amber)">${fmt(f)}</div></div><div class="stat-card" style="padding:8px 10px"><div class="slabel">Por mês</div><div style="font-size:12px;font-weight:700">${fmt(meta.mensal)}</div></div></div>`;
+    c.innerHTML=`<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:.5rem"><div style="display:flex;align-items:center;gap:8px"><span style="font-size:24px">${esc(meta.catIcon||'🎯')}</span><div><div style="font-size:15px;font-weight:800">${esc(meta.nome)}</div><div style="font-size:11px;color:var(--text-muted)">${esc(meta.catNome||'Outro')}</div></div></div><span class="badge ${st==='concluida'?'badge-green':st==='atrasada'?'badge-red':'badge-blue'}">${st==='concluida'?'✅ Concluída':st==='atrasada'?'⚠️ Atrasada':'🎯 Ativa'}</span></div><div class="prog-bg" style="height:7px;margin-bottom:5px"><div class="prog-fill" style="width:${pct}%"></div></div><div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-muted);margin-bottom:.75rem"><span>${pct}% concluído</span><span>${fmt(g)} de ${fmt(meta.meta)}</span></div>${streak>=2?`<div style="font-size:12px;font-weight:600;color:var(--amber);margin-bottom:.5rem">🔥 ${streak} meses consecutivos!</div>`:''}<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px"><div class="stat-card" style="padding:8px 10px"><div class="slabel">Acumulado</div><div style="font-size:12px;font-weight:700;color:var(--eko-green)">${fmt(g)}</div></div><div class="stat-card" style="padding:8px 10px"><div class="slabel">Faltante</div><div style="font-size:12px;font-weight:700;color:var(--amber)">${fmt(f)}</div></div><div class="stat-card" style="padding:8px 10px"><div class="slabel">Por mês</div><div style="font-size:12px;font-weight:700">${fmt(meta.mensal)}</div></div></div>`;
     c.onclick=()=>abrirMetaDetalhe(meta._id);lista.appendChild(c);
   });
   // Botão "Carregar mais"
@@ -2731,7 +2771,7 @@ function renderMetaDetalhe(){
     const icons2={pago:'✅',parcial:'⚠️',pendente:'⏳',atrasado:'🔴',extra:'⭐'};
     const sub=dep.pago?'Acumulado: '+fmt(dep.valor):'Previsto: '+fmt(meta.mensal);
     const item=document.createElement('div');item.className='mes-item '+st;
-    item.innerHTML=`<div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:7px;margin-bottom:3px;flex-wrap:wrap"><span style="font-size:13px;font-weight:700">Mês ${i+1} · dia ${meta.dia}</span><span class="badge badge-${st==='pago'||st==='extra'?'green':st==='parcial'?'amber':st==='atrasado'?'red':'gray'}">${icons2[st]} ${labels[st]}</span></div><div style="font-size:12px;color:var(--text-muted)">${fmtMes(meta.inicio,i)} · ${sub}</div></div><button class="btn btn-sm ${dep.pago?'':'btn-primary'}" onclick="abrirDeposito(${i})">${dep.pago?'✓ Editar':'Depositar'}</button>`;
+    item.innerHTML=`<div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:7px;margin-bottom:3px;flex-wrap:wrap"><span style="font-size:13px;font-weight:700">Mês ${i+1} · dia ${meta.dia}</span><span class="badge badge-${st==='pago'||st==='extra'?'green':st==='parcial'?'amber':st==='atrasado'?'red':'gray'}">${icons2[st]} ${labels[st]}</span></div><div style="font-size:12px;color:var(--text-muted)">${fmtMes(meta.inicio,i)} · ${esc(sub)}</div></div><button class="btn btn-sm ${dep.pago?'':'btn-primary'}" onclick="abrirDeposito(${i})">${dep.pago?'✓ Editar':'Depositar'}</button>`;
     lista.appendChild(item);
   });
 }
@@ -2871,7 +2911,7 @@ async function renderDividas(){
     const stLabel={emdia:'✅ Em dia',atrasada:'🔴 Atrasada',vencendo:'⚠️ Vencendo',pendente:'⏳ Pendente'}[st]||'⏳ Pendente';
     const stBadge={emdia:'badge-green',atrasada:'badge-red',vencendo:'badge-amber',pendente:'badge-gray'}[st]||'badge-gray';
     const c=document.createElement('div');c.className='divida-card '+(idx===0&&dividas.length>1?'prioridade1 ':'')+st;
-    c.innerHTML=`<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:.625rem"><div style="display:flex;align-items:center;gap:8px"><span style="font-size:22px">${div.tipoIcon||'💳'}</span><div><div style="font-size:15px;font-weight:800">${div.nome}</div><div style="font-size:11px;color:var(--text-muted)">${div.credor||''}</div></div></div><div style="display:flex;align-items:center;gap:6px"><span class="badge ${stBadge}">${stLabel}</span><button onclick="excluirDivida('${div._id}')" style="background:none;border:none;cursor:pointer;font-size:16px;padding:2px;color:var(--text-muted)" title="Excluir">🗑️</button></div></div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:.75rem"><div class="stat-card" style="padding:8px 10px"><div class="slabel">Parcela/mês</div><div style="font-size:12px;font-weight:700">${fmt(div.parcela)}</div></div><div class="stat-card" style="padding:8px 10px"><div class="slabel">Parcelas restantes</div><div style="font-size:12px;font-weight:700">${div.parcelasRestantes||0}x</div></div><div class="stat-card" style="padding:8px 10px"><div class="slabel">Juros</div><div style="font-size:12px;font-weight:700;color:var(--red)">${div.juros||0}% a.m.</div></div></div><div style="display:flex;justify-content:space-between;align-items:center"><div style="font-size:12px;color:var(--text-muted)">💰 <strong>A pagar: ${fmt(total)}</strong> · Vence dia ${div.vencimento||'--'}</div><button class="btn btn-sm btn-primary" onclick="abrirPagamento('${div._id}')">Registrar pagamento</button></div>`;
+    c.innerHTML=`<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:.625rem"><div style="display:flex;align-items:center;gap:8px"><span style="font-size:22px">${esc(div.tipoIcon||'💳')}</span><div><div style="font-size:15px;font-weight:800">${esc(div.nome)}</div><div style="font-size:11px;color:var(--text-muted)">${esc(div.credor||'')}</div></div></div><div style="display:flex;align-items:center;gap:6px"><span class="badge ${stBadge}">${stLabel}</span><button onclick="excluirDivida('${div._id}')" style="background:none;border:none;cursor:pointer;font-size:16px;padding:2px;color:var(--text-muted)" title="Excluir">🗑️</button></div></div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:.75rem"><div class="stat-card" style="padding:8px 10px"><div class="slabel">Parcela/mês</div><div style="font-size:12px;font-weight:700">${fmt(div.parcela)}</div></div><div class="stat-card" style="padding:8px 10px"><div class="slabel">Parcelas restantes</div><div style="font-size:12px;font-weight:700">${div.parcelasRestantes||0}x</div></div><div class="stat-card" style="padding:8px 10px"><div class="slabel">Juros</div><div style="font-size:12px;font-weight:700;color:var(--red)">${div.juros||0}% a.m.</div></div></div><div style="display:flex;justify-content:space-between;align-items:center"><div style="font-size:12px;color:var(--text-muted)">💰 <strong>A pagar: ${fmt(total)}</strong> · Vence dia ${div.vencimento||'--'}</div><button class="btn btn-sm btn-primary" onclick="abrirPagamento('${div._id}')">Registrar pagamento</button></div>`;
     lista.appendChild(c);
   });
 }
@@ -2912,7 +2952,7 @@ window.salvarDivida=async function(){
 };
 window.excluirDivida=async function(id){
   if(!confirm('Excluir esta dívida?'))return;
-  try{const{deleteDoc:dd,doc:dr}=await import('https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js');await dd(dr(db,'dividas',id));}catch(e){const dividas=await getDividas();const div=dividas.find(d=>d._id===id);if(div){div.excluida=true;await saveDivida2(div);}}
+  try{await deleteDoc(doc(db,'dividas',id));}catch(e){const dividas=await getDividas();const div=dividas.find(d=>d._id===id);if(div){div.excluida=true;await saveDivida2(div);}}
   await renderDividas();toast('🗑️ Dívida excluída.');await renderProntuario();
 };
 
@@ -3001,7 +3041,7 @@ async function renderObjetivos(){
       <div class="prog-bg" style="height:6px"><div class="prog-fill" style="width:${pctAcum}%"></div></div>
     </div>` : '';
     const c=document.createElement('div');c.className='card';
-    c.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.625rem"><div style="font-size:15px;font-weight:800;flex:1;margin-right:8px">${obj.nome}</div><div style="display:flex;align-items:center;gap:6px"><div style="font-size:18px;font-weight:800;color:var(--eko-green);white-space:nowrap">${fmt(obj.pmt||0)}<span style="font-size:11px;font-weight:500;color:var(--text-muted)">/mês</span></div><button onclick="editarObjetivo('${obj._id}')" style="background:none;border:none;cursor:pointer;font-size:15px;color:var(--text-muted)">✏️</button><button onclick="excluirObjetivo('${obj._id}')" style="background:none;border:none;cursor:pointer;font-size:15px;color:var(--text-muted)">🗑️</button></div></div><div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-bottom:.625rem"><div class="stat-card" style="padding:8px 10px"><div class="slabel">Meta</div><div style="font-size:12px;font-weight:700">${fmt(obj.valor||0)}</div></div><div class="stat-card" style="padding:8px 10px"><div class="slabel">Prazo</div><div style="font-size:12px;font-weight:700">${prazoStr}</div></div></div>${barraAcum}<div style="font-size:12px;color:var(--text-muted);margin-bottom:.625rem">📅 Conclusão estimada: ${conclusao}</div>${obj.obs?`<div style="font-size:12px;color:var(--text-muted);margin-bottom:.625rem">📝 ${obj.obs}</div>`:''}<button class="btn btn-sm" style="width:100%;margin-top:4px" onclick="gerarMetaDeObjetivo('${obj._id}')">🎯 Criar meta financeira para este objetivo</button>`;
+    c.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.625rem"><div style="font-size:15px;font-weight:800;flex:1;margin-right:8px">${esc(obj.nome)}</div><div style="display:flex;align-items:center;gap:6px"><div style="font-size:18px;font-weight:800;color:var(--eko-green);white-space:nowrap">${fmt(obj.pmt||0)}<span style="font-size:11px;font-weight:500;color:var(--text-muted)">/mês</span></div><button onclick="editarObjetivo('${obj._id}')" style="background:none;border:none;cursor:pointer;font-size:15px;color:var(--text-muted)">✏️</button><button onclick="excluirObjetivo('${obj._id}')" style="background:none;border:none;cursor:pointer;font-size:15px;color:var(--text-muted)">🗑️</button></div></div><div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-bottom:.625rem"><div class="stat-card" style="padding:8px 10px"><div class="slabel">Meta</div><div style="font-size:12px;font-weight:700">${fmt(obj.valor||0)}</div></div><div class="stat-card" style="padding:8px 10px"><div class="slabel">Prazo</div><div style="font-size:12px;font-weight:700">${prazoStr}</div></div></div>${barraAcum}<div style="font-size:12px;color:var(--text-muted);margin-bottom:.625rem">📅 Conclusão estimada: ${conclusao}</div>${obj.obs?`<div style="font-size:12px;color:var(--text-muted);margin-bottom:.625rem">📝 ${esc(obj.obs)}</div>`:''}<button class="btn btn-sm" style="width:100%;margin-top:4px" onclick="gerarMetaDeObjetivo('${obj._id}')">🎯 Criar meta financeira para este objetivo</button>`;
     lista.appendChild(c);
   });
 }
@@ -3018,19 +3058,46 @@ window.salvarObjetivo=async function(){
 
 // ── Navegação Fase 2 ──────────────────────────────────────
 async function renderJornada(diags){
-  const ciclo=diags.find(d=>d.tipo==='ciclo');const indep=diags.find(d=>d.tipo==='independencia');const casal=diags.find(d=>d.tipo==='casal');
-  let metas=[],dividas=[],sims=[];try{metas=await getMetas();}catch(e){} try{dividas=await getDividas();}catch(e){} try{sims=await getSimulacoes();}catch(e){}
+  const ciclo=diags.find(d=>d.tipo==='ciclo');
+  const indep=diags.find(d=>d.tipo==='independencia');
+  let metas=[],dividas=[],sims=[],reserva=null,objetivos=[],lancamentos=[];
+  try{metas=await getMetas();}catch(e){}
+  try{dividas=await getDividas();}catch(e){}
+  try{sims=await getSimulacoes();}catch(e){}
+  try{objetivos=await getObjetivos();}catch(e){}
+  try{
+    const snap=await getDoc(doc(db,'reserva',sessao.email));
+    if(snap.exists()) reserva=snap.data();
+  }catch(e){}
+  try{
+    const q=query(collection(db,'controle'),where('email','==',sessao.email));
+    const snap=await getDocs(q);
+    lancamentos=snap.docs.map(d=>d.data());
+  }catch(e){}
+
   const itens=[
     {num:'1',txt:'Fazer diagnóstico Ciclo Financeiro',done:!!ciclo,acao:"abrirDiagnosticos()"},
     {num:'2',txt:'Fazer diagnóstico Independência Financeira',done:!!indep,acao:"abrirDiagnosticos()"},
-    {num:'3',txt:'Fazer diagnóstico Finanças a Dois',done:!!casal,acao:"abrirDiagnosticos()"},
-    {num:'4',txt:'Criar primeira meta financeira',done:metas.length>0,acao:"abrirMetas()"},
-    {num:'5',txt:'Organizar suas dívidas',done:dividas.length>0,acao:"abrirDividas()"},
-    {num:'6',txt:'Fazer simulação de aposentadoria',done:sims.some(s=>s.tipo==='aposentadoria'),acao:"abrirSimulacoes()"},
+    {num:'3',txt:'Organizar suas dívidas',done:dividas.length>0,acao:"abrirDividas()"},
+    {num:'4',txt:'Configurar sua reserva de emergência',done:!!reserva,acao:"abrirReserva()"},
+    {num:'5',txt:'Criar primeira meta financeira',done:metas.length>0,acao:"abrirMetas()"},
+    {num:'6',txt:'Definir um objetivo de longo prazo',done:objetivos.length>0,acao:"abrirObjetivos()"},
+    {num:'7',txt:'Fazer simulação de aposentadoria',done:sims.some(s=>s.tipo==='aposentadoria'),acao:"abrirSimulacoes()"},
+    {num:'8',txt:'Registrar primeiro lançamento no Controle',done:lancamentos.length>0,acao:"abrirControleFinanceiro()"},
   ];
   const proximo=itens.find(i=>!i.done);
-  if(!proximo){document.getElementById('hub-jornada').innerHTML='';return;}
-  document.getElementById('hub-jornada').innerHTML=`<div class="section-title" style="margin-bottom:8px">📍 Próximo passo</div><div class="jornada-item" onclick="${proximo.acao}" style="cursor:pointer"><div class="jornada-num">${proximo.num}</div><div style="font-size:13px;font-weight:600;flex:1">${proximo.txt}</div><div style="font-size:16px;color:var(--eko-green)">→</div></div>`;
+  if(!proximo){
+    document.getElementById('hub-jornada').innerHTML=`<div class="jornada-item" style="background:var(--eko-green-light);border-color:var(--eko-green)"><div style="font-size:20px">🎉</div><div style="font-size:13px;font-weight:700;color:var(--eko-green-dark);flex:1">Jornada completa! Parabéns!</div></div>`;
+    return;
+  }
+  const concluidos=itens.filter(i=>i.done).length;
+  document.getElementById('hub-jornada').innerHTML=`
+    <div class="section-title" style="margin-bottom:8px">📍 Próximo passo <span style="font-size:11px;color:var(--text-muted);font-weight:500">${concluidos}/${itens.length}</span></div>
+    <div class="jornada-item" onclick="${proximo.acao}" style="cursor:pointer">
+      <div class="jornada-num">${proximo.num}</div>
+      <div style="font-size:13px;font-weight:600;flex:1">${proximo.txt}</div>
+      <div style="font-size:16px;color:var(--eko-green)">→</div>
+    </div>`;
 }
 
 window.abrirMetas=async function(){
@@ -3829,7 +3896,7 @@ function renderPainelReserva() {
       <div style="display:flex;align-items:center;justify-content:space-between;padding:.625rem 0;border-bottom:1px solid var(--border)">
         <div>
           <div style="font-size:13px;font-weight:700;color:${h.tipo === 'aporte' ? 'var(--eko-green)' : 'var(--red)'}">${h.tipo === 'aporte' ? '+ ' : '- '}${fmt(h.valor)}</div>
-          <div style="font-size:11px;color:var(--text-muted)">${h.descricao || h.motivo || ''} · ${new Date(h.data).toLocaleDateString('pt-BR')}</div>
+          <div style="font-size:11px;color:var(--text-muted)">${esc(h.descricao || h.motivo || '')} · ${new Date(h.data).toLocaleDateString('pt-BR')}</div>
         </div>
         <div style="font-size:20px">${h.tipo === 'aporte' ? '💰' : '📤'}</div>
       </div>`).join('');
@@ -3911,6 +3978,12 @@ window.salvarUsoReserva = async function() {
     showToast('Uso registrado. Lembre-se de reconstruir a reserva! 💪', 'warn');
     logEko('reserva_uso', { valor });
   } catch(e) { msg.textContent = 'Erro ao salvar.'; msg.className = 'msg error'; }
+};
+
+window.reservaVerEducativo = function() {
+  document.getElementById('reserva-onboarding').style.display = '';
+  document.getElementById('reserva-painel').style.display = 'none';
+  reservaStep(1);
 };
 
 window.reservaReconfigurar = function() {
@@ -4275,7 +4348,7 @@ Regras:
     const response = await fetch('/.netlify/functions/dica', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contexto })
+      body: JSON.stringify({ contexto, prompt })
     });
 
     const data = await response.json();
@@ -4741,7 +4814,7 @@ async function renderCarteiraControle() {
         const nome = cat ? cat.nome : id;
         const isReceita = (cats.receita||[]).some(c=>c.id===id);
         return `<div data-catid="${id}" class="cf-cat-item" style="display:flex;align-items:center;justify-content:space-between;padding:.625rem 0;border-bottom:1px solid var(--border);cursor:pointer">
-          <div style="font-size:14px;font-weight:600;pointer-events:none">${nome}</div>
+          <div style="font-size:14px;font-weight:600;pointer-events:none">${esc(nome)}</div>
           <div style="display:flex;align-items:center;gap:8px;pointer-events:none">
             <div style="font-size:14px;font-weight:800;color:${isReceita?'var(--eko-green)':'var(--red)'}">${isReceita?'+':'-'}${fmt(val)}</div>
             <div style="font-size:11px;color:var(--text-muted)">›</div>
@@ -4920,8 +4993,7 @@ function renderLancamentosCat(lancs, isReceita) {
 window.excluirLancamentoCF = async function(id) {
   if(!confirm('Excluir este lançamento?')) return;
   try {
-    const {deleteDoc, doc:docRef} = await import('https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js');
-    await deleteDoc(docRef(db,'controle',id));
+    await deleteDoc(doc(db,'controle',id));
   } catch(e) {
     // fallback: marca como excluído
     try {
@@ -4977,6 +5049,20 @@ async function cfSugerirLancamento(tipo, valor, categoriaId, categoriaNome) {
 // FEEDBACK
 // ════════════════════════════════════════════════
 let fbTipoAtual = 'bug';
+
+
+window.abrirIndicar = function() {
+  abrirOverlay('overlay-indicar');
+};
+
+window.indicarWhatsApp = function() {
+  const msg = encodeURIComponent('Ei! Estou usando a Eko Financeira para organizar minhas finanças. É gratuito e incrível! 🌱\n\nAcessa aqui: https://app.ekofinanceira.com.br');
+  window.open('https://wa.me/?text=' + msg, '_blank');
+};
+
+window.indicarInstagram = function() {
+  window.open('https://instagram.com/ekofinanceira', '_blank');
+};
 
 window.abrirFeedback = function() {
   fbTipoAtual = 'bug';
