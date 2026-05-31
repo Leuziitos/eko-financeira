@@ -630,6 +630,25 @@ html,body{height:100%;background:var(--bg);font-family:'Plus Jakarta Sans',sans-
   </div>
 </div>
 
+
+<!-- OVERLAY: Meta da Reserva -->
+<div id="overlay-reserva-meta" class="overlay hidden">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+      <div style="font-size:17px;font-weight:800">🎯 Criar meta da reserva</div>
+      <button onclick="fecharOverlay('overlay-reserva-meta')" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-muted)">✕</button>
+    </div>
+    <div id="res-meta-info" style="background:var(--eko-green-light);border:1px solid var(--eko-green);border-radius:12px;padding:.875rem;margin-bottom:1rem;font-size:13px;color:var(--eko-green-dark);line-height:1.6"></div>
+    <div style="margin-bottom:1.25rem">
+      <label style="font-size:12px;font-weight:700;color:var(--text-muted);display:block;margin-bottom:6px">QUANTO VOCÊ CONSEGUE GUARDAR POR MÊS?</label>
+      <input id="res-meta-mensal" type="text" inputmode="numeric" placeholder="R$ 0,00" class="input" oninput="window.applyMoneyMask(this)" style="font-size:20px;font-weight:800;text-align:center;padding:1rem">
+    </div>
+    <div id="res-meta-msg" class="msg"></div>
+    <button onclick="confirmarMetaReserva()" class="btn btn-primary" style="width:100%">Criar meta 🎯</button>
+  </div>
+</div>
+
 <!-- OVERLAY: Feedback -->
 <div id="overlay-feedback" class="overlay hidden">
   <div class="sheet">
@@ -1222,6 +1241,10 @@ html,body{height:100%;background:var(--bg);font-family:'Plus Jakarta Sans',sans-
       <div id="res-aviso-metas" class="card" style="background:var(--amber-light);border:1px solid var(--amber);display:none">
         <div style="font-size:13px;font-weight:700;color:var(--amber);margin-bottom:.375rem">⚠️ Atenção</div>
         <div style="font-size:12px;color:var(--text-muted);line-height:1.6">Sua reserva ainda está incompleta. Considere priorizá-la antes de criar novas metas financeiras.</div>
+      </div>
+      <!-- Transformar em meta -->
+      <div id="res-btn-meta" style="margin-bottom:.75rem">
+        <button onclick="criarMetaReserva()" class="btn btn-primary" style="width:100%;font-size:13px;padding:.75rem">🎯 Transformar em meta financeira</button>
       </div>
       <!-- Entender + Reconfigurar + Excluir -->
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:.75rem">
@@ -3911,27 +3934,29 @@ function renderPainelReserva() {
     </div>
   `;
 
-  // Marcos
+  // Marcos — indicador compacto de fases
   const isClt = perfil === 'clt';
   const marcosOpcoes = isClt ? [1,3,6] : [3,6,12];
   const marcosEl = document.getElementById('res-marcos');
-  marcosEl.innerHTML = '';
-  marcosOpcoes.forEach(m => {
-    const valMarco = gastosMensais * m;
-    const pctMarco = Math.min(100, Math.round((saldoAtual / valMarco) * 100));
-    const concluido = saldoAtual >= valMarco;
-    marcosEl.innerHTML += `
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:.75rem">
-        <div style="width:28px;height:28px;border-radius:50%;background:${concluido ? 'var(--eko-green)' : 'var(--surface2)'};border:2px solid ${concluido ? 'var(--eko-green)' : 'var(--border)'};display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">${concluido ? '✓' : m}</div>
-        <div style="flex:1">
-          <div style="font-size:13px;font-weight:700">${m} ${m === 1 ? 'mês' : 'meses'} — ${fmt(valMarco)}</div>
-          <div style="background:var(--border);border-radius:99px;height:5px;margin-top:4px">
-            <div style="background:${concluido ? 'var(--eko-green)' : 'var(--eko-green)'};opacity:${concluido ? 1 : 0.5};height:5px;border-radius:99px;width:${pctMarco}%"></div>
-          </div>
-        </div>
-        <div style="font-size:12px;font-weight:700;color:${concluido ? 'var(--eko-green)' : 'var(--text-muted)'}">${concluido ? '✅' : pctMarco + '%'}</div>
-      </div>`;
-  });
+  const faseAtual = marcosOpcoes.filter(m => saldoAtual >= gastosMensais * m).length;
+  const labels = isClt
+    ? ['1 mês','3 meses','6 meses']
+    : ['3 meses','6 meses','12 meses'];
+  const icons = ['🔴','🟡','🟢'];
+  marcosEl.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:4px">
+      ${marcosOpcoes.map((m, i) => {
+        const concluido = saldoAtual >= gastosMensais * m;
+        const atual = faseAtual === i;
+        return `<div style="flex:1;text-align:center;padding:.5rem .25rem;border-radius:10px;background:${concluido ? 'var(--eko-green-light)' : atual ? 'var(--surface2)' : 'var(--surface)'};border:1.5px solid ${concluido ? 'var(--eko-green)' : atual ? 'var(--border-strong)' : 'var(--border)'}">
+          <div style="font-size:18px">${concluido ? '✅' : icons[i]}</div>
+          <div style="font-size:11px;font-weight:700;color:${concluido ? 'var(--eko-green-dark)' : 'var(--text-muted)'};margin-top:2px">${labels[i]}</div>
+          <div style="font-size:10px;color:var(--text-hint);margin-top:1px">${fmt(gastosMensais * m)}</div>
+        </div>`;
+      }).join('<div style="font-size:14px;color:var(--border-strong);align-self:center">›</div>')}
+    </div>
+    ${faseAtual < marcosOpcoes.length ? `<div style="font-size:12px;color:var(--text-muted);margin-top:.625rem;text-align:center">Próxima fase: <strong>${labels[faseAtual]}</strong> — ${fmt(gastosMensais * marcosOpcoes[faseAtual])}</div>` : '<div style="font-size:12px;color:var(--eko-green);margin-top:.625rem;text-align:center;font-weight:700">🎉 Todas as fases concluídas!</div>'}
+  `;
 
   // Histórico
   const hist = (historico || []).slice().reverse().slice(0, 10);
@@ -3952,6 +3977,10 @@ function renderPainelReserva() {
   // Aviso metas
   const avisoMetas = document.getElementById('res-aviso-metas');
   if (avisoMetas) avisoMetas.style.display = pct < 100 ? '' : 'none';
+
+  // Botão "transformar em meta" — só aparece se reserva incompleta
+  const btnMeta = document.getElementById('res-btn-meta');
+  if (btnMeta) btnMeta.style.display = pct < 100 ? '' : 'none';
 }
 
 function calcAporteMedioReserva(historico) {
@@ -4025,6 +4054,81 @@ window.salvarUsoReserva = async function() {
   try { renderPainelReserva(); } catch(e) { console.error('renderPainel uso', e); }
   try { atualizarHubReserva(); } catch(e) {}
   try { logEko('reserva_uso', { valor }); } catch(e) {}
+};
+
+
+window.criarMetaReserva = function() {
+  if (!reservaConfig) return;
+  const { saldoAtual, meta, gastosMensais, mesesCobertura } = reservaConfig;
+  const faltante = Math.max(0, meta - saldoAtual);
+
+  if (faltante <= 0) {
+    toast('Sua reserva já está completa! 🎉');
+    return;
+  }
+
+  // Calcular mensal sugerido pelo histórico
+  const aporteMedio = calcAporteMedioReserva(reservaConfig.historico || []);
+  const mensal = aporteMedio > 0 ? aporteMedio : 0;
+  const prazo = mensal > 0 ? Math.ceil(faltante / mensal) : null;
+
+  // Preencher info
+  const infoEl = document.getElementById('res-meta-info');
+  infoEl.innerHTML = `
+    <div style="font-weight:800;margin-bottom:.375rem">🛡️ Reserva de Emergência</div>
+    <div>Valor faltante: <strong>${fmt(faltante)}</strong></div>
+    ${mensal > 0 ? `<div>Aporte médio atual: <strong>${fmt(mensal)}/mês</strong> → completa em ~${prazo} ${prazo===1?'mês':'meses'}</div>` : '<div style="color:var(--amber)">Sem histórico de aportes — informe um valor mensal</div>'}
+  `;
+
+  // Pré-preencher mensal se tiver histórico
+  const input = document.getElementById('res-meta-mensal');
+  input.value = mensal > 0 ? fmtInput(mensal) : '';
+  document.getElementById('res-meta-msg').textContent = '';
+  document.getElementById('res-meta-msg').className = 'msg';
+
+  abrirOverlay('overlay-reserva-meta');
+};
+
+window.confirmarMetaReserva = async function() {
+  if (!reservaConfig) return;
+  const msg = document.getElementById('res-meta-msg');
+  const mensal = parseMoney(document.getElementById('res-meta-mensal').value);
+  if (!mensal || mensal <= 0) {
+    msg.textContent = 'Informe um valor mensal.';
+    msg.className = 'msg error';
+    return;
+  }
+
+  const { saldoAtual, meta } = reservaConfig;
+  const faltante = Math.max(0, meta - saldoAtual);
+  const meses = Math.ceil(faltante / mensal);
+  const inicio = new Date().toISOString().slice(0, 7);
+
+  const novaMeta = {
+    nome: '🛡️ Reserva de Emergência',
+    meta: faltante,
+    meses,
+    dia: 1,
+    inicio,
+    mensal,
+    catIcon: '🛡️',
+    catNome: 'Reserva',
+    saldoExtra: 0,
+    depositos: Array(meses).fill(null).map(() => ({pago:false, parcial:false, extra:false, valor:0})),
+    email: sessao.email,
+    origemReserva: true,
+  };
+
+  try {
+    msg.textContent = 'Criando meta...'; msg.className = 'msg';
+    await saveMeta2(novaMeta);
+    fecharOverlay('overlay-reserva-meta');
+    toast('Meta criada! 🎯 Veja em Metas Financeiras.');
+    logEko('reserva_meta_criada', { mensal, meses });
+  } catch(e) {
+    msg.textContent = 'Erro ao criar meta. Tente novamente.';
+    msg.className = 'msg error';
+  }
 };
 
 window.excluirReserva = async function() {
