@@ -3648,8 +3648,10 @@ function mostrarOnboardingReserva() {
 
 function mostrarPainelReserva() {
   document.getElementById('reserva-onboarding').style.display = 'none';
-  document.getElementById('reserva-painel').style.display = '';
-  renderPainelReserva();
+  const painel = document.getElementById('reserva-painel');
+  painel.style.display = '';
+  // Aguarda o DOM atualizar antes de renderizar
+  setTimeout(() => renderPainelReserva(), 0);
 }
 
 window.reservaStep = function(step) {
@@ -3869,9 +3871,6 @@ window.salvarConfigReserva = async function() {
 
 function renderPainelReserva() {
   if (!reservaConfig) return;
-  if (!document.getElementById('res-status-card')) return;
-  if (!document.getElementById('res-marcos')) return;
-  if (!document.getElementById('res-historico')) return;
   const { saldoAtual, meta, mesesCobertura, gastosMensais, ondeGuardar, historico, perfil } = reservaConfig;
   const pct = Math.min(100, Math.round((saldoAtual / meta) * 100));
   const faltante = Math.max(0, meta - saldoAtual);
