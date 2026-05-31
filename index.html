@@ -3732,7 +3732,7 @@ window.selecionarFonteReserva = async function(fonte) {
       } else {
         input.value = '';
         hint.style.display = 'none';
-        showToast('Nenhum dado encontrado no Controle. Informe manualmente.', 'warn');
+        toast('Nenhum dado encontrado no Controle. Informe manualmente.');
       }
     } catch(e) { input.value = ''; }
   } else {
@@ -3857,7 +3857,7 @@ window.salvarConfigReserva = async function() {
     return;
   }
   // Salvo com sucesso
-  showToast('Reserva configurada! 🛡️');
+  toast('Reserva configurada! 🛡️');
   // Primeiro mostrar o painel (torna os elementos visíveis), depois renderizar
   try {
     document.getElementById('reserva-onboarding').style.display = 'none';
@@ -3988,7 +3988,7 @@ window.salvarAporteReserva = async function() {
     reservaConfig.historico = novoHistorico;
     fecharOverlay('overlay-reserva-aporte');
   } catch(e) { msg.textContent = 'Erro ao salvar.'; msg.className = 'msg error'; return; }
-  showToast('Aporte registrado! 💰');
+  toast('Aporte registrado! 💰');
   try { renderPainelReserva(); } catch(e) { console.error('renderPainel aporte', e); }
   try { atualizarHubReserva(); } catch(e) {}
   try { logEko('reserva_aporte', { valor }); } catch(e) {}
@@ -4021,7 +4021,7 @@ window.salvarUsoReserva = async function() {
     reservaConfig.historico = novoHistorico;
     fecharOverlay('overlay-reserva-uso');
   } catch(e) { msg.textContent = 'Erro ao salvar.'; msg.className = 'msg error'; return; }
-  showToast('Uso registrado. Lembre-se de reconstruir a reserva! 💪', 'warn');
+  toast('Uso registrado. Lembre-se de reconstruir a reserva! 💪');
   try { renderPainelReserva(); } catch(e) { console.error('renderPainel uso', e); }
   try { atualizarHubReserva(); } catch(e) {}
   try { logEko('reserva_uso', { valor }); } catch(e) {}
@@ -4035,10 +4035,10 @@ window.excluirReserva = async function() {
     mostrarOnboardingReserva();
     reservaStep(1);
     atualizarHubReserva();
-    showToast('Reserva excluída.');
+    toast('Reserva excluída.');
     logEko('reserva_excluida');
   } catch(e) {
-    showToast('Erro ao excluir. Tente novamente.', 'error');
+    toast('Erro ao excluir. Tente novamente.');
   }
 };
 
@@ -4540,7 +4540,7 @@ function parseMoney(str) {
   return parseFloat(s) || 0;
 }
 
-function applyMoneyMask(input) {
+window.applyMoneyMask = function applyMoneyMask(input) {
   let val = input.value.replace(/\D/g, '');
   if (!val) { input.value = ''; return; }
   val = (parseInt(val) / 100).toFixed(2);
