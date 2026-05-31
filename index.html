@@ -3851,11 +3851,15 @@ window.salvarConfigReserva = async function() {
     msg.textContent = 'Salvando...'; msg.className = 'msg';
     await setDoc(doc(db, 'reserva', sessao.email), config);
     reservaConfig = config;
-    showToast('Reserva configurada! 🛡️');
-    mostrarPainelReserva();
-    atualizarHubReserva();
-    logEko('reserva_configurada', { perfil: config.perfil, meta: config.meta });
-  } catch(e) { msg.textContent = 'Erro ao salvar. Tente novamente.'; msg.className = 'msg error'; }
+  } catch(e) {
+    msg.textContent = 'Erro ao salvar. Tente novamente.'; msg.className = 'msg error';
+    return;
+  }
+  // Salvo com sucesso — executar fora do try para não mascarar erros de UI
+  showToast('Reserva configurada! 🛡️');
+  try { mostrarPainelReserva(); } catch(e) { console.error('mostrarPainelReserva', e); }
+  try { atualizarHubReserva(); } catch(e) {}
+  try { logEko('reserva_configurada', { perfil: config.perfil, meta: config.meta }); } catch(e) {}
 };
 
 function renderPainelReserva() {
@@ -3977,11 +3981,11 @@ window.salvarAporteReserva = async function() {
     reservaConfig.saldoAtual = novoSaldo;
     reservaConfig.historico = novoHistorico;
     fecharOverlay('overlay-reserva-aporte');
-    renderPainelReserva();
-    atualizarHubReserva();
-    showToast('Aporte registrado! 💰');
-    logEko('reserva_aporte', { valor });
-  } catch(e) { msg.textContent = 'Erro ao salvar.'; msg.className = 'msg error'; }
+  } catch(e) { msg.textContent = 'Erro ao salvar.'; msg.className = 'msg error'; return; }
+  showToast('Aporte registrado! 💰');
+  try { renderPainelReserva(); } catch(e) { console.error('renderPainel aporte', e); }
+  try { atualizarHubReserva(); } catch(e) {}
+  try { logEko('reserva_aporte', { valor }); } catch(e) {}
 };
 
 window.abrirOverlayUsarReserva = function() {
@@ -4010,11 +4014,11 @@ window.salvarUsoReserva = async function() {
     reservaConfig.saldoAtual = novoSaldo;
     reservaConfig.historico = novoHistorico;
     fecharOverlay('overlay-reserva-uso');
-    renderPainelReserva();
-    atualizarHubReserva();
-    showToast('Uso registrado. Lembre-se de reconstruir a reserva! 💪', 'warn');
-    logEko('reserva_uso', { valor });
-  } catch(e) { msg.textContent = 'Erro ao salvar.'; msg.className = 'msg error'; }
+  } catch(e) { msg.textContent = 'Erro ao salvar.'; msg.className = 'msg error'; return; }
+  showToast('Uso registrado. Lembre-se de reconstruir a reserva! 💪', 'warn');
+  try { renderPainelReserva(); } catch(e) { console.error('renderPainel uso', e); }
+  try { atualizarHubReserva(); } catch(e) {}
+  try { logEko('reserva_uso', { valor }); } catch(e) {}
 };
 
 window.excluirReserva = async function() {
