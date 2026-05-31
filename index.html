@@ -47,7 +47,7 @@ html,body{height:100%;background:var(--bg);font-family:'Plus Jakarta Sans',sans-
 @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 
 /* theme toggle */
-.theme-toggle{position:fixed;top:1rem;right:1rem;z-index:500;width:38px;height:38px;border-radius:50%;background:var(--surface);border:1px solid var(--border);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:var(--shadow);transition:all .2s}
+.theme-toggle{position:fixed;top:1rem;right:4.5rem;z-index:500;width:38px;height:38px;border-radius:50%;background:var(--surface);border:1px solid var(--border);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:var(--shadow);transition:all .2s}
 .theme-toggle:hover{transform:scale(1.1)}
 
 /* topbar */
@@ -703,6 +703,10 @@ html,body{height:100%;background:var(--bg);font-family:'Plus Jakarta Sans',sans-
     </div>
 
     <div class="pront-section">
+      <div class="pront-label">🛡️ Reserva de Emergência</div>
+      <div id="pront-reserva-resumo" class="pront-empty">Reserva não configurada</div>
+    </div>
+    <div class="pront-section">
       <div class="pront-label">🎯 Metas Financeiras</div>
       <div id="pront-metas-resumo" class="pront-empty">Nenhuma meta ainda</div>
     </div>
@@ -1219,11 +1223,12 @@ html,body{height:100%;background:var(--bg);font-family:'Plus Jakarta Sans',sans-
         <div style="font-size:13px;font-weight:700;color:var(--amber);margin-bottom:.375rem">⚠️ Atenção</div>
         <div style="font-size:12px;color:var(--text-muted);line-height:1.6">Sua reserva ainda está incompleta. Considere priorizá-la antes de criar novas metas financeiras.</div>
       </div>
-      <!-- Entender + Reconfigurar -->
+      <!-- Entender + Reconfigurar + Excluir -->
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:.75rem">
         <button onclick="reservaVerEducativo()" class="btn" style="background:var(--surface);border:1px solid var(--border);color:var(--text-muted);font-size:13px;padding:.75rem">📚 Entender sobre reserva</button>
         <button onclick="reservaReconfigurar()" class="btn" style="background:var(--surface);border:1px solid var(--border);color:var(--text-muted);font-size:13px;padding:.75rem">⚙️ Reconfigurar</button>
       </div>
+      <button onclick="excluirReserva()" class="btn" style="width:100%;margin-top:8px;background:var(--red-light);border:1px solid var(--red);color:var(--red);font-size:13px;padding:.75rem">🗑️ Excluir reserva</button>
     </div>
   </div>
 </div>
@@ -2098,6 +2103,27 @@ async function renderProntuario() {
       elDiv.innerHTML = `<div class="pront-item-left"><div class="pront-item-icon">${icon}</div><div><div class="pront-item-title">${esc(nome)}</div><div class="pront-item-sub">Não realizado — toque para iniciar</div></div></div><span style="color:var(--eko-green);font-size:14px">→</span>`;
     }
   });
+
+  // Reserva de Emergência no prontuário
+  try {
+    const snapRes = await getDoc(doc(db, 'reserva', sessao.email));
+    const elRes = document.getElementById('pront-reserva-resumo');
+    if (elRes) {
+      if (snapRes.exists()) {
+        const r = snapRes.data();
+        const pct = Math.min(100, Math.round(((r.saldoAtual||0) / r.meta) * 100));
+        const completa = pct >= 100;
+        elRes.className = 'pront-item';
+        elRes.innerHTML = `<div class="pront-item-left"><div class="pront-item-icon">🛡️</div><div>
+          <div class="pront-item-title">${completa ? 'Reserva completa! 🎉' : pct + '% da meta'}</div>
+          <div class="pront-item-sub">${fmt(r.saldoAtual||0)} de ${fmt(r.meta)} · ${r.mesesCobertura} meses</div>
+        </div></div><span class="badge ${completa ? 'badge-green' : pct >= 50 ? 'badge-amber' : 'badge-red'}">${pct}%</span>`;
+      } else {
+        elRes.className = 'pront-empty';
+        elRes.innerHTML = 'Reserva não configurada';
+      }
+    }
+  } catch(e) {}
 
   // fase 2 data
   try {
@@ -3989,6 +4015,21 @@ window.salvarUsoReserva = async function() {
     showToast('Uso registrado. Lembre-se de reconstruir a reserva! 💪', 'warn');
     logEko('reserva_uso', { valor });
   } catch(e) { msg.textContent = 'Erro ao salvar.'; msg.className = 'msg error'; }
+};
+
+window.excluirReserva = async function() {
+  if (!confirm('Tem certeza que deseja excluir sua reserva de emergência? Todo o histórico será perdido.')) return;
+  try {
+    await deleteDoc(doc(db, 'reserva', sessao.email));
+    reservaConfig = null;
+    mostrarOnboardingReserva();
+    reservaStep(1);
+    atualizarHubReserva();
+    showToast('Reserva excluída.');
+    logEko('reserva_excluida');
+  } catch(e) {
+    showToast('Erro ao excluir. Tente novamente.', 'error');
+  }
 };
 
 window.reservaVerEducativo = function() {
