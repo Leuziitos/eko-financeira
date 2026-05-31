@@ -3855,15 +3855,23 @@ window.salvarConfigReserva = async function() {
     msg.textContent = 'Erro ao salvar. Tente novamente.'; msg.className = 'msg error';
     return;
   }
-  // Salvo com sucesso — executar fora do try para não mascarar erros de UI
+  // Salvo com sucesso
   showToast('Reserva configurada! 🛡️');
-  try { mostrarPainelReserva(); } catch(e) { console.error('mostrarPainelReserva', e); }
+  // Primeiro mostrar o painel (torna os elementos visíveis), depois renderizar
+  try {
+    document.getElementById('reserva-onboarding').style.display = 'none';
+    document.getElementById('reserva-painel').style.display = '';
+    renderPainelReserva();
+  } catch(e) { console.error('mostrarPainelReserva', e); }
   try { atualizarHubReserva(); } catch(e) {}
   try { logEko('reserva_configurada', { perfil: config.perfil, meta: config.meta }); } catch(e) {}
 };
 
 function renderPainelReserva() {
   if (!reservaConfig) return;
+  if (!document.getElementById('res-status-card')) return;
+  if (!document.getElementById('res-marcos')) return;
+  if (!document.getElementById('res-historico')) return;
   const { saldoAtual, meta, mesesCobertura, gastosMensais, ondeGuardar, historico, perfil } = reservaConfig;
   const pct = Math.min(100, Math.round((saldoAtual / meta) * 100));
   const faltante = Math.max(0, meta - saldoAtual);
