@@ -564,6 +564,11 @@ html,body{height:100%;background:var(--bg);font-family:'Plus Jakarta Sans',sans-
         <div class="hub-card-title">Controle Financeiro</div>
         <div class="hub-card-sub" id="hub-controle-sub">Receitas e gastos</div>
       </div>
+      <div class="hub-card" onclick="abrirReserva()">
+        <div class="hub-card-icon">🛡️</div>
+        <div class="hub-card-title">Reserva de Emergência</div>
+        <div class="hub-card-sub" id="hub-reserva-sub">Sua proteção financeira</div>
+      </div>
       <div class="hub-card" onclick="abrirPlanilha()">
         <div class="hub-card-icon">📊</div>
         <div class="hub-card-title">Planilha Excel</div>
@@ -801,6 +806,10 @@ html,body{height:100%;background:var(--bg);font-family:'Plus Jakarta Sans',sans-
     <div style="margin-bottom:1.25rem">
       <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Módulo</div>
       <div style="font-size:22px;font-weight:800">🎯 Metas Financeiras</div>
+    </div>
+    <div id="metas-aviso-reserva" style="display:none;background:var(--amber-light);border:1px solid var(--amber);border-radius:12px;padding:.875rem;margin-bottom:1rem;cursor:pointer" onclick="abrirReserva()">
+      <div style="font-size:13px;font-weight:700;color:var(--amber)">⚠️ Sua reserva de emergência está incompleta</div>
+      <div style="font-size:12px;color:var(--text-muted);margin-top:2px;line-height:1.5">Considere priorizá-la antes de criar novas metas. Toque para configurar. →</div>
     </div>
     <div id="metas-resumo" style="margin-bottom:1rem"></div>
     <div id="metas-lista"></div>
@@ -1041,6 +1050,190 @@ html,body{height:100%;background:var(--bg);font-family:'Plus Jakarta Sans',sans-
 </div>
 
 <!-- ════ FASE 3: PLANILHA ════════════════════════════════ -->
+
+<!-- ════ RESERVA DE EMERGÊNCIA ═══════════════════════════════ -->
+<div id="screen-reserva" class="screen">
+  <div class="topbar">
+    <button class="back-btn" onclick="ir('screen-hub')">← Voltar</button>
+    <button class="user-pill" onclick="logout()">Sair</button>
+  </div>
+  <div class="content">
+    <div style="margin-bottom:1.25rem">
+      <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Módulo</div>
+      <div style="font-size:22px;font-weight:800">🛡️ Reserva de Emergência</div>
+      <div style="font-size:13px;color:var(--text-muted);margin-top:4px">Sua proteção financeira para imprevistos</div>
+    </div>
+
+    <!-- Onboarding (aparece só se não configurou) -->
+    <div id="reserva-onboarding">
+      <!-- Step 1 -->
+      <div id="reserva-step-1" class="card" style="text-align:center;padding:1.5rem">
+        <div style="font-size:48px;margin-bottom:1rem">🛡️</div>
+        <div style="font-size:18px;font-weight:800;margin-bottom:.75rem">O que é uma reserva de emergência?</div>
+        <div style="font-size:14px;color:var(--text-muted);line-height:1.7;margin-bottom:1.25rem">É um valor guardado <strong>exclusivamente para imprevistos</strong>: perda de emprego, doença, carro quebrado. <strong>Não é para sonhos — é para sobreviver sem se endividar.</strong></div>
+        <div style="background:var(--red-light);border:1px solid var(--red);border-radius:12px;padding:1rem;margin-bottom:1.25rem">
+          <div style="font-size:13px;color:var(--red);font-weight:700">⚠️ Sem reserva, qualquer imprevisto vira dívida</div>
+        </div>
+        <button onclick="reservaStep(2)" class="btn btn-primary" style="width:100%">Entender mais →</button>
+      </div>
+      <!-- Step 2 -->
+      <div id="reserva-step-2" class="card" style="text-align:center;padding:1.5rem;display:none">
+        <div style="font-size:48px;margin-bottom:1rem">📅</div>
+        <div style="font-size:18px;font-weight:800;margin-bottom:.75rem">Quanto devo guardar?</div>
+        <div style="font-size:14px;color:var(--text-muted);line-height:1.7;margin-bottom:1rem">Depende do seu perfil:</div>
+        <div style="display:grid;gap:8px;margin-bottom:1.25rem">
+          <div style="background:var(--eko-green-light);border:1px solid var(--eko-green);border-radius:12px;padding:.875rem;text-align:left">
+            <div style="font-size:13px;font-weight:800;color:var(--eko-green-dark)">👔 CLT / Empregado formal</div>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:2px">3 a 6 meses de gastos essenciais</div>
+          </div>
+          <div style="background:var(--amber-light);border:1px solid var(--amber);border-radius:12px;padding:.875rem;text-align:left">
+            <div style="font-size:13px;font-weight:800;color:var(--amber)">💼 Autônomo / Freelancer</div>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:2px">6 a 12 meses de gastos essenciais</div>
+          </div>
+          <div style="background:var(--purple-light);border:1px solid var(--purple);border-radius:12px;padding:.875rem;text-align:left">
+            <div style="font-size:13px;font-weight:800;color:var(--purple)">🏢 Empresário / PJ</div>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:2px">6 a 12 meses de gastos essenciais</div>
+          </div>
+        </div>
+        <button onclick="reservaStep(3)" class="btn btn-primary" style="width:100%">Onde guardar? →</button>
+        <button onclick="reservaStep(1)" class="btn" style="width:100%;margin-top:8px;background:var(--surface);border:1px solid var(--border)">← Voltar</button>
+      </div>
+      <!-- Step 3 -->
+      <div id="reserva-step-3" class="card" style="text-align:center;padding:1.5rem;display:none">
+        <div style="font-size:48px;margin-bottom:1rem">🏦</div>
+        <div style="font-size:18px;font-weight:800;margin-bottom:.75rem">Onde guardar?</div>
+        <div style="font-size:14px;color:var(--text-muted);line-height:1.7;margin-bottom:1rem">A reserva precisa ser <strong>segura, líquida e rentável</strong>:</div>
+        <div style="display:grid;gap:8px;margin-bottom:1.25rem;text-align:left">
+          <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:.875rem">
+            <div style="font-size:13px;font-weight:800">🟢 Tesouro Selic</div>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:2px">100% seguro, rende ~100% CDI, resgate em 1 dia. <strong>Melhor opção.</strong></div>
+          </div>
+          <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:.875rem">
+            <div style="font-size:13px;font-weight:800">🟡 CDB 100% CDI</div>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:2px">Bom rendimento, seguro pelo FGC até R$250k.</div>
+          </div>
+          <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:.875rem">
+            <div style="font-size:13px;font-weight:800">🔴 Poupança</div>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:2px">Segura, mas rende menos. Use só como último recurso.</div>
+          </div>
+        </div>
+        <button onclick="reservaStep('config')" class="btn btn-primary" style="width:100%">Calcular minha reserva 🚀</button>
+        <button onclick="reservaStep(2)" class="btn" style="width:100%;margin-top:8px;background:var(--surface);border:1px solid var(--border)">← Voltar</button>
+      </div>
+      <!-- Step Config -->
+      <div id="reserva-step-config" class="card" style="display:none">
+        <div style="font-size:16px;font-weight:800;margin-bottom:1rem">⚙️ Configurar minha reserva</div>
+        <!-- Perfil -->
+        <div style="margin-bottom:1rem">
+          <label style="font-size:12px;font-weight:700;color:var(--text-muted);display:block;margin-bottom:8px">SEU PERFIL</label>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
+            <button id="res-perfil-clt" onclick="selecionarPerfilReserva('clt')" style="padding:.625rem;border-radius:10px;border:2px solid var(--eko-green);background:var(--eko-green-light);color:var(--eko-green-dark);font-weight:700;font-size:12px;cursor:pointer">👔 CLT</button>
+            <button id="res-perfil-autonomo" onclick="selecionarPerfilReserva('autonomo')" style="padding:.625rem;border-radius:10px;border:2px solid var(--border);background:var(--surface);color:var(--text-muted);font-weight:700;font-size:12px;cursor:pointer">💼 Autônomo</button>
+            <button id="res-perfil-empresario" onclick="selecionarPerfilReserva('empresario')" style="padding:.625rem;border-radius:10px;border:2px solid var(--border);background:var(--surface);color:var(--text-muted);font-weight:700;font-size:12px;cursor:pointer">🏢 PJ</button>
+          </div>
+        </div>
+        <!-- Gastos mensais -->
+        <div style="margin-bottom:1rem">
+          <label style="font-size:12px;font-weight:700;color:var(--text-muted);display:block;margin-bottom:6px">GASTOS MENSAIS ESSENCIAIS</label>
+          <div style="display:flex;gap:8px;margin-bottom:6px">
+            <button id="res-fonte-manual" onclick="selecionarFonteReserva('manual')" style="flex:1;padding:.5rem;border-radius:8px;border:2px solid var(--eko-green);background:var(--eko-green-light);color:var(--eko-green-dark);font-weight:700;font-size:12px;cursor:pointer">✏️ Informar</button>
+            <button id="res-fonte-controle" onclick="selecionarFonteReserva('controle')" style="flex:1;padding:.5rem;border-radius:8px;border:2px solid var(--border);background:var(--surface);color:var(--text-muted);font-weight:700;font-size:12px;cursor:pointer">📊 Do Controle</button>
+          </div>
+          <input id="res-gastos" type="text" inputmode="numeric" placeholder="R$ 0,00" class="input">
+          <div id="res-gastos-hint" style="font-size:11px;color:var(--text-muted);margin-top:4px;display:none">💡 Média dos últimos 3 meses carregada do Controle Financeiro</div>
+        </div>
+        <!-- Meses meta -->
+        <div style="margin-bottom:1rem">
+          <label style="font-size:12px;font-weight:700;color:var(--text-muted);display:block;margin-bottom:8px">MESES DE COBERTURA</label>
+          <div id="res-meses-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px"></div>
+        </div>
+        <!-- Onde guardar -->
+        <div style="margin-bottom:1.25rem">
+          <label style="font-size:12px;font-weight:700;color:var(--text-muted);display:block;margin-bottom:8px">ONDE VAI GUARDAR</label>
+          <div style="display:grid;gap:6px" id="res-onde-grid"></div>
+        </div>
+        <div id="res-config-msg" class="msg"></div>
+        <button onclick="salvarConfigReserva()" class="btn btn-primary" style="width:100%">Criar minha reserva 🛡️</button>
+        <button onclick="reservaStep(3)" class="btn" style="width:100%;margin-top:8px;background:var(--surface);border:1px solid var(--border)">← Voltar</button>
+      </div>
+    </div>
+
+    <!-- Painel principal (após configurar) -->
+    <div id="reserva-painel" style="display:none">
+      <!-- Status -->
+      <div id="res-status-card" class="card" style="text-align:center;padding:1.5rem;margin-bottom:.75rem"></div>
+      <!-- Marcos -->
+      <div class="card" style="margin-bottom:.75rem">
+        <div style="font-size:13px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.75rem">🏁 Marcos</div>
+        <div id="res-marcos"></div>
+      </div>
+      <!-- Ações -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:.75rem">
+        <button onclick="abrirOverlayAporteReserva()" class="btn btn-primary" style="padding:.75rem;font-size:13px">+ Registrar aporte</button>
+        <button onclick="abrirOverlayUsarReserva()" class="btn" style="padding:.75rem;font-size:13px;background:var(--red-light);color:var(--red);border:1px solid var(--red)">📤 Usei a reserva</button>
+      </div>
+      <!-- Histórico aportes -->
+      <div class="card" style="margin-bottom:.75rem">
+        <div style="font-size:13px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.75rem">📋 Histórico</div>
+        <div id="res-historico"></div>
+      </div>
+      <!-- Aviso sobre metas -->
+      <div id="res-aviso-metas" class="card" style="background:var(--amber-light);border:1px solid var(--amber);display:none">
+        <div style="font-size:13px;font-weight:700;color:var(--amber);margin-bottom:.375rem">⚠️ Atenção</div>
+        <div style="font-size:12px;color:var(--text-muted);line-height:1.6">Sua reserva ainda está incompleta. Considere priorizá-la antes de criar novas metas financeiras.</div>
+      </div>
+      <!-- Reconfigurar -->
+      <button onclick="reservaReconfigurar()" class="btn" style="width:100%;margin-top:.75rem;background:var(--surface);border:1px solid var(--border);color:var(--text-muted);font-size:13px">⚙️ Reconfigurar reserva</button>
+    </div>
+  </div>
+</div>
+
+<!-- OVERLAY: Registrar aporte reserva -->
+<div id="overlay-reserva-aporte" class="overlay hidden">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+      <div style="font-size:17px;font-weight:800">+ Registrar aporte</div>
+      <button onclick="fecharOverlay('overlay-reserva-aporte')" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-muted)">✕</button>
+    </div>
+    <div style="margin-bottom:1rem">
+      <label style="font-size:12px;font-weight:700;color:var(--text-muted);display:block;margin-bottom:6px">VALOR DO APORTE</label>
+      <input id="res-aporte-valor" type="text" inputmode="numeric" placeholder="R$ 0,00" class="input" style="font-size:20px;font-weight:800;text-align:center">
+    </div>
+    <div style="margin-bottom:1.25rem">
+      <label style="font-size:12px;font-weight:700;color:var(--text-muted);display:block;margin-bottom:6px">DESCRIÇÃO (opcional)</label>
+      <input id="res-aporte-desc" type="text" placeholder="Ex: Sobra do mês" class="input">
+    </div>
+    <div id="res-aporte-msg" class="msg"></div>
+    <button onclick="salvarAporteReserva()" class="btn btn-primary" style="width:100%">Salvar aporte</button>
+  </div>
+</div>
+
+<!-- OVERLAY: Usar reserva -->
+<div id="overlay-reserva-uso" class="overlay hidden">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem">
+      <div style="font-size:17px;font-weight:800">📤 Registrar uso</div>
+      <button onclick="fecharOverlay('overlay-reserva-uso')" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-muted)">✕</button>
+    </div>
+    <div style="background:var(--amber-light);border:1px solid var(--amber);border-radius:12px;padding:.875rem;margin-bottom:1rem">
+      <div style="font-size:13px;color:var(--amber);font-weight:700;margin-bottom:2px">💡 Lembrete importante</div>
+      <div style="font-size:12px;color:var(--text-muted);line-height:1.6">A reserva existe para imprevistos reais. Após usar, lembre-se de reconstruí-la o quanto antes.</div>
+    </div>
+    <div style="margin-bottom:1rem">
+      <label style="font-size:12px;font-weight:700;color:var(--text-muted);display:block;margin-bottom:6px">VALOR UTILIZADO</label>
+      <input id="res-uso-valor" type="text" inputmode="numeric" placeholder="R$ 0,00" class="input" style="font-size:20px;font-weight:800;text-align:center">
+    </div>
+    <div style="margin-bottom:1.25rem">
+      <label style="font-size:12px;font-weight:700;color:var(--text-muted);display:block;margin-bottom:6px">MOTIVO</label>
+      <input id="res-uso-motivo" type="text" placeholder="Ex: Conserto do carro" class="input">
+    </div>
+    <div id="res-uso-msg" class="msg"></div>
+    <button onclick="salvarUsoReserva()" class="btn" style="width:100%;background:var(--red-light);color:var(--red);border:1px solid var(--red);font-weight:700">Registrar uso</button>
+  </div>
+</div>
+
 <div id="screen-planilha" class="screen">
   <div class="topbar">
     <button class="back-btn" onclick="ir('screen-hub')">← Voltar</button>
@@ -1456,6 +1649,7 @@ function ir(id) {
     'screen-simulacoes':   'simulacoes',
     'screen-aulas':        'aulas',
     'screen-planilha':     'planilha',
+    'screen-reserva':      'reserva',
     'screen-diagnosticos': 'diagnosticos',
     'screen-prontuario':   'prontuario',
     'screen-controle':     'controle',
@@ -1742,6 +1936,9 @@ async function renderHub() {
 
   // Controle Financeiro — resumo no hub
   try { await renderHubControle(); } catch(e){}
+
+  // Reserva de Emergência — status no hub
+  try { await atualizarHubReserva(); } catch(e){}
 
   // FASE 4 — Dica financeira IA
   try { await renderDicaIA(); } catch(e){ console.error('dica ia',e); }
@@ -2836,7 +3033,22 @@ async function renderJornada(diags){
   document.getElementById('hub-jornada').innerHTML=`<div class="section-title" style="margin-bottom:8px">📍 Próximo passo</div><div class="jornada-item" onclick="${proximo.acao}" style="cursor:pointer"><div class="jornada-num">${proximo.num}</div><div style="font-size:13px;font-weight:600;flex:1">${proximo.txt}</div><div style="font-size:16px;color:var(--eko-green)">→</div></div>`;
 }
 
-window.abrirMetas=async function(){try{await renderMetas();}catch(e){console.error(e);}ir('screen-metas');};
+window.abrirMetas=async function(){
+  try{await renderMetas();}catch(e){console.error(e);}
+  ir('screen-metas');
+  // Verificar reserva e mostrar aviso se incompleta
+  try {
+    const snap = await getDoc(doc(db,'reserva',sessao.email));
+    const avisoEl = document.getElementById('metas-aviso-reserva');
+    if(avisoEl){
+      if(!snap.exists() || (snap.data().saldoAtual < snap.data().meta)){
+        avisoEl.style.display='';
+      } else {
+        avisoEl.style.display='none';
+      }
+    }
+  } catch(e){}
+};
 window.abrirDividas=async function(){try{await renderDividas();}catch(e){console.error(e);}ir('screen-dividas');};
 window.abrirObjetivos=async function(){try{await renderObjetivos();}catch(e){console.error(e);}ir('screen-objetivos');};
 
@@ -3302,6 +3514,436 @@ window.abrirSimulacoes = async function() {
 
 // ════════════════════════════════════════════════
 // FASE 3 — PLANILHA
+// ════════════════════════════════════════════════
+
+
+// ════ RESERVA DE EMERGÊNCIA ════════════════════════════════
+let reservaConfig = null;
+let reservaPerfilSelecionado = 'clt';
+let reservaFonteSelecionada = 'manual';
+const TAXAS_RENDIMENTO = {
+  'Tesouro Selic': 0.1065,
+  'CDB 100% CDI': 0.1065,
+  'Poupança': 0.07
+};
+
+const ONDE_GUARDAR_OPCOES = [
+  { id: 'tesouro', label: '🟢 Tesouro Selic', desc: 'Melhor opção — seguro e rende ~CDI' },
+  { id: 'cdb', label: '🟡 CDB 100% CDI', desc: 'Seguro pelo FGC até R$250k' },
+  { id: 'poupanca', label: '🔴 Poupança', desc: 'Menos rentável, mas segura' },
+];
+
+window.abrirReserva = async function() {
+  ir('screen-reserva');
+  const ref = doc(db, 'reserva', sessao.email);
+  const snap = await getDoc(ref);
+  if (snap.exists()) {
+    reservaConfig = snap.data();
+    mostrarPainelReserva();
+  } else {
+    reservaConfig = null;
+    mostrarOnboardingReserva();
+  }
+  atualizarHubReserva();
+};
+
+function mostrarOnboardingReserva() {
+  document.getElementById('reserva-onboarding').style.display = '';
+  document.getElementById('reserva-painel').style.display = 'none';
+  reservaStep(1);
+}
+
+function mostrarPainelReserva() {
+  document.getElementById('reserva-onboarding').style.display = 'none';
+  document.getElementById('reserva-painel').style.display = '';
+  renderPainelReserva();
+}
+
+window.reservaStep = function(step) {
+  ['1','2','3','config'].forEach(s => {
+    const el = document.getElementById('reserva-step-' + s);
+    if (el) el.style.display = 'none';
+  });
+  const el = document.getElementById('reserva-step-' + step);
+  if (el) el.style.display = '';
+
+  if (step === 'config') {
+    renderMesesGrid();
+    renderOndeGrid();
+    selecionarPerfilReserva(reservaPerfilSelecionado);
+    selecionarFonteReserva(reservaFonteSelecionada);
+  }
+};
+
+window.selecionarPerfilReserva = function(perfil) {
+  reservaPerfilSelecionado = perfil;
+  ['clt','autonomo','empresario'].forEach(p => {
+    const btn = document.getElementById('res-perfil-' + p);
+    if (!btn) return;
+    if (p === perfil) {
+      btn.style.borderColor = 'var(--eko-green)';
+      btn.style.background = 'var(--eko-green-light)';
+      btn.style.color = 'var(--eko-green-dark)';
+    } else {
+      btn.style.borderColor = 'var(--border)';
+      btn.style.background = 'var(--surface)';
+      btn.style.color = 'var(--text-muted)';
+    }
+  });
+  // Atualiza meses recomendados
+  renderMesesGrid();
+};
+
+window.selecionarFonteReserva = async function(fonte) {
+  reservaFonteSelecionada = fonte;
+  const btns = {
+    manual: document.getElementById('res-fonte-manual'),
+    controle: document.getElementById('res-fonte-controle'),
+  };
+  Object.entries(btns).forEach(([k, btn]) => {
+    if (!btn) return;
+    if (k === fonte) {
+      btn.style.borderColor = 'var(--eko-green)';
+      btn.style.background = 'var(--eko-green-light)';
+      btn.style.color = 'var(--eko-green-dark)';
+    } else {
+      btn.style.borderColor = 'var(--border)';
+      btn.style.background = 'var(--surface)';
+      btn.style.color = 'var(--text-muted)';
+    }
+  });
+
+  const hint = document.getElementById('res-gastos-hint');
+  const input = document.getElementById('res-gastos');
+
+  if (fonte === 'controle') {
+    // Puxa média dos últimos 3 meses do Controle Financeiro
+    try {
+      const agora = new Date();
+      let totalGastos = 0; let mesesComDados = 0;
+      for (let i = 1; i <= 3; i++) {
+        const d = new Date(agora.getFullYear(), agora.getMonth() - i, 1);
+        const mesKey = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2,'0');
+        const q = query(collection(db,'controle'), where('email','==',sessao.email), where('mes','==',mesKey), where('tipo','==','gasto'));
+        const snap = await getDocs(q);
+        if (!snap.empty) {
+          let soma = 0; snap.forEach(d2 => soma += (d2.data().valor || 0));
+          totalGastos += soma; mesesComDados++;
+        }
+      }
+      if (mesesComDados > 0) {
+        const media = totalGastos / mesesComDados;
+        input.value = fmtInput(media);
+        hint.style.display = '';
+      } else {
+        input.value = '';
+        hint.style.display = 'none';
+        showToast('Nenhum dado encontrado no Controle. Informe manualmente.', 'warn');
+      }
+    } catch(e) { input.value = ''; }
+  } else {
+    hint.style.display = 'none';
+  }
+};
+
+function renderMesesGrid() {
+  const grid = document.getElementById('res-meses-grid');
+  if (!grid) return;
+  const isClt = reservaPerfilSelecionado === 'clt';
+  const opcoes = isClt ? [3,4,6] : [6,9,12];
+  const recomendado = isClt ? 6 : 12;
+  grid.innerHTML = '';
+  opcoes.forEach(m => {
+    const btn = document.createElement('button');
+    btn.id = 'res-meses-' + m;
+    btn.textContent = m + ' meses' + (m === recomendado ? ' ⭐' : '');
+    btn.style.cssText = 'padding:.625rem;border-radius:10px;border:2px solid var(--border);background:var(--surface);color:var(--text-muted);font-weight:700;font-size:12px;cursor:pointer;transition:all .2s';
+    btn.onclick = () => {
+      grid.querySelectorAll('button').forEach(b => {
+        b.style.borderColor = 'var(--border)'; b.style.background = 'var(--surface)'; b.style.color = 'var(--text-muted)';
+      });
+      btn.style.borderColor = 'var(--eko-green)';
+      btn.style.background = 'var(--eko-green-light)';
+      btn.style.color = 'var(--eko-green-dark)';
+    };
+    if (m === recomendado) {
+      btn.style.borderColor = 'var(--eko-green)';
+      btn.style.background = 'var(--eko-green-light)';
+      btn.style.color = 'var(--eko-green-dark)';
+    }
+    grid.appendChild(btn);
+  });
+}
+
+function renderOndeGrid() {
+  const grid = document.getElementById('res-onde-grid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  ONDE_GUARDAR_OPCOES.forEach((op, i) => {
+    const btn = document.createElement('button');
+    btn.id = 'res-onde-' + op.id;
+    btn.style.cssText = 'padding:.75rem;border-radius:10px;border:2px solid var(--border);background:var(--surface);text-align:left;cursor:pointer;transition:all .2s;width:100%';
+    btn.innerHTML = `<div style="font-size:13px;font-weight:800">${op.label}</div><div style="font-size:11px;color:var(--text-muted);margin-top:2px">${op.desc}</div>`;
+    btn.onclick = () => {
+      grid.querySelectorAll('button').forEach(b => {
+        b.style.borderColor = 'var(--border)'; b.style.background = 'var(--surface)';
+      });
+      btn.style.borderColor = 'var(--eko-green)';
+      btn.style.background = 'var(--eko-green-light)';
+    };
+    if (i === 0) { btn.style.borderColor = 'var(--eko-green)'; btn.style.background = 'var(--eko-green-light)'; }
+    grid.appendChild(btn);
+  });
+}
+
+window.salvarConfigReserva = async function() {
+  const msg = document.getElementById('res-config-msg');
+  const gastoRaw = document.getElementById('res-gastos').value;
+  const gastos = parseMoney(gastoRaw);
+  if (!gastos || gastos <= 0) { msg.textContent = 'Informe seus gastos mensais.'; msg.className = 'msg error'; return; }
+
+  // Pegar meses selecionado
+  const mesesGrid = document.getElementById('res-meses-grid');
+  let mesesSel = null;
+  if (mesesGrid) {
+    mesesGrid.querySelectorAll('button').forEach(b => {
+      if (b.style.borderColor === 'var(--eko-green)' || b.style.background === 'var(--eko-green-light)') {
+        const n = parseInt(b.textContent);
+        if (!isNaN(n)) mesesSel = n;
+      }
+    });
+  }
+  if (!mesesSel) { msg.textContent = 'Selecione quantos meses de cobertura.'; msg.className = 'msg error'; return; }
+
+  // Pegar onde guardar
+  let ondeSel = 'Tesouro Selic';
+  const ondeGrid = document.getElementById('res-onde-grid');
+  if (ondeGrid) {
+    ondeGrid.querySelectorAll('button').forEach(b => {
+      if (b.style.borderColor === 'var(--eko-green)' || b.style.background === 'var(--eko-green-light)') {
+        const label = b.querySelector('div')?.textContent;
+        if (label?.includes('Tesouro')) ondeSel = 'Tesouro Selic';
+        else if (label?.includes('CDB')) ondeSel = 'CDB 100% CDI';
+        else if (label?.includes('Poupança')) ondeSel = 'Poupança';
+      }
+    });
+  }
+
+  const meta = gastos * mesesSel;
+  const config = {
+    email: sessao.email,
+    perfil: reservaPerfilSelecionado,
+    gastosMensais: gastos,
+    mesesCobertura: mesesSel,
+    meta: meta,
+    ondeGuardar: ondeSel,
+    saldoAtual: reservaConfig?.saldoAtual || 0,
+    historico: reservaConfig?.historico || [],
+    criadoEm: reservaConfig?.criadoEm || new Date().toISOString(),
+    atualizadoEm: new Date().toISOString(),
+  };
+
+  try {
+    msg.textContent = 'Salvando...'; msg.className = 'msg';
+    await setDoc(doc(db, 'reserva', sessao.email), config);
+    reservaConfig = config;
+    showToast('Reserva configurada! 🛡️');
+    mostrarPainelReserva();
+    atualizarHubReserva();
+    logEko('reserva_configurada', { perfil: config.perfil, meta: config.meta });
+  } catch(e) { msg.textContent = 'Erro ao salvar. Tente novamente.'; msg.className = 'msg error'; }
+};
+
+function renderPainelReserva() {
+  if (!reservaConfig) return;
+  const { saldoAtual, meta, mesesCobertura, gastosMensais, ondeGuardar, historico, perfil } = reservaConfig;
+  const pct = Math.min(100, Math.round((saldoAtual / meta) * 100));
+  const faltante = Math.max(0, meta - saldoAtual);
+  const taxa = TAXAS_RENDIMENTO[ondeGuardar] || 0.1065;
+  const rendimentoMes = saldoAtual * (taxa / 12);
+
+  // Status
+  let statusColor = 'var(--red)'; let statusBg = 'var(--red-light)'; let statusIcon = '🚨';
+  if (pct >= 100) { statusColor = 'var(--eko-green)'; statusBg = 'var(--eko-green-light)'; statusIcon = '🛡️'; }
+  else if (pct >= 50) { statusColor = 'var(--amber)'; statusBg = 'var(--amber-light)'; statusIcon = '⚠️'; }
+
+  // Prazo estimado
+  let prazoTxt = '';
+  if (pct < 100 && gastosMensais > 0) {
+    const aporteMedio = calcAporteMedioReserva(historico);
+    if (aporteMedio > 0) {
+      const meses = Math.ceil(faltante / aporteMedio);
+      prazoTxt = `<div style="font-size:12px;color:var(--text-muted);margin-top:4px">⏱️ No ritmo atual, completa em ~${meses} ${meses === 1 ? 'mês' : 'meses'}</div>`;
+    }
+  }
+
+  document.getElementById('res-status-card').innerHTML = `
+    <div style="background:${statusBg};border:1px solid ${statusColor};border-radius:14px;padding:1.25rem">
+      <div style="font-size:32px;margin-bottom:.5rem">${statusIcon}</div>
+      <div style="font-size:22px;font-weight:800;color:${statusColor}">${fmt(saldoAtual)}</div>
+      <div style="font-size:13px;color:var(--text-muted);margin:.25rem 0">de ${fmt(meta)} (${mesesCobertura} meses de cobertura)</div>
+      <div style="background:var(--border);border-radius:99px;height:10px;margin:.75rem 0">
+        <div style="background:${statusColor};height:10px;border-radius:99px;width:${pct}%;transition:width .5s"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-muted)">
+        <span>${pct}% completo</span>
+        <span>Faltam ${fmt(faltante)}</span>
+      </div>
+      ${prazoTxt}
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:.75rem">
+      <div class="stat-card"><div class="slabel">Rendimento/mês</div><div style="font-size:14px;font-weight:700;color:var(--eko-green)">+${fmt(rendimentoMes)}</div></div>
+      <div class="stat-card"><div class="slabel">Guardado em</div><div style="font-size:13px;font-weight:700">${ondeGuardar}</div></div>
+    </div>
+  `;
+
+  // Marcos
+  const isClt = perfil === 'clt';
+  const marcosOpcoes = isClt ? [1,3,6] : [3,6,12];
+  const marcosEl = document.getElementById('res-marcos');
+  marcosEl.innerHTML = '';
+  marcosOpcoes.forEach(m => {
+    const valMarco = gastosMensais * m;
+    const pctMarco = Math.min(100, Math.round((saldoAtual / valMarco) * 100));
+    const concluido = saldoAtual >= valMarco;
+    marcosEl.innerHTML += `
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:.75rem">
+        <div style="width:28px;height:28px;border-radius:50%;background:${concluido ? 'var(--eko-green)' : 'var(--surface2)'};border:2px solid ${concluido ? 'var(--eko-green)' : 'var(--border)'};display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">${concluido ? '✓' : m}</div>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:700">${m} ${m === 1 ? 'mês' : 'meses'} — ${fmt(valMarco)}</div>
+          <div style="background:var(--border);border-radius:99px;height:5px;margin-top:4px">
+            <div style="background:${concluido ? 'var(--eko-green)' : 'var(--eko-green)'};opacity:${concluido ? 1 : 0.5};height:5px;border-radius:99px;width:${pctMarco}%"></div>
+          </div>
+        </div>
+        <div style="font-size:12px;font-weight:700;color:${concluido ? 'var(--eko-green)' : 'var(--text-muted)'}">${concluido ? '✅' : pctMarco + '%'}</div>
+      </div>`;
+  });
+
+  // Histórico
+  const hist = (historico || []).slice().reverse().slice(0, 10);
+  const histEl = document.getElementById('res-historico');
+  if (!hist.length) {
+    histEl.innerHTML = '<div style="text-align:center;color:var(--text-muted);font-size:13px;padding:1rem">Nenhum registro ainda.</div>';
+  } else {
+    histEl.innerHTML = hist.map(h => `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:.625rem 0;border-bottom:1px solid var(--border)">
+        <div>
+          <div style="font-size:13px;font-weight:700;color:${h.tipo === 'aporte' ? 'var(--eko-green)' : 'var(--red)'}">${h.tipo === 'aporte' ? '+ ' : '- '}${fmt(h.valor)}</div>
+          <div style="font-size:11px;color:var(--text-muted)">${h.descricao || h.motivo || ''} · ${new Date(h.data).toLocaleDateString('pt-BR')}</div>
+        </div>
+        <div style="font-size:20px">${h.tipo === 'aporte' ? '💰' : '📤'}</div>
+      </div>`).join('');
+  }
+
+  // Aviso metas
+  const avisoMetas = document.getElementById('res-aviso-metas');
+  if (avisoMetas) avisoMetas.style.display = pct < 100 ? '' : 'none';
+}
+
+function calcAporteMedioReserva(historico) {
+  if (!historico?.length) return 0;
+  const aportes = historico.filter(h => h.tipo === 'aporte');
+  if (!aportes.length) return 0;
+  return aportes.reduce((s, h) => s + h.valor, 0) / aportes.length;
+}
+
+window.abrirOverlayAporteReserva = function() {
+  document.getElementById('res-aporte-valor').value = '';
+  document.getElementById('res-aporte-desc').value = '';
+  document.getElementById('res-aporte-msg').textContent = '';
+  document.getElementById('overlay-reserva-aporte').classList.remove('hidden');
+};
+
+window.salvarAporteReserva = async function() {
+  const msg = document.getElementById('res-aporte-msg');
+  const valor = parseMoney(document.getElementById('res-aporte-valor').value);
+  if (!valor || valor <= 0) { msg.textContent = 'Informe um valor válido.'; msg.className = 'msg error'; return; }
+  const desc = document.getElementById('res-aporte-desc').value.trim();
+
+  const novoHistorico = [...(reservaConfig.historico || []), {
+    tipo: 'aporte', valor, descricao: desc, data: new Date().toISOString()
+  }];
+  const novoSaldo = (reservaConfig.saldoAtual || 0) + valor;
+
+  try {
+    msg.textContent = 'Salvando...'; msg.className = 'msg';
+    await setDoc(doc(db, 'reserva', sessao.email), {
+      ...reservaConfig, saldoAtual: novoSaldo, historico: novoHistorico, atualizadoEm: new Date().toISOString()
+    });
+    reservaConfig.saldoAtual = novoSaldo;
+    reservaConfig.historico = novoHistorico;
+    fecharOverlay('overlay-reserva-aporte');
+    renderPainelReserva();
+    atualizarHubReserva();
+    showToast('Aporte registrado! 💰');
+    logEko('reserva_aporte', { valor });
+  } catch(e) { msg.textContent = 'Erro ao salvar.'; msg.className = 'msg error'; }
+};
+
+window.abrirOverlayUsarReserva = function() {
+  document.getElementById('res-uso-valor').value = '';
+  document.getElementById('res-uso-motivo').value = '';
+  document.getElementById('res-uso-msg').textContent = '';
+  document.getElementById('overlay-reserva-uso').classList.remove('hidden');
+};
+
+window.salvarUsoReserva = async function() {
+  const msg = document.getElementById('res-uso-msg');
+  const valor = parseMoney(document.getElementById('res-uso-valor').value);
+  if (!valor || valor <= 0) { msg.textContent = 'Informe um valor válido.'; msg.className = 'msg error'; return; }
+  const motivo = document.getElementById('res-uso-motivo').value.trim();
+
+  const novoSaldo = Math.max(0, (reservaConfig.saldoAtual || 0) - valor);
+  const novoHistorico = [...(reservaConfig.historico || []), {
+    tipo: 'uso', valor, motivo, data: new Date().toISOString()
+  }];
+
+  try {
+    msg.textContent = 'Salvando...'; msg.className = 'msg';
+    await setDoc(doc(db, 'reserva', sessao.email), {
+      ...reservaConfig, saldoAtual: novoSaldo, historico: novoHistorico, atualizadoEm: new Date().toISOString()
+    });
+    reservaConfig.saldoAtual = novoSaldo;
+    reservaConfig.historico = novoHistorico;
+    fecharOverlay('overlay-reserva-uso');
+    renderPainelReserva();
+    atualizarHubReserva();
+    showToast('Uso registrado. Lembre-se de reconstruir a reserva! 💪', 'warn');
+    logEko('reserva_uso', { valor });
+  } catch(e) { msg.textContent = 'Erro ao salvar.'; msg.className = 'msg error'; }
+};
+
+window.reservaReconfigurar = function() {
+  mostrarOnboardingReserva();
+  reservaStep('config');
+  renderMesesGrid();
+  renderOndeGrid();
+  selecionarPerfilReserva(reservaConfig?.perfil || 'clt');
+  // Pre-preenche gastos
+  if (reservaConfig?.gastosMensais) {
+    document.getElementById('res-gastos').value = fmtInput(reservaConfig.gastosMensais);
+  }
+};
+
+async function atualizarHubReserva() {
+  const el = document.getElementById('hub-reserva-sub');
+  if (!el) return;
+  try {
+    const snap = await getDoc(doc(db, 'reserva', sessao.email));
+    if (snap.exists()) {
+      const { saldoAtual, meta } = snap.data();
+      const pct = Math.min(100, Math.round((saldoAtual / meta) * 100));
+      el.textContent = pct >= 100 ? '✅ Reserva completa!' : `${pct}% — ${fmt(saldoAtual)} de ${fmt(meta)}`;
+    } else {
+      el.textContent = '⚠️ Ainda não configurada';
+    }
+  } catch(e) {}
+}
+
+function fmtInput(val) {
+  return 'R$ ' + val.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+}
+
 // ════════════════════════════════════════════════
 
 window.abrirPlanilha = function() { ir('screen-planilha'); };
