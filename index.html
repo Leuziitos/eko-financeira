@@ -5040,7 +5040,7 @@ window.abrirRecuperacaoRapida = function() {
   // Categorias
   renderCategoriasGrid('rec-categorias-grid', cat => {
     recCatSelecionada = cat;
-  });
+  }).catch(()=>{});
   selecionarTipoRec('gasto');
   abrirOverlay('overlay-recuperacao');
 };
@@ -5138,11 +5138,13 @@ window.salvarTodosRec = async function() {
   }
 };
 
-function renderCategoriasGrid(gridId, onSelect, tipoFiltro) {
+async function renderCategoriasGrid(gridId, onSelect, tipoFiltro) {
   const grid = document.getElementById(gridId);
   if (!grid) return;
-  const tipo = tipoFiltro || cfTipoAtual || 'gasto';
-  const cats = cfCategorias.filter(c => !c.oculta && c.tipo === tipo);
+  const tipo = tipoFiltro || recTipoAtual || 'gasto';
+  let cats = [];
+  try { cats = await getCFCategorias(); } catch(e) {}
+  cats = cats.filter(c => !c.oculta && c.tipo === tipo);
   grid.innerHTML = '';
   cats.forEach(cat => {
     const btn = document.createElement('button');
