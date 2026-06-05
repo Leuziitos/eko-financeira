@@ -5143,12 +5143,19 @@ async function renderCategoriasGrid(gridId, onSelect, tipoFiltro) {
   if (!grid) return;
   const tipo = tipoFiltro || recTipoAtual || 'gasto';
   let cats = [];
-  try { cats = await getCFCategorias(); } catch(e) {}
+  try {
+    const raw = await getCFCategorias();
+    // Garantir que é array
+    cats = Array.isArray(raw) ? raw : Object.values(raw || {});
+  } catch(e) {}
   cats = cats.filter(c => !c.oculta && c.tipo === tipo);
+  // Pré-selecionar "Outras" como padrão
+  let catPadrao = cats.find(c => c.nome === 'Outras' || c.nome === 'Outro') || cats[0] || null;
   grid.innerHTML = '';
   cats.forEach(cat => {
     const btn = document.createElement('button');
-    btn.style.cssText = 'padding:.5rem .25rem;border-radius:10px;border:2px solid var(--border);background:var(--surface);cursor:pointer;font-size:11px;font-weight:600;transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:2px';
+    const isPadrao = catPadrao && cat.nome === catPadrao.nome;
+    btn.style.cssText = `padding:.5rem .25rem;border-radius:10px;border:2px solid ${isPadrao ? 'var(--eko-green)' : 'var(--border)'};background:${isPadrao ? 'var(--eko-green-light)' : 'var(--surface)'};cursor:pointer;font-size:11px;font-weight:600;transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:2px`;
     btn.innerHTML = `<span style="font-size:18px">${esc(cat.icon||'')}</span><span style="color:var(--text-muted)">${esc(cat.nome||'')}</span>`;
     btn.onclick = () => {
       grid.querySelectorAll('button').forEach(b => {
@@ -5158,6 +5165,7 @@ async function renderCategoriasGrid(gridId, onSelect, tipoFiltro) {
       btn.style.background = 'var(--eko-green-light)';
       onSelect(cat);
     };
+    if (isPadrao) onSelect(cat);
     grid.appendChild(btn);
   });
 }
