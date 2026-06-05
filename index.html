@@ -5079,7 +5079,7 @@ window.adicionarLancamentoRec = function() {
   recLancamentos.push({
     tipo: recTipoAtual,
     valor,
-    categoria: recCatSelecionada,
+    categoria: recCatSelecionada.id || recCatSelecionada,
     mes: d.getMonth(),
     ano: d.getFullYear(),
     chaveMes: cfChaveMes(d.getFullYear(), d.getMonth()),
@@ -5094,7 +5094,7 @@ window.adicionarLancamentoRec = function() {
     <div style="display:flex;align-items:center;justify-content:space-between;padding:.5rem 0;border-bottom:1px solid var(--border)">
       <div>
         <div style="font-size:13px;font-weight:700;color:${l.tipo==='gasto'?'var(--red)':'var(--eko-green)'}">${l.tipo==='gasto'?'💸':'💵'} ${fmt(l.valor)}</div>
-        <div style="font-size:11px;color:var(--text-muted)">${esc(l.categoria.icon||'')} ${esc(l.categoria.nome||'')} · ${new Date(l.data).toLocaleDateString('pt-BR')}</div>
+        <div style="font-size:11px;color:var(--text-muted)">${esc(typeof l.categoria === 'object' ? l.categoria.nome : l.categoria)} · ${new Date(l.data).toLocaleDateString('pt-BR')}</div>
       </div>
       <button onclick="removerLancamentoRec(${i})" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px">✕</button>
     </div>`).join('');
@@ -5115,7 +5115,7 @@ window.removerLancamentoRec = function(idx) {
     <div style="display:flex;align-items:center;justify-content:space-between;padding:.5rem 0;border-bottom:1px solid var(--border)">
       <div>
         <div style="font-size:13px;font-weight:700;color:${l.tipo==='gasto'?'var(--red)':'var(--eko-green)'}">${l.tipo==='gasto'?'💸':'💵'} ${fmt(l.valor)}</div>
-        <div style="font-size:11px;color:var(--text-muted)">${esc(l.categoria.icon||'')} ${esc(l.categoria.nome||'')} · ${new Date(l.data).toLocaleDateString('pt-BR')}</div>
+        <div style="font-size:11px;color:var(--text-muted)">${esc(typeof l.categoria === 'object' ? l.categoria.nome : l.categoria)} · ${new Date(l.data).toLocaleDateString('pt-BR')}</div>
       </div>
       <button onclick="removerLancamentoRec(${i})" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px">✕</button>
     </div>`).join('');
@@ -5142,30 +5142,37 @@ async function renderCategoriasGrid(gridId, onSelect, tipoFiltro) {
   const grid = document.getElementById(gridId);
   if (!grid) return;
   const tipo = tipoFiltro || recTipoAtual || 'gasto';
-  let cats = [];
+  let lista = [];
   try {
-    const raw = await getCFCategorias();
-    // Garantir que é array
-    cats = Array.isArray(raw) ? raw : Object.values(raw || {});
+    const cats = await getCFCategorias();
+    lista = (cats[tipo] || []).filter(c => c.visivel);
   } catch(e) {}
-  cats = cats.filter(c => !c.oculta && c.tipo === tipo);
-  // Pré-selecionar "Outras" como padrão
-  let catPadrao = cats.find(c => c.nome === 'Outras' || c.nome === 'Outro') || cats[0] || null;
   grid.innerHTML = '';
-  cats.forEach(cat => {
+  if (!lista.length) {
+    grid.innerHTML = '<div style="font-size:12px;color:var(--text-muted);padding:.5rem">Nenhuma categoria disponível.</div>';
+    return;
+  }
+  // Pré-selecionar "Outras" ou primeira da lista
+  const padrao = lista.find(c => c.nome === 'Outras' || c.nome === 'Outro') || lista[0];
+  lista.forEach(cat => {
+    const isPadrao = padrao && cat.id === padrao.id;
     const btn = document.createElement('button');
-    const isPadrao = catPadrao && cat.nome === catPadrao.nome;
-    btn.style.cssText = `padding:.5rem .25rem;border-radius:10px;border:2px solid ${isPadrao ? 'var(--eko-green)' : 'var(--border)'};background:${isPadrao ? 'var(--eko-green-light)' : 'var(--surface)'};cursor:pointer;font-size:11px;font-weight:600;transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:2px`;
-    btn.innerHTML = `<span style="font-size:18px">${esc(cat.icon||'')}</span><span style="color:var(--text-muted)">${esc(cat.nome||'')}</span>`;
+    btn.style.cssText = `padding:.5rem .25rem;border-radius:10px;border:2px solid ${isPadrao ? 'var(--eko-green)' : 'var(--border)'};background:${isPadrao ? 'var(--eko-green-light)' : 'var(--surface)'};cursor:pointer;font-size:11px;font-weight:700;transition:all .2s;line-height:1.4;color:var(--text)`;
+    btn.textContent = cat.nome;
     btn.onclick = () => {
       grid.querySelectorAll('button').forEach(b => {
-        b.style.borderColor = 'var(--border)'; b.style.background = 'var(--surface)';
+        b.style.border = '2px solid var(--border)';
+        b.style.background = 'var(--surface)';
       });
-      btn.style.borderColor = 'var(--eko-green)';
-      btn.style.background = 'var(--eko-green-light)';
+      btn.style.border = tipo==='gasto' ? '2px solid var(--red)' : '2px solid var(--eko-green)';
+      btn.style.background = tipo==='gasto' ? 'var(--red-light)' : 'var(--eko-green-light)';
       onSelect(cat);
     };
-    if (isPadrao) onSelect(cat);
+    if (isPadrao) {
+      btn.style.border = tipo==='gasto' ? '2px solid var(--red)' : '2px solid var(--eko-green)';
+      btn.style.background = tipo==='gasto' ? 'var(--red-light)' : 'var(--eko-green-light)';
+      onSelect(padrao);
+    }
     grid.appendChild(btn);
   });
 }
