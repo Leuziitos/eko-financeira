@@ -649,6 +649,50 @@ html,body{height:100%;background:var(--bg);font-family:'Plus Jakarta Sans',sans-
   </div>
 </div>
 
+
+<!-- OVERLAY: Recuperação Rápida -->
+<div id="overlay-recuperacao" class="overlay hidden">
+  <div class="sheet" style="max-height:95vh">
+    <div class="sheet-handle"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem">
+      <div style="font-size:17px;font-weight:800">⏪ Recuperação rápida</div>
+      <button onclick="fecharOverlay('overlay-recuperacao')" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-muted)">✕</button>
+    </div>
+    <div style="font-size:13px;color:var(--text-muted);margin-bottom:1rem">Registre gastos e receitas de dias anteriores rapidamente.</div>
+    <!-- Seletor de data -->
+    <div style="margin-bottom:1rem">
+      <label style="font-size:12px;font-weight:700;color:var(--text-muted);display:block;margin-bottom:6px">DATA DO LANÇAMENTO</label>
+      <div id="rec-dias-grid" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px"></div>
+      <input id="rec-data-custom" type="date" class="input" style="display:none">
+    </div>
+    <!-- Tipo -->
+    <div style="display:flex;gap:8px;margin-bottom:1rem">
+      <button id="rec-tipo-gasto" onclick="selecionarTipoRec('gasto')" style="flex:1;padding:.5rem;border-radius:10px;border:2px solid var(--red);background:var(--red-light);color:var(--red);font-weight:700;font-size:13px;cursor:pointer">💸 Gasto</button>
+      <button id="rec-tipo-receita" onclick="selecionarTipoRec('receita')" style="flex:1;padding:.5rem;border-radius:10px;border:2px solid var(--border);background:var(--surface);color:var(--text-muted);font-weight:700;font-size:13px;cursor:pointer">💵 Receita</button>
+    </div>
+    <!-- Valor -->
+    <div style="margin-bottom:1rem">
+      <label style="font-size:12px;font-weight:700;color:var(--text-muted);display:block;margin-bottom:6px">VALOR</label>
+      <input id="rec-valor" type="text" inputmode="numeric" placeholder="R$ 0,00" class="input" oninput="window.applyMoneyMask(this)" style="font-size:20px;font-weight:800;text-align:center;padding:1rem">
+    </div>
+    <!-- Categoria -->
+    <div style="margin-bottom:1rem">
+      <label style="font-size:12px;font-weight:700;color:var(--text-muted);display:block;margin-bottom:8px">CATEGORIA</label>
+      <div id="rec-categorias-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px"></div>
+    </div>
+    <div id="rec-msg" class="msg"></div>
+    <!-- Lançamentos adicionados -->
+    <div id="rec-lista-wrap" style="display:none;margin-bottom:1rem">
+      <div style="font-size:12px;font-weight:700;color:var(--text-muted);margin-bottom:.5rem">LANÇAMENTOS ADICIONADOS</div>
+      <div id="rec-lista"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <button onclick="adicionarLancamentoRec()" class="btn" style="background:var(--surface);border:1px solid var(--border);font-weight:700">+ Adicionar</button>
+      <button onclick="salvarTodosRec()" class="btn btn-primary" style="font-weight:700">Salvar tudo ✓</button>
+    </div>
+  </div>
+</div>
+
 <!-- OVERLAY: Feedback -->
 <div id="overlay-feedback" class="overlay hidden">
   <div class="sheet">
@@ -1376,6 +1420,16 @@ html,body{height:100%;background:var(--bg);font-family:'Plus Jakarta Sans',sans-
           <label style="font-size:12px;font-weight:700;color:var(--text-muted);display:block;margin-bottom:6px">VALOR</label>
           <input id="cf-valor" type="text" inputmode="numeric" placeholder="R$ 0,00" class="input" style="font-size:20px;font-weight:800;text-align:center">
         </div>
+        <!-- Data -->
+        <div style="margin-bottom:1rem">
+          <label style="font-size:12px;font-weight:700;color:var(--text-muted);display:block;margin-bottom:6px">DATA</label>
+          <div style="display:flex;gap:8px">
+            <button id="cf-data-hoje" onclick="selecionarDataLancamento('hoje')" style="flex:1;padding:.5rem;border-radius:8px;border:2px solid var(--eko-green);background:var(--eko-green-light);color:var(--eko-green-dark);font-weight:700;font-size:12px;cursor:pointer">Hoje</button>
+            <button id="cf-data-ontem" onclick="selecionarDataLancamento('ontem')" style="flex:1;padding:.5rem;border-radius:8px;border:2px solid var(--border);background:var(--surface);color:var(--text-muted);font-weight:700;font-size:12px;cursor:pointer">Ontem</button>
+            <button id="cf-data-outro" onclick="selecionarDataLancamento('outro')" style="flex:1;padding:.5rem;border-radius:8px;border:2px solid var(--border);background:var(--surface);color:var(--text-muted);font-weight:700;font-size:12px;cursor:pointer">Outra data</button>
+          </div>
+          <input id="cf-data-custom" type="date" class="input" style="margin-top:8px;display:none">
+        </div>
         <!-- Categoria -->
         <div style="margin-bottom:1.25rem">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
@@ -1386,6 +1440,16 @@ html,body{height:100%;background:var(--bg);font-family:'Plus Jakarta Sans',sans-
         </div>
         <div id="cf-msg" class="msg"></div>
         <button onclick="salvarLancamento()" class="btn btn-primary" style="width:100%">Salvar lançamento</button>
+      </div>
+      <!-- Recuperação rápida -->
+      <div class="card" style="margin-top:.75rem">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem">
+          <div>
+            <div style="font-size:14px;font-weight:800">⏪ Recuperação rápida</div>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:2px">Registre vários dias de uma vez</div>
+          </div>
+          <button onclick="abrirRecuperacaoRapida()" class="btn btn-primary" style="font-size:12px;padding:.5rem .875rem">Abrir</button>
+        </div>
       </div>
       <!-- Boas-vindas / dica -->
       <div id="cf-boas-vindas" class="card" style="background:linear-gradient(135deg,var(--eko-green-light),var(--surface));border-color:var(--eko-green);display:none">
@@ -4887,19 +4951,229 @@ window.selecionarCategoriaCF = function(id) {
   }
 };
 
+
+// ════ CONTROLE FINANCEIRO — DATA RETROATIVA ════════════════
+let cfDataSelecionada = 'hoje'; // 'hoje' | 'ontem' | 'outro'
+
+window.selecionarDataLancamento = function(opcao) {
+  cfDataSelecionada = opcao;
+  ['hoje','ontem','outro'].forEach(op => {
+    const btn = document.getElementById('cf-data-' + op);
+    if (!btn) return;
+    const sel = op === opcao;
+    btn.style.borderColor = sel ? 'var(--eko-green)' : 'var(--border)';
+    btn.style.background = sel ? 'var(--eko-green-light)' : 'var(--surface)';
+    btn.style.color = sel ? 'var(--eko-green-dark)' : 'var(--text-muted)';
+  });
+  const custom = document.getElementById('cf-data-custom');
+  if (custom) custom.style.display = opcao === 'outro' ? '' : 'none';
+};
+
+function getDataLancamento() {
+  if (cfDataSelecionada === 'hoje') return new Date();
+  if (cfDataSelecionada === 'ontem') {
+    const d = new Date(); d.setDate(d.getDate() - 1); return d;
+  }
+  // outro
+  const val = document.getElementById('cf-data-custom')?.value;
+  if (val) return new Date(val + 'T12:00:00');
+  return new Date();
+}
+
+// ════ RECUPERAÇÃO RÁPIDA ════════════════════════════════════
+let recTipoAtual = 'gasto';
+let recCatSelecionada = null;
+let recLancamentos = []; // lista de lançamentos para salvar em batch
+let recDataSelecionada = null; // data ISO string
+
+window.abrirRecuperacaoRapida = function() {
+  recLancamentos = [];
+  recCatSelecionada = null;
+  recTipoAtual = 'gasto';
+  document.getElementById('rec-valor').value = '';
+  document.getElementById('rec-msg').textContent = '';
+  document.getElementById('rec-msg').className = 'msg';
+  document.getElementById('rec-lista-wrap').style.display = 'none';
+  document.getElementById('rec-lista').innerHTML = '';
+
+  // Gerar botões dos últimos 7 dias
+  const grid = document.getElementById('rec-dias-grid');
+  grid.innerHTML = '';
+  const hoje = new Date();
+  const dias = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(hoje);
+    d.setDate(d.getDate() - i);
+    const iso = d.toISOString().slice(0,10);
+    const label = i === 0 ? 'Hoje' : i === 1 ? 'Ontem' : dias[d.getDay()] + ' ' + d.getDate() + '/' + (d.getMonth()+1);
+    const btn = document.createElement('button');
+    btn.dataset.iso = iso;
+    btn.textContent = label;
+    btn.style.cssText = 'padding:.4rem .6rem;border-radius:8px;border:2px solid var(--border);background:var(--surface);color:var(--text-muted);font-weight:700;font-size:11px;cursor:pointer;transition:all .2s;white-space:nowrap';
+    btn.onclick = () => {
+      grid.querySelectorAll('button').forEach(b => {
+        b.style.borderColor = 'var(--border)'; b.style.background = 'var(--surface)'; b.style.color = 'var(--text-muted)';
+      });
+      btn.style.borderColor = 'var(--eko-green)';
+      btn.style.background = 'var(--eko-green-light)';
+      btn.style.color = 'var(--eko-green-dark)';
+      recDataSelecionada = iso;
+      document.getElementById('rec-data-custom').style.display = 'none';
+    };
+    if (i === 0) {
+      btn.style.borderColor = 'var(--eko-green)';
+      btn.style.background = 'var(--eko-green-light)';
+      btn.style.color = 'var(--eko-green-dark)';
+      recDataSelecionada = iso;
+    }
+    grid.appendChild(btn);
+  }
+  // Botão "Outra data"
+  const btnOutra = document.createElement('button');
+  btnOutra.textContent = '📅 Outra';
+  btnOutra.style.cssText = 'padding:.4rem .6rem;border-radius:8px;border:2px solid var(--border);background:var(--surface);color:var(--text-muted);font-weight:700;font-size:11px;cursor:pointer';
+  btnOutra.onclick = () => {
+    document.getElementById('rec-data-custom').style.display = '';
+  };
+  grid.appendChild(btnOutra);
+
+  // Categorias
+  renderCategoriasGrid('rec-categorias-grid', cat => {
+    recCatSelecionada = cat;
+  });
+  selecionarTipoRec('gasto');
+  abrirOverlay('overlay-recuperacao');
+};
+
+window.selecionarTipoRec = function(tipo) {
+  recTipoAtual = tipo;
+  ['gasto','receita'].forEach(t => {
+    const btn = document.getElementById('rec-tipo-' + t);
+    if (!btn) return;
+    const sel = t === tipo;
+    if (t === 'gasto') {
+      btn.style.borderColor = sel ? 'var(--red)' : 'var(--border)';
+      btn.style.background = sel ? 'var(--red-light)' : 'var(--surface)';
+      btn.style.color = sel ? 'var(--red)' : 'var(--text-muted)';
+    } else {
+      btn.style.borderColor = sel ? 'var(--eko-green)' : 'var(--border)';
+      btn.style.background = sel ? 'var(--eko-green-light)' : 'var(--surface)';
+      btn.style.color = sel ? 'var(--eko-green-dark)' : 'var(--text-muted)';
+    }
+  });
+  // Recarregar categorias por tipo
+  renderCategoriasGrid('rec-categorias-grid', cat => { recCatSelecionada = cat; }, tipo);
+  recCatSelecionada = null;
+};
+
+window.adicionarLancamentoRec = function() {
+  const msg = document.getElementById('rec-msg');
+  const valor = parseMoney(document.getElementById('rec-valor').value);
+  if (!valor || valor <= 0) { msg.textContent = 'Informe o valor.'; msg.className = 'msg error'; return; }
+  if (!recCatSelecionada) { msg.textContent = 'Selecione uma categoria.'; msg.className = 'msg error'; return; }
+
+  const dataCustom = document.getElementById('rec-data-custom').value;
+  const dataFinal = dataCustom || recDataSelecionada || new Date().toISOString().slice(0,10);
+  const d = new Date(dataFinal + 'T12:00:00');
+
+  recLancamentos.push({
+    tipo: recTipoAtual,
+    valor,
+    categoria: recCatSelecionada,
+    mes: d.getMonth(),
+    ano: d.getFullYear(),
+    chaveMes: cfChaveMes(d.getFullYear(), d.getMonth()),
+    data: d.toISOString(),
+  });
+
+  // Atualizar lista visual
+  const lista = document.getElementById('rec-lista');
+  const wrap = document.getElementById('rec-lista-wrap');
+  wrap.style.display = '';
+  lista.innerHTML = recLancamentos.map((l, i) => `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:.5rem 0;border-bottom:1px solid var(--border)">
+      <div>
+        <div style="font-size:13px;font-weight:700;color:${l.tipo==='gasto'?'var(--red)':'var(--eko-green)'}">${l.tipo==='gasto'?'💸':'💵'} ${fmt(l.valor)}</div>
+        <div style="font-size:11px;color:var(--text-muted)">${esc(l.categoria.icon||'')} ${esc(l.categoria.nome||'')} · ${new Date(l.data).toLocaleDateString('pt-BR')}</div>
+      </div>
+      <button onclick="removerLancamentoRec(${i})" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px">✕</button>
+    </div>`).join('');
+
+  // Limpar campos
+  document.getElementById('rec-valor').value = '';
+  msg.textContent = `✓ ${recLancamentos.length} lançamento(s) na fila`;
+  msg.className = 'msg success';
+};
+
+window.removerLancamentoRec = function(idx) {
+  recLancamentos.splice(idx, 1);
+  window.adicionarLancamentoRec && null; // trigger re-render
+  const lista = document.getElementById('rec-lista');
+  const wrap = document.getElementById('rec-lista-wrap');
+  if (!recLancamentos.length) { wrap.style.display = 'none'; return; }
+  lista.innerHTML = recLancamentos.map((l, i) => `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:.5rem 0;border-bottom:1px solid var(--border)">
+      <div>
+        <div style="font-size:13px;font-weight:700;color:${l.tipo==='gasto'?'var(--red)':'var(--eko-green)'}">${l.tipo==='gasto'?'💸':'💵'} ${fmt(l.valor)}</div>
+        <div style="font-size:11px;color:var(--text-muted)">${esc(l.categoria.icon||'')} ${esc(l.categoria.nome||'')} · ${new Date(l.data).toLocaleDateString('pt-BR')}</div>
+      </div>
+      <button onclick="removerLancamentoRec(${i})" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px">✕</button>
+    </div>`).join('');
+};
+
+window.salvarTodosRec = async function() {
+  const msg = document.getElementById('rec-msg');
+  if (!recLancamentos.length) { msg.textContent = 'Adicione pelo menos um lançamento.'; msg.className = 'msg error'; return; }
+  msg.textContent = 'Salvando...'; msg.className = 'msg';
+  try {
+    for (const lanc of recLancamentos) {
+      await saveCFLancamento(lanc);
+    }
+    fecharOverlay('overlay-recuperacao');
+    toast(`✅ ${recLancamentos.length} lançamento(s) salvos!`);
+    recLancamentos = [];
+    await renderHubControle();
+  } catch(e) {
+    msg.textContent = 'Erro ao salvar. Tente novamente.'; msg.className = 'msg error';
+  }
+};
+
+function renderCategoriasGrid(gridId, onSelect, tipoFiltro) {
+  const grid = document.getElementById(gridId);
+  if (!grid) return;
+  const tipo = tipoFiltro || cfTipoAtual || 'gasto';
+  const cats = cfCategorias.filter(c => !c.oculta && c.tipo === tipo);
+  grid.innerHTML = '';
+  cats.forEach(cat => {
+    const btn = document.createElement('button');
+    btn.style.cssText = 'padding:.5rem .25rem;border-radius:10px;border:2px solid var(--border);background:var(--surface);cursor:pointer;font-size:11px;font-weight:600;transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:2px';
+    btn.innerHTML = `<span style="font-size:18px">${esc(cat.icon||'')}</span><span style="color:var(--text-muted)">${esc(cat.nome||'')}</span>`;
+    btn.onclick = () => {
+      grid.querySelectorAll('button').forEach(b => {
+        b.style.borderColor = 'var(--border)'; b.style.background = 'var(--surface)';
+      });
+      btn.style.borderColor = 'var(--eko-green)';
+      btn.style.background = 'var(--eko-green-light)';
+      onSelect(cat);
+    };
+    grid.appendChild(btn);
+  });
+}
+
 window.salvarLancamento = async function() {
   limparMsg('cf-msg');
   const valor = parseMoney(document.getElementById('cf-valor').value);
   if (!valor || valor <= 0) { showMsg('cf-msg','error','Informe o valor.'); return; }
   if (!cfCatSelecionada) { showMsg('cf-msg','error','Selecione uma categoria.'); return; }
-  const now = new Date();
+  const dataLanc = getDataLancamento();
   const lanc = {
     tipo: cfTipoAtual,
     valor,
     categoria: cfCatSelecionada,
-    mes: now.getMonth(),
-    ano: now.getFullYear(),
-    chaveMes: cfChaveMes(now.getFullYear(), now.getMonth()),
+    mes: dataLanc.getMonth(),
+    ano: dataLanc.getFullYear(),
+    chaveMes: cfChaveMes(dataLanc.getFullYear(), dataLanc.getMonth()),
+    data: dataLanc.toISOString(),
   };
   try {
     await saveCFLancamento(lanc);
@@ -4918,6 +5192,8 @@ window.salvarLancamento = async function() {
   });
   const bv = document.getElementById('cf-boas-vindas');
   if(bv) bv.style.display = 'none';
+  // Resetar data para hoje
+  selecionarDataLancamento('hoje');
   await renderHubControle();
 };
 
