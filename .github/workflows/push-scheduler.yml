@@ -1,0 +1,43 @@
+name: Push Notifications Scheduler
+
+on:
+  schedule:
+    # Horários em UTC (Brasil = UTC-3, então somar 3h)
+    - cron: '0 11 * * 1'      # Dica: segunda-feira 08:00 BRT (11:00 UTC)
+    - cron: '0 23 * * *'      # Gastos: todo dia 20:00 BRT (23:00 UTC)
+    - cron: '0 12 * * *'      # Dívida: todo dia 09:00 BRT (12:00 UTC)
+    - cron: '0 23 20 * *'     # Meta: todo dia 20 às 20:00 BRT
+    - cron: '0 12 5 * *'      # Reserva: todo dia 5 às 09:00 BRT
+  workflow_dispatch:           # Permite disparar manualmente para testes
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Determinar tipo de notificação
+        id: tipo
+        run: |
+          HOUR=$(date -u +"%H")
+          DAY=$(date -u +"%d")
+          WEEKDAY=$(date -u +"%u")  # 1=segunda
+          
+          if [ "$HOUR" = "11" ] && [ "$WEEKDAY" = "1" ]; then
+            echo "tipo=dica" >> $GITHUB_OUTPUT
+          elif [ "$HOUR" = "23" ] && [ "$DAY" = "20" ]; then
+            echo "tipo=meta" >> $GITHUB_OUTPUT
+          elif [ "$HOUR" = "12" ] && [ "$DAY" = "05" ]; then
+            echo "tipo=reserva" >> $GITHUB_OUTPUT
+          elif [ "$HOUR" = "12" ]; then
+            echo "tipo=divida" >> $GITHUB_OUTPUT
+          elif [ "$HOUR" = "23" ]; then
+            echo "tipo=gastos" >> $GITHUB_OUTPUT
+          else
+            echo "tipo=gastos" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Disparar notificação
+        run: |
+          curl -s -X POST \
+            "https://app.ekofinanceira.com.br/.netlify/functions/push?tipo=${{ steps.tipo.outputs.tipo }}" \
+            -H "x-push-secret: ${{ secrets.PUSH_SECRET }}" \
+            -H "Content-Type: application/json"

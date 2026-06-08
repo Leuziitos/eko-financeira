@@ -518,6 +518,7 @@ html,body{height:100%;background:var(--bg);font-family:'Plus Jakarta Sans',sans-
     <div id="hub-dica" style="margin-bottom:1rem"></div>
 
     <!-- Revisão trimestral -->
+    <div id="hub-push-optin" style="display:none;margin-bottom:1rem"></div>
     <div id="hub-revisao" style="margin-bottom:1rem"></div>
 
     <!-- Avisos rápidos -->
@@ -1730,6 +1731,7 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.0.1/firebas
 import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, getDocs, addDoc, query, where, orderBy, runTransaction, onSnapshot } from 'https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js';
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail } from 'https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js';
 import { getAnalytics, logEvent } from 'https://www.gstatic.com/firebasejs/11.0.1/firebase-analytics.js';
+import { getMessaging, getToken, onMessage } from 'https://www.gstatic.com/firebasejs/11.0.1/firebase-messaging.js';
 
 const firebaseConfig = {
   apiKey: "AIzaSyAu5cMIkf6zn6sTt3M5eTV5uoPE002ad2k",
@@ -1745,6 +1747,8 @@ const firebaseApp = initializeApp(firebaseConfig);
 const db = getFirestore(firebaseApp);
 const auth = getAuth(firebaseApp);
 const analytics = getAnalytics(firebaseApp);
+let messaging = null;
+try { messaging = getMessaging(firebaseApp); } catch(e) {}
 
 // Helper para logar eventos com segurança
 function logEko(evento, params = {}) {
@@ -1903,6 +1907,8 @@ async function carregarApp() {
       });
     } catch(e){ console.error('onSnapshot metas',e); }
     try { await renderHub(); } catch(e) { console.error('renderHub error:', e); }
+  try { await inicializarPush(); } catch(e) {}
+  try { inicializarMensagensPush(); } catch(e) {}
     try { await renderProntuario(); } catch(e) { console.error('renderProntuario error:', e); }
     try { await renderDiagnosticos(); } catch(e) { console.error('renderDiagnosticos error:', e); }
     ir('screen-hub');
@@ -5580,6 +5586,104 @@ async function init() {
   const obDone = localStorage.getItem('eko_onboard_done');
   if (!obDone) { obIdx = 0; renderOnboard(); ir('screen-onboarding'); return; }
   ir('screen-login'); // aguarda onAuthStateChanged
+}
+
+
+// ════ PUSH NOTIFICATIONS ════════════════════════════════════
+const VAPID_KEY = 'BFh4hicncxVsOGZ3ORnUkXqcEARfj6-BQDPpII2LgDEcCSYXgqWSjtceCJPb6nb942KBn-ESSIFZiHJ_yfik4Ug';
+const PUSH_OPTIN_KEY = 'eko_push_optin_';
+
+async function inicializarPush() {
+  if (!messaging) return;
+  if (!('Notification' in window)) return;
+  if (!('serviceWorker' in navigator)) return;
+
+  const optinKey = PUSH_OPTIN_KEY + (sessao?.email || '');
+  const jaRespondeu = localStorage.getItem(optinKey);
+  
+  // Se já tem permissão concedida, registrar token silenciosamente
+  if (Notification.permission === 'granted') {
+    await registrarTokenPush();
+    return;
+  }
+
+  // Se negou ou já perguntou nos últimos 7 dias, não perguntar
+  if (Notification.permission === 'denied') return;
+  if (jaRespondeu) {
+    const ts = parseInt(jaRespondeu);
+    if (Date.now() - ts < 7 * 24 * 60 * 60 * 1000) return;
+  }
+
+  // Mostrar card de opt-in no hub
+  const el = document.getElementById('hub-push-optin');
+  if (!el) return;
+  el.style.display = '';
+  el.innerHTML = `
+    <div style="background:linear-gradient(135deg,var(--eko-green-light),var(--surface));border:1px solid var(--eko-green);border-radius:14px;padding:1rem;display:flex;align-items:center;gap:12px">
+      <div style="font-size:28px;flex-shrink:0">📱</div>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:800;color:var(--eko-green-dark)">Ative as notificações!</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:2px">Receba dicas e lembretes financeiros no celular.</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0">
+        <button onclick="ativarPush()" style="background:var(--eko-green);color:var(--dark);border:none;border-radius:8px;padding:.4rem .75rem;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit">Ativar</button>
+        <button onclick="dispensarPush()" style="background:none;border:none;color:var(--text-muted);font-size:11px;cursor:pointer;font-family:inherit">Agora não</button>
+      </div>
+    </div>`;
+}
+
+window.ativarPush = async function() {
+  try {
+    const permission = await Notification.requestPermission();
+    const el = document.getElementById('hub-push-optin');
+    if (el) el.style.display = 'none';
+    
+    if (permission === 'granted') {
+      await registrarTokenPush();
+      toast('📱 Notificações ativadas! 🌱');
+      logEko('push_ativado');
+    } else {
+      dispensarPush();
+    }
+  } catch(e) {
+    console.error('Erro ao ativar push:', e);
+  }
+};
+
+window.dispensarPush = function() {
+  const el = document.getElementById('hub-push-optin');
+  if (el) el.style.display = 'none';
+  const optinKey = PUSH_OPTIN_KEY + (sessao?.email || '');
+  localStorage.setItem(optinKey, Date.now().toString());
+};
+
+async function registrarTokenPush() {
+  if (!messaging || !sessao?.email) return;
+  try {
+    const sw = await navigator.serviceWorker.ready;
+    const token = await getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: sw });
+    if (!token) return;
+    // Salvar token no Firestore
+    await setDoc(doc(db, 'push_tokens', sessao.email + '_' + token.slice(-8)), {
+      token,
+      email: sessao.email,
+      atualizadoEm: new Date().toISOString(),
+      dispositivo: navigator.userAgent.slice(0, 100),
+    });
+  } catch(e) {
+    console.error('Erro ao registrar token:', e);
+  }
+}
+
+// Receber mensagem com app aberto
+function inicializarMensagensPush() {
+  if (!messaging) return;
+  try {
+    onMessage(messaging, payload => {
+      const { title, body } = payload.notification || {};
+      if (title) toast(`${title}: ${body || ''}`);
+    });
+  } catch(e) {}
 }
 
 onAuthStateChanged(auth, async (firebaseUser) => {

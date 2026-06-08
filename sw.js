@@ -1,4 +1,4 @@
-const CACHE_NAME = 'eko-financeira-v2';
+const CACHE_NAME = 'eko-financeira-v3';
 const ASSETS = [
   '/',
   '/index.html',
@@ -6,6 +6,7 @@ const ASSETS = [
   '/icons/icon-192x192.png',
   '/icons/icon-512x512.png',
 ];
+
 // Instala e faz cache dos assets principais
 self.addEventListener('install', event => {
   event.waitUntil(
@@ -13,6 +14,7 @@ self.addEventListener('install', event => {
   );
   self.skipWaiting();
 });
+
 // Limpa caches antigos
 self.addEventListener('activate', event => {
   event.waitUntil(
@@ -22,6 +24,7 @@ self.addEventListener('activate', event => {
   );
   self.clients.claim();
 });
+
 // Estratégia: network first, fallback para cache
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
@@ -36,5 +39,42 @@ self.addEventListener('fetch', event => {
         return response;
       })
       .catch(() => caches.match(event.request))
+  );
+});
+
+// ════ PUSH NOTIFICATIONS ════════════════════════════════════
+
+// Recebe notificação push
+self.addEventListener('push', event => {
+  if (!event.data) return;
+  let payload;
+  try { payload = event.data.json(); } catch(e) { payload = { title: 'Eko Financeira', body: event.data.text() }; }
+
+  const title = payload.title || 'Eko Financeira 🌱';
+  const options = {
+    body: payload.body || '',
+    icon: '/icons/icon-192x192.png',
+    badge: '/icons/icon-192x192.png',
+    tag: payload.tag || 'eko-notif',
+    renotify: true,
+    data: { url: payload.url || 'https://app.ekofinanceira.com.br' },
+    vibrate: [200, 100, 200],
+  };
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+// Clique na notificação — abre o app
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  const url = event.notification.data?.url || 'https://app.ekofinanceira.com.br';
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
+      for (const client of clientList) {
+        if (client.url.includes('ekofinanceira') && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      return clients.openWindow(url);
+    })
   );
 });
