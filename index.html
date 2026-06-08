@@ -5660,7 +5660,9 @@ window.dispensarPush = function() {
 async function registrarTokenPush() {
   if (!messaging || !sessao?.email) return;
   try {
-    const sw = await navigator.serviceWorker.ready;
+    // Usar o firebase-messaging-sw.js dedicado
+    const sw = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+    await navigator.serviceWorker.ready;
     const token = await getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: sw });
     if (!token) return;
     // Salvar token no Firestore
