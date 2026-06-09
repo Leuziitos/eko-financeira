@@ -1746,9 +1746,7 @@ const firebaseApp = initializeApp(firebaseConfig);
 const db = getFirestore(firebaseApp);
 const auth = getAuth(firebaseApp);
 const analytics = getAnalytics(firebaseApp);
-// Messaging via SDK compat (carregado como script clássico abaixo do módulo)
-// A variável `messaging` é preenchida após o script compat ser carregado
-let messaging = null;
+// Push via OneSignal (ver bloco no final do arquivo)
 
 // Helper para logar eventos com segurança
 function logEko(evento, params = {}) {
@@ -5589,21 +5587,21 @@ async function init() {
 }
 
 
-// ════ PUSH NOTIFICATIONS ════════════════════════════════════
-const VAPID_KEY = 'BFh4hicncxVsQGZ3ORnUkXqcEARfj6-BQDPpII2LgDEcCSYXgqWSjtceCJPb6nb942KBn-ESSiFZiHJ_yfik4Ug';
+// ════ PUSH NOTIFICATIONS — OneSignal ════════════════════════
+const ONESIGNAL_APP_ID = 'c91df304-8d91-4528-bacd-edb75e918fb1';
 const PUSH_OPTIN_KEY = 'eko_push_optin_';
 
 async function inicializarPush() {
-  if (!messaging) return;
   if (!('Notification' in window)) return;
   if (!('serviceWorker' in navigator)) return;
+  if (typeof OneSignalDeferred === 'undefined') return;
 
   const optinKey = PUSH_OPTIN_KEY + (sessao?.email || '');
   const jaRespondeu = localStorage.getItem(optinKey);
-  
-  // Se já tem permissão concedida, registrar token silenciosamente
+
+  // Se já tem permissão concedida, vincular email silenciosamente
   if (Notification.permission === 'granted') {
-    await registrarTokenPush();
+    await vincularEmailOneSignal();
     return;
   }
 
@@ -5634,17 +5632,20 @@ async function inicializarPush() {
 
 window.ativarPush = async function() {
   try {
-    const permission = await Notification.requestPermission();
     const el = document.getElementById('hub-push-optin');
     if (el) el.style.display = 'none';
-    
-    if (permission === 'granted') {
-      await registrarTokenPush();
-      toast('📱 Notificações ativadas! 🌱');
-      logEko('push_ativado');
-    } else {
-      dispensarPush();
-    }
+
+    // Solicitar permissão via OneSignal
+    OneSignalDeferred.push(async (os) => {
+      await os.Notifications.requestPermission();
+      if (os.Notifications.permission) {
+        await vincularEmailOneSignal();
+        toast('📱 Notificações ativadas! 🌱');
+        logEko('push_ativado');
+      } else {
+        dispensarPush();
+      }
+    });
   } catch(e) {
     console.error('Erro ao ativar push:', e);
   }
@@ -5657,44 +5658,31 @@ window.dispensarPush = function() {
   localStorage.setItem(optinKey, Date.now().toString());
 };
 
-async function registrarTokenPush() {
+async function vincularEmailOneSignal() {
   if (!sessao?.email) return;
   try {
-    // Registrar SW dedicado ao FCM
-    const sw = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
-    await navigator.serviceWorker.ready;
-
-    // Usar messaging compat pré-inicializado
-    if (!messaging) messaging = window._ekoMessagingCompat || null;
-    if (!messaging && window.firebase && window.firebase.messaging) {
-      try { messaging = window.firebase.messaging(); } catch(e) {}
-    }
-    if (!messaging) { console.warn('FCM messaging não disponível'); return; }
-
-    // getToken via API compat (resolve o erro OAuth 401)
-    const token = await messaging.getToken({ vapidKey: VAPID_KEY, serviceWorkerRegistration: sw });
-    if (!token) return;
-
-    // Salvar token no Firestore
-    await setDoc(doc(db, 'push_tokens', sessao.email + '_' + token.slice(-8)), {
-      token,
-      email: sessao.email,
-      atualizadoEm: new Date().toISOString(),
-      dispositivo: navigator.userAgent.slice(0, 100),
+    OneSignalDeferred.push(async (os) => {
+      // Vincular email do usuário ao dispositivo no OneSignal
+      await os.login(sessao.email);
+      console.log('✅ OneSignal: usuário vinculado -', sessao.email);
     });
-    console.log('✅ Push token registrado');
   } catch(e) {
-    console.error('Erro ao registrar token:', e);
+    console.error('Erro ao vincular email OneSignal:', e);
   }
 }
 
-// Receber mensagem com app aberto (SDK compat)
+// Receber mensagem com app aberto (OneSignal cuida disso automaticamente)
 function inicializarMensagensPush() {
-  if (!messaging) return;
+  // OneSignal exibe as notificações automaticamente via SW
+  // Aqui apenas registramos o listener para foreground
+  if (typeof OneSignalDeferred === 'undefined') return;
   try {
-    messaging.onMessage(payload => {
-      const { title, body } = payload.notification || {};
-      if (title) toast(`${title}: ${body || ''}`);
+    OneSignalDeferred.push((os) => {
+      os.Notifications.addEventListener('foregroundWillDisplay', (event) => {
+        const { title, body } = event.notification;
+        toast(`${title || 'Eko'}: ${body || ''}`);
+        event.preventDefault(); // Não exibir notificação nativa em foreground, usar toast
+      });
     });
   } catch(e) {}
 }
@@ -5846,40 +5834,18 @@ if ('serviceWorker' in navigator) {
 init();
 </script>
 
-<!--
-  Firebase Messaging SDK COMPAT — carregado como script clássico (não module)
-  Necessário para getToken funcionar sem erro OAuth 401 no FCM v1.
-  Os outros SDKs (Firestore, Auth, Analytics) continuam usando a versão modular acima.
--->
-<script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-messaging-compat.js"></script>
+<!-- OneSignal Web SDK -->
+<script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
 <script>
-// Inicializa o app compat reutilizando o mesmo projeto Firebase
-// (o SDK compat detecta que já existe um app inicializado e o reutiliza)
-try {
-  const firebaseConfigCompat = {
-    apiKey: "AIzaSyAu5cMIkf6zn6sTt3M5eTV5uoPE002ad2k",
-    authDomain: "eko-financeira.firebaseapp.com",
-    projectId: "eko-financeira",
-    storageBucket: "eko-financeira.firebasestorage.app",
-    messagingSenderId: "600120589786",
-    appId: "1:600120589786:web:b71b059b58b15caae4d4e3",
-    measurementId: "G-ZJBF8CPZ9R"
-  };
-  // Evita "duplicate app" se o compat já foi carregado
-  const compatApp = firebase.apps.length
-    ? firebase.app()
-    : firebase.initializeApp(firebaseConfigCompat);
-
-  // Expõe o messaging compat globalmente para registrarTokenPush usar
-  if ('serviceWorker' in navigator && 'Notification' in window) {
-    window._ekoMessagingCompat = firebase.messaging(compatApp);
-    // Se messaging ainda não foi atribuído (nenhum usuário logado ainda),
-    // registrarTokenPush vai buscá-lo em window.firebase.messaging()
-  }
-} catch(e) {
-  console.warn('Firebase compat init:', e.message);
-}
+  window.OneSignalDeferred = window.OneSignalDeferred || [];
+  OneSignalDeferred.push(async function(OneSignal) {
+    await OneSignal.init({
+      appId: "c91df304-8d91-4528-bacd-edb75e918fb1",
+      safari_web_id: "",
+      notifyButton: { enable: false }, // Usamos nosso próprio card de opt-in
+      allowLocalhostAsSecureOrigin: true,
+    });
+  });
 </script>
 </body>
 </html>
