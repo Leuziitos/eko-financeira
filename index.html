@@ -5635,28 +5635,22 @@ window.ativarPush = async function() {
     const el = document.getElementById('hub-push-optin');
     if (el) el.style.display = 'none';
 
-    OneSignalDeferred.push(async (os) => {
-      // Usar o método oficial do OneSignal que funciona em desktop e Android PWA
-      const accepted = await os.User.PushSubscription.optIn();
-      
-      if (accepted || os.Notifications.permission) {
-        await vincularEmailOneSignal();
-        toast('📱 Notificações ativadas! 🌱');
-        logEko('push_ativado');
-      } else {
-        dispensarPush();
-      }
-    });
+    // Solicitar permissão nativa DIRETAMENTE no clique (sem async queue)
+    const perm = await Notification.requestPermission();
+
+    if (perm === 'granted') {
+      // Vincular ao OneSignal após permissão concedida
+      OneSignalDeferred.push(async (os) => {
+        await os.User.PushSubscription.optIn();
+        await os.login(sessao?.email || '');
+      });
+      toast('📱 Notificações ativadas! 🌱');
+      logEko('push_ativado');
+    } else {
+      dispensarPush();
+    }
   } catch(e) {
     console.error('Erro ao ativar push:', e);
-    // Fallback: tentar requestPermission diretamente
-    try {
-      const perm = await Notification.requestPermission();
-      if (perm === 'granted') {
-        await vincularEmailOneSignal();
-        toast('📱 Notificações ativadas! 🌱');
-      }
-    } catch(e2) {}
   }
 };
 
