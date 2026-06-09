@@ -1,6 +1,5 @@
 const { initializeApp, cert, getApps } = require('firebase-admin/app');
 const { getFirestore } = require('firebase-admin/firestore');
-const { getMessaging } = require('firebase-admin/messaging');
 
 // Inicializar Firebase Admin
 if (!getApps().length) {
@@ -10,7 +9,9 @@ if (!getApps().length) {
 }
 
 const db = getFirestore();
-const messaging = getMessaging();
+
+const ONESIGNAL_APP_ID = process.env.ONESIGNAL_APP_ID;
+const ONESIGNAL_API_KEY = process.env.ONESIGNAL_API_KEY;
 
 // Tipos de notificação
 const TIPOS = {
@@ -20,6 +21,35 @@ const TIPOS = {
   reserva: { title: '🛡️ Reserva de Emergência', body: 'Dia 5 chegou! Lembre de aportar na sua reserva.' },
   divida:  { title: '💳 Vencimento amanhã!', body: 'Você tem uma dívida vencendo amanhã. Já se programou?' },
 };
+
+// Dispara notificação via OneSignal para um email específico
+async function enviarNotificacao(email, notif) {
+  const payload = {
+    app_id: ONESIGNAL_APP_ID,
+    filters: [{ field: 'external_user_id', relation: '=', value: email }],
+    headings: { en: notif.title },
+    contents: { en: notif.body },
+    url: 'https://app.ekofinanceira.com.br',
+    chrome_web_icon: 'https://app.ekofinanceira.com.br/icons/icon-192x192.png',
+    firefox_icon: 'https://app.ekofinanceira.com.br/icons/icon-192x192.png',
+  };
+
+  const response = await fetch('https://api.onesignal.com/notifications', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Key ${ONESIGNAL_API_KEY}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const err = await response.text();
+    throw new Error(`OneSignal error: ${response.status} — ${err}`);
+  }
+
+  return await response.json();
+}
 
 exports.handler = async (event) => {
   // Verificar autorização
@@ -34,15 +64,16 @@ exports.handler = async (event) => {
   const diaSemana = new Date().getDay(); // 0=dom, 1=seg
 
   try {
-    // Buscar todos os tokens ativos
-    const tokensSnap = await db.collection('push_tokens').get();
-    if (tokensSnap.empty) return { statusCode: 200, body: 'Nenhum token registrado' };
+    // Buscar todos os usuários únicos com push ativo via OneSignal
+    // Usamos o Firestore para obter a lista de emails cadastrados no app
+    const usuariosSnap = await db.collection('users').get();
+    if (usuariosSnap.empty) return { statusCode: 200, body: 'Nenhum usuário cadastrado' };
 
     const resultados = { enviados: 0, pulados: 0, erros: 0 };
 
-    for (const tokenDoc of tokensSnap.docs) {
-      const { token, email } = tokenDoc.data();
-      if (!token || !email) continue;
+    for (const userDoc of usuariosSnap.docs) {
+      const email = userDoc.data().email || userDoc.id;
+      if (!email) continue;
 
       let deveEnviar = false;
       let notif = TIPOS[tipo];
@@ -99,27 +130,12 @@ exports.handler = async (event) => {
 
       if (!deveEnviar) { resultados.pulados++; continue; }
 
-      // Enviar notificação
+      // Enviar via OneSignal
       try {
-        await messaging.send({
-          token,
-          notification: { title: notif.title, body: notif.body },
-          webpush: {
-            notification: {
-              title: notif.title,
-              body: notif.body,
-              icon: 'https://app.ekofinanceira.com.br/icons/icon-192x192.png',
-              badge: 'https://app.ekofinanceira.com.br/icons/icon-192x192.png',
-            },
-            fcmOptions: { link: 'https://app.ekofinanceira.com.br' },
-          },
-        });
+        await enviarNotificacao(email, notif);
         resultados.enviados++;
       } catch (e) {
-        // Token inválido — remover do Firestore
-        if (e.code === 'messaging/registration-token-not-registered') {
-          await tokenDoc.ref.delete();
-        }
+        console.error(`Erro ao enviar para ${email}:`, e.message);
         resultados.erros++;
       }
     }
