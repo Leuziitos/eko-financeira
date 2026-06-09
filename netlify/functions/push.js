@@ -22,17 +22,24 @@ const TIPOS = {
   divida:  { title: '💳 Vencimento amanhã!', body: 'Você tem uma dívida vencendo amanhã. Já se programou?' },
 };
 
-// Dispara notificação via OneSignal para um email específico
-async function enviarNotificacao(email, notif) {
+// Dispara notificação via OneSignal para lista de external_user_ids (emails)
+// Se a lista estiver vazia, envia para todos os subscribers
+async function enviarNotificacaoLote(emails, notif) {
   const payload = {
     app_id: ONESIGNAL_APP_ID,
-    filters: [{ field: 'external_user_id', relation: '=', value: email }],
     headings: { en: notif.title },
     contents: { en: notif.body },
     url: 'https://app.ekofinanceira.com.br',
     chrome_web_icon: 'https://app.ekofinanceira.com.br/icons/icon-192x192.png',
     firefox_icon: 'https://app.ekofinanceira.com.br/icons/icon-192x192.png',
   };
+
+  if (emails && emails.length > 0) {
+    payload.include_aliases = { external_id: emails };
+    payload.target_channel = 'push';
+  } else {
+    payload.included_segments = ['Total Subscriptions'];
+  }
 
   const response = await fetch('https://api.onesignal.com/notifications', {
     method: 'POST',
@@ -43,12 +50,12 @@ async function enviarNotificacao(email, notif) {
     body: JSON.stringify(payload),
   });
 
+  const responseText = await response.text();
   if (!response.ok) {
-    const err = await response.text();
-    throw new Error(`OneSignal error: ${response.status} — ${err}`);
+    throw new Error(`OneSignal error: ${response.status} — ${responseText}`);
   }
 
-  return await response.json();
+  return JSON.parse(responseText);
 }
 
 exports.handler = async (event) => {
@@ -64,27 +71,27 @@ exports.handler = async (event) => {
   const diaSemana = new Date().getDay(); // 0=dom, 1=seg
 
   try {
-    // Buscar todos os usuários únicos com push ativo via OneSignal
-    // Usamos o Firestore para obter a lista de emails cadastrados no app
+    // ── Dica semanal — envia para todos (só segunda)
+    if (tipo === 'dica') {
+      if (diaSemana !== 1) return { statusCode: 200, body: JSON.stringify({ tipo, msg: 'Não é segunda-feira' }) };
+      const result = await enviarNotificacaoLote([], TIPOS.dica);
+      return { statusCode: 200, body: JSON.stringify({ tipo, result }) };
+    }
+
+    // Para os outros tipos, filtra por usuário
     const usuariosSnap = await db.collection('users').get();
     if (usuariosSnap.empty) return { statusCode: 200, body: 'Nenhum usuário cadastrado' };
 
-    const resultados = { enviados: 0, pulados: 0, erros: 0 };
+    const emailsParaEnviar = [];
 
     for (const userDoc of usuariosSnap.docs) {
       const email = userDoc.data().email || userDoc.id;
       if (!email) continue;
 
       let deveEnviar = false;
-      let notif = TIPOS[tipo];
-
-      // ── Dica semanal (só segunda-feira = dia 1)
-      if (tipo === 'dica') {
-        deveEnviar = diaSemana === 1;
-      }
 
       // ── Lembrete de gastos (só se não registrou hoje)
-      else if (tipo === 'gastos') {
+      if (tipo === 'gastos') {
         const lancSnap = await db.collection('controle')
           .where('email', '==', email)
           .where('data', '>=', hoje + 'T00:00:00.000Z')
@@ -95,8 +102,7 @@ exports.handler = async (event) => {
 
       // ── Aporte em metas (todo dia 20)
       else if (tipo === 'meta') {
-        deveEnviar = diaMes === 20;
-        if (deveEnviar) {
+        if (diaMes === 20) {
           const metasSnap = await db.collection('metas').where('email', '==', email).limit(1).get();
           const objSnap = await db.collection('objetivos').where('email', '==', email).limit(1).get();
           deveEnviar = !metasSnap.empty || !objSnap.empty;
@@ -105,8 +111,7 @@ exports.handler = async (event) => {
 
       // ── Aporte na reserva (todo dia 5)
       else if (tipo === 'reserva') {
-        deveEnviar = diaMes === 5;
-        if (deveEnviar) {
+        if (diaMes === 5) {
           const resDoc = await db.collection('reserva').doc(email).get();
           const res = resDoc.data();
           deveEnviar = resDoc.exists && res && (res.saldoAtual || 0) < res.meta;
@@ -122,28 +127,24 @@ exports.handler = async (event) => {
           .where('email', '==', email)
           .where('vencimento', '==', diaAmanha).get();
         deveEnviar = !dividasSnap.empty;
-        if (deveEnviar && !dividasSnap.empty) {
-          const nomeDivida = dividasSnap.docs[0].data().nome || 'uma dívida';
-          notif = { title: '💳 Vencimento amanhã!', body: `"${nomeDivida}" vence amanhã. Já se programou?` };
-        }
       }
 
-      if (!deveEnviar) { resultados.pulados++; continue; }
-
-      // Enviar via OneSignal
-      try {
-        await enviarNotificacao(email, notif);
-        resultados.enviados++;
-      } catch (e) {
-        console.error(`Erro ao enviar para ${email}:`, e.message);
-        resultados.erros++;
-      }
+      if (deveEnviar) emailsParaEnviar.push(email);
     }
+
+    if (emailsParaEnviar.length === 0) {
+      return { statusCode: 200, body: JSON.stringify({ tipo, enviados: 0, msg: 'Nenhum usuário elegível' }) };
+    }
+
+    // Enviar em lote para todos os elegíveis de uma vez
+    const notif = TIPOS[tipo];
+    const result = await enviarNotificacaoLote(emailsParaEnviar, notif);
 
     return {
       statusCode: 200,
-      body: JSON.stringify({ tipo, ...resultados }),
+      body: JSON.stringify({ tipo, elegíveis: emailsParaEnviar.length, result }),
     };
+
   } catch (e) {
     console.error('Erro push:', e);
     return { statusCode: 500, body: e.message };
