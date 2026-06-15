@@ -3,6 +3,16 @@ exports.handler = async function(event) {
     return { statusCode: 405, body: 'Method Not Allowed' };
   }
 
+  // Validar Origin — só aceitar chamadas do app
+  const origin = event.headers['origin'] || '';
+  const allowedOrigins = [
+    'https://app.ekofinanceira.com.br',
+    'https://ekofinanceira.com.br'
+  ];
+  if (!allowedOrigins.includes(origin)) {
+    return { statusCode: 403, body: 'Forbidden' };
+  }
+
   try {
     const { contexto } = JSON.parse(event.body || '{}');
 

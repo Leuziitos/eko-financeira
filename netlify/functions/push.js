@@ -59,10 +59,15 @@ async function enviarNotificacaoLote(emails, notif) {
 }
 
 exports.handler = async (event) => {
-  // Verificar autorização
-  const authHeader = event.headers['x-push-secret'] || event.headers['authorization'];
-  if (authHeader !== process.env.PUSH_SECRET) {
+  // Verificar autorização — exige header x-push-secret obrigatoriamente
+  const secret = event.headers['x-push-secret'];
+  if (!secret || secret !== process.env.PUSH_SECRET) {
     return { statusCode: 401, body: 'Unauthorized' };
+  }
+
+  // Só aceitar GET e POST
+  if (!['GET', 'POST'].includes(event.httpMethod)) {
+    return { statusCode: 405, body: 'Method Not Allowed' };
   }
 
   const tipo = event.queryStringParameters?.tipo || 'gastos';
