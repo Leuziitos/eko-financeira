@@ -92,10 +92,14 @@ exports.handler = async (event) => {
   }
 
   // Rate limiting por IP
-  const ip = event.headers['x-forwarded-for'] || 'unknown';
-  const limited = await checkRateLimit(ip);
-  if (limited) {
-    return { statusCode: 429, body: 'Too Many Requests' };
+  try {
+    const ip = event.headers['x-forwarded-for'] || 'unknown';
+    const limited = await checkRateLimit(ip);
+    if (limited) {
+      return { statusCode: 429, body: 'Too Many Requests' };
+    }
+  } catch (e) {
+    console.warn('Rate limit check failed, continuing:', e.message);
   }
 
   const tipo = event.queryStringParameters?.tipo || 'gastos';
