@@ -481,7 +481,7 @@ html,body{height:100%;background:var(--bg);font-family:'Plus Jakarta Sans',sans-
         <div class="field-hint">🔒 Use uma senha diferente das habituais e <strong>anote-a</strong> — não é possível recuperar por enquanto.</div>
       </div>
       <button class="btn btn-primary" onclick="criarConta()">Criar minha conta</button>
-      <div class="lgpd-txt">Ao criar sua conta você concorda com nossos <button class="link-btn" onclick="ir('screen-termo')">Termos de Uso</button> e <button class="link-btn" onclick="ir('screen-politica')">Política de Privacidade</button>. Seus dados são armazenados com segurança e não são compartilhados com terceiros, em conformidade com a LGPD.</div>
+      <div class="lgpd-txt">Ao criar sua conta você concorda com nossos <button class="link-btn" onclick="irPublico('screen-termo')">Termos de Uso</button> e <button class="link-btn" onclick="irPublico('screen-politica')">Política de Privacidade</button>. Seus dados são armazenados com segurança e não são compartilhados com terceiros, em conformidade com a LGPD.</div>
     </div>
     <div class="switch-row">Já tem conta? <button class="link-btn" onclick="ir('screen-login')">Entrar</button></div>
   </div>
@@ -1791,6 +1791,22 @@ function ir(id) {
   if (telas[id]) logEko('screen_view', { screen_name: telas[id] });
 }
 window.ir = ir;
+
+// Navegação para telas públicas (sem autenticação)
+let _telaAnteriorPublico = 'screen-cadastro';
+function irPublico(id) {
+  _telaAnteriorPublico = document.querySelector('.screen.active')?.id || 'screen-cadastro';
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+}
+function voltarPublico() {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(_telaAnteriorPublico).classList.add('active');
+  window.scrollTo(0,0);
+}
+window.irPublico = irPublico;
+window.voltarPublico = voltarPublico;
 
 // Intercepta botão voltar do browser/celular
 window.addEventListener('popstate', function(e) {
@@ -5841,7 +5857,7 @@ init();
 <!-- TERMO DE USO -->
 <div id="screen-termo" class="screen">
   <div class="topbar">
-    <button class="back-btn" onclick="history.back()">← Voltar</button>
+    <button class="back-btn" onclick="voltarPublico()">← Voltar</button>
     <div style="font-size:15px;font-weight:700">Termos de Uso</div>
     <div style="width:60px"></div>
   </div>
@@ -5884,7 +5900,7 @@ init();
 <!-- POLÍTICA DE PRIVACIDADE -->
 <div id="screen-politica" class="screen">
   <div class="topbar">
-    <button class="back-btn" onclick="history.back()">← Voltar</button>
+    <button class="back-btn" onclick="voltarPublico()">← Voltar</button>
     <div style="font-size:15px;font-weight:700">Política de Privacidade</div>
     <div style="width:60px"></div>
   </div>
