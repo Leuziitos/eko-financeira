@@ -1836,6 +1836,7 @@ function logEko(evento, params = {}) {
 }
 const SESS_KEY = 'eko_sess';
 let sessao = null;
+let _unsubscribeMetas = null; // guarda unsubscribe do onSnapshot
 
 // ── THEME ──────────────────────────────────────────────
 const savedTheme = localStorage.getItem('eko_theme') || 'light';
@@ -1990,7 +1991,8 @@ async function carregarApp() {
     // Item 1 — listener em tempo real para badge de metas no hub
     try {
       const metasQ = query(collection(db,'metas'), where('email','==',sessao.email));
-      onSnapshot(metasQ, (snap) => {
+      if (_unsubscribeMetas) { _unsubscribeMetas(); _unsubscribeMetas = null; }
+      _unsubscribeMetas = onSnapshot(metasQ, (snap) => {
         const metas = [];
         snap.forEach(d => metas.push(d.data()));
         const ativas = metas.filter(m=>!m.concluida).length;
@@ -2093,6 +2095,7 @@ window.criarConta = async function() {
 };
 
 window.logout = async function() {
+  if (_unsubscribeMetas) { _unsubscribeMetas(); _unsubscribeMetas = null; }
   try { await signOut(auth); } catch(e) {}
   sessao = null;
   localStorage.removeItem(SESS_KEY);
