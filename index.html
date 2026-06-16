@@ -5699,7 +5699,8 @@ onAuthStateChanged(auth, async (firebaseUser) => {
     // Não autenticado — vai para login (a menos que esteja no onboarding)
     const obDone = localStorage.getItem('eko_onboard_done');
     const telaAtual = document.querySelector('.screen.active')?.id;
-    if (obDone && telaAtual !== 'screen-onboarding') {
+    const telasPublicas = ['screen-onboarding', 'screen-termo', 'screen-politica'];
+    if (obDone && !telasPublicas.includes(telaAtual)) {
       ir('screen-login');
     }
   }
