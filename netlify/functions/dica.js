@@ -34,14 +34,10 @@ exports.handler = async function(event) {
     return { statusCode: 403, body: 'Forbidden' };
   }
 
-  // Rate limiting por IP — com logs de diagnóstico
+  // Rate limiting por IP
   try {
     const ip = event.headers['x-forwarded-for'] || 'unknown';
-    console.log('[rate-limit] IP:', ip);
-    console.log('[rate-limit] URL:', process.env.UPSTASH_REDIS_REST_URL);
-    console.log('[rate-limit] TOKEN exists:', !!process.env.UPSTASH_REDIS_REST_TOKEN);
     const limited = await checkRateLimit(ip);
-    console.log('[rate-limit] limited:', limited);
     if (limited) {
       return { statusCode: 429, body: 'Too Many Requests' };
     }
