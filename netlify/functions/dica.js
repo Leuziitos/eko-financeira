@@ -1,3 +1,24 @@
+// Função de rate limiting via Upstash Redis
+async function checkRateLimit(ip) {
+  const key = `rate:dica:${ip}`;
+  const baseUrl = process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+
+  const res = await fetch(`${baseUrl}/incr/${key}`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+  const { result: count } = await res.json();
+
+  if (count === 1) {
+    await fetch(`${baseUrl}/expire/${key}/60`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+  }
+
+  return count > 10; // Máximo 10 requests por minuto por IP
+}
+
 exports.handler = async function(event) {
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, body: 'Method Not Allowed' };
@@ -11,6 +32,13 @@ exports.handler = async function(event) {
   ];
   if (!allowedOrigins.includes(origin)) {
     return { statusCode: 403, body: 'Forbidden' };
+  }
+
+  // Rate limiting por IP
+  const ip = event.headers['x-forwarded-for'] || 'unknown';
+  const limited = await checkRateLimit(ip);
+  if (limited) {
+    return { statusCode: 429, body: 'Too Many Requests' };
   }
 
   try {

@@ -22,6 +22,27 @@ const TIPOS = {
   divida:  { title: '💳 Vencimento amanhã!', body: 'Você tem uma dívida vencendo amanhã. Já se programou?' },
 };
 
+// Função de rate limiting via Upstash Redis
+async function checkRateLimit(ip) {
+  const key = `rate:push:${ip}`;
+  const baseUrl = process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+
+  const res = await fetch(`${baseUrl}/incr/${key}`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+  const { result: count } = await res.json();
+
+  if (count === 1) {
+    await fetch(`${baseUrl}/expire/${key}/60`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+  }
+
+  return count > 5; // Máximo 5 requests por minuto por IP
+}
+
 // Dispara notificação via OneSignal para lista de external_user_ids (emails)
 // Se a lista estiver vazia, envia para todos os subscribers
 async function enviarNotificacaoLote(emails, notif) {
@@ -68,6 +89,13 @@ exports.handler = async (event) => {
   // Só aceitar GET e POST
   if (!['GET', 'POST'].includes(event.httpMethod)) {
     return { statusCode: 405, body: 'Method Not Allowed' };
+  }
+
+  // Rate limiting por IP
+  const ip = event.headers['x-forwarded-for'] || 'unknown';
+  const limited = await checkRateLimit(ip);
+  if (limited) {
+    return { statusCode: 429, body: 'Too Many Requests' };
   }
 
   const tipo = event.queryStringParameters?.tipo || 'gastos';
