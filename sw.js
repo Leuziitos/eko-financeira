@@ -30,7 +30,9 @@ self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
   if (event.request.url.includes('firestore') || 
       event.request.url.includes('anthropic') ||
-      event.request.url.includes('googleapis')) return;
+      event.request.url.includes('googleapis') ||
+      event.request.url.includes('gstatic.com') ||
+      event.request.url.includes('googletagmanager.com')) return;
   event.respondWith(
     fetch(event.request)
       .then(response => {
