@@ -473,12 +473,12 @@ html,body{height:100%;background:var(--bg);font-family:'Plus Jakarta Sans',sans-
       <div id="cad-msg" class="msg"></div>
       <div class="field"><label>Nome completo</label><input type="text" id="cad-nome" placeholder="Seu nome" autocomplete="name"></div>
       <div class="field"><label>E-mail</label><input type="email" id="cad-email" placeholder="seu@email.com" autocomplete="email"></div>
-      <div class="field"><label>WhatsApp</label><input type="tel" id="cad-whatsapp" placeholder="(11) 99999-9999"></div>
+      <div class="field"><label>WhatsApp <span style="font-weight:400;color:var(--text-hint)">(opcional)</span></label><input type="tel" id="cad-whatsapp" placeholder="(11) 99999-9999"></div>
       <div class="field"><label>Renda mensal (R$) <span style="font-weight:400;color:var(--text-hint)">(opcional)</span></label><input type="text" inputmode="numeric" id="cad-renda" placeholder="R$ 0,00"><div class="field-hint">💡 Opcional. Se informada, usamos para calcular o percentual da renda comprometida nos módulos de dívidas e objetivos.</div></div>
       <div class="field">
         <label>Senha</label>
-        <input type="password" id="cad-senha" placeholder="Mínimo 6 caracteres" autocomplete="new-password">
-        <div class="field-hint">🔒 Use uma senha diferente das habituais e <strong>anote-a</strong> — não é possível recuperar por enquanto.</div>
+        <input type="password" id="cad-senha" placeholder="Mínimo 8 caracteres" autocomplete="new-password">
+        <div class="field-hint">🔒 Use uma senha diferente das habituais. Caso esqueça, use a opção "Esqueci minha senha" na tela de login.</div>
       </div>
       <button class="btn btn-primary" onclick="criarConta()">Criar minha conta</button>
       <div class="lgpd-txt">Ao criar sua conta você concorda com nossos <button class="link-btn" onclick="irPublico('screen-termo')">Termos de Uso</button> e <button class="link-btn" onclick="irPublico('screen-politica')">Política de Privacidade</button>. Seus dados são armazenados com segurança e não são compartilhados com terceiros, em conformidade com a LGPD.</div>
@@ -2077,9 +2077,9 @@ window.criarConta = async function() {
   const whatsapp = document.getElementById('cad-whatsapp').value.trim();
   const renda = parseMoney(document.getElementById('cad-renda').value) || 0;
   const senha = document.getElementById('cad-senha').value;
-  if (!nome||!email||!whatsapp||!senha) { showMsg('cad-msg','error','Preencha todos os campos.'); return; }
-  if (senha.length < 6) { showMsg('cad-msg','error','Senha com ao menos 6 caracteres.'); return; }
-  if (!email.includes('@')) { showMsg('cad-msg','error','E-mail inválido.'); return; }
+  if (!nome||!email||!senha) { showMsg('cad-msg','error','Preencha nome, e-mail e senha.'); return; }
+  if (senha.length < 8) { showMsg('cad-msg','error','Senha com ao menos 8 caracteres.'); return; }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showMsg('cad-msg','error','E-mail inválido.'); return; }
   try {
     await createUserWithEmailAndPassword(auth, email, senha);
     // Salva dados adicionais no Firestore (Firebase Auth só guarda email/senha)
@@ -2087,7 +2087,7 @@ window.criarConta = async function() {
     logEko('sign_up', { method: 'email' });
     // onAuthStateChanged cuida do resto
   } catch(e) {
-    const erros = { 'auth/email-already-in-use':'E-mail já cadastrado.', 'auth/weak-password':'Senha fraca — use ao menos 6 caracteres.', 'auth/invalid-email':'E-mail inválido.' };
+    const erros = { 'auth/email-already-in-use':'E-mail já cadastrado.', 'auth/weak-password':'Senha fraca — use ao menos 8 caracteres.', 'auth/invalid-email':'E-mail inválido.' };
     showMsg('cad-msg','error', erros[e.code] || 'Erro ao criar conta. Tente novamente.');
   }
 };
@@ -2106,7 +2106,7 @@ window.enviarResetSenha = async function() {
   limparMsg('reset-msg');
   const email = document.getElementById('reset-email').value.trim().toLowerCase();
   if (!email) { showMsg('reset-msg','error','Digite seu e-mail cadastrado.'); return; }
-  if (!email.includes('@')) { showMsg('reset-msg','error','E-mail inválido.'); return; }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showMsg('reset-msg','error','E-mail inválido.'); return; }
   try {
     await sendPasswordResetEmail(auth, email);
     showMsg('reset-msg','success','✅ E-mail enviado! Verifique sua caixa de entrada (e o spam).');
