@@ -3,13 +3,13 @@
  * Dica financeira do dia via IA (Netlify Function /dica →
  * Anthropic). Cache diário por usuário em localStorage.
  *
- * NOTA: getMetas/getDividas/getObjetivos são resolvidas via
- * ponte window.* enquanto metas/dividas/objetivos ainda vivem
- * no inline — viram imports quando esses módulos forem
- * extraídos (Fase 4). Corpo movido verbatim.
+ * NOTA: getDividas/getObjetivos são resolvidas via ponte
+ * window.* até dividas.js/objetivos.js serem extraídos
+ * (Fase 4). Corpo movido verbatim.
  * ═══════════════════════════════════════════════════════════ */
 
 import { store } from '../core/store.js';
+import { getMetas } from './metas.js';
 
 // ════════════════════════════════════════════════
 // FASE 4 — DICA FINANCEIRA IA (Claude API)
