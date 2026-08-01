@@ -13,6 +13,8 @@ import { store } from '../core/store.js';
 import { ir } from '../core/router.js';
 import { logEko } from '../core/firebase.js';
 import { esc, diasAte } from '../utils/format.js';
+import { renderProntuario } from './prontuario.js';
+import { renderHub } from './hub.js';
 
 async function getDiags(email) {
   try {

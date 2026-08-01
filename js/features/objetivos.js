@@ -16,6 +16,7 @@ import { parseMoney } from '../utils/money.js';
 import { calcPMT } from '../utils/finance-math.js';
 import { showMsg, limparMsg, toast, abrirOverlay, fecharOverlay } from '../utils/dom.js';
 import { saveMeta2, renderMetas } from './metas.js';
+import { renderProntuario } from './prontuario.js';
 
 // ── Editar Objetivo ──────────────────────────────────────
 window.editarObjetivo = async function(id) {

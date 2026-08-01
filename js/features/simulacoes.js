@@ -19,6 +19,7 @@ import { parseMoney, setupMoneyInputs } from '../utils/money.js';
 import { taxaReal, calcFV, calcPMTparaFV, irSobreJuros } from '../utils/finance-math.js';
 import { debounce } from '../utils/debounce.js';
 import { toast } from '../utils/dom.js';
+import { renderProntuario } from './prontuario.js';
 
 // ════════════════════════════════════════════════
 // FASE 3 — SIMULAÇÕES (matemática completa)

@@ -3,7 +3,7 @@
  * Aulas PEF: catálogo fixo (AULAS_PEF), progresso do usuário
  * (coleção 'aulas'), detalhe em overlay e conclusão.
  *
- * NOTA: marcarAulaConcluida chama renderProntuario via ponte
+ * NOTA: renderProntuario importada de prontuario.js (ciclo
  * window.* enquanto prontuario.js não é extraído (Fase 5).
  * Corpo movido verbatim.
  * ═══════════════════════════════════════════════════════════ */
@@ -12,6 +12,7 @@ import { db, query, collection, where, getDocs, addDoc } from '../core/firebase.
 import { store } from '../core/store.js';
 import { ir } from '../core/router.js';
 import { toast, abrirOverlay, fecharOverlay } from '../utils/dom.js';
+import { renderProntuario } from './prontuario.js';
 
 // ════════════════════════════════════════════════
 // FASE 3 — AULAS PEF

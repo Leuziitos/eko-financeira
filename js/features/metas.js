@@ -17,6 +17,7 @@ import { fmt, esc } from '../utils/format.js';
 import { parseMoney } from '../utils/money.js';
 import { showMsg, limparMsg, toast, abrirOverlay, fecharOverlay } from '../utils/dom.js';
 import { cfSugerirLancamento } from './controle.js';
+import { renderProntuario } from './prontuario.js';
 
 // ── Excluir Meta ─────────────────────────────────────────
 window.excluirMetaAtual = async function() {
