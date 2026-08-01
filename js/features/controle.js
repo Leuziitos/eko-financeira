@@ -502,7 +502,7 @@ window.salvarLancamento = async function() {
     return;
   }
   logEko('cf_lancamento', {tipo: cfTipoAtual, categoria: cfCatSelecionada});
-  toast(cfTipoAtual==='gasto' ? '💸 Gasto registrado!' : '💵 Receita registrada!');
+  toast(cfTipoAtual==='gasto' ? '💸 Gasto registrado!' : '💵 Entrada registrada!');
   document.getElementById('cf-valor').value = '';
   cfCatSelecionada = null;
   cfCatsExpandido = false; // expansão reseta ao salvar
@@ -573,7 +573,7 @@ async function renderCarteiraControle() {
   const resumoEl = document.getElementById('cf-resumo-mes');
   if(resumoEl) resumoEl.innerHTML = `
     <div class="stat-card" style="text-align:center;padding:.75rem .5rem">
-      <div class="slabel">Receitas</div>
+      <div class="slabel">Entradas</div>
       <div style="font-size:13px;font-weight:800;color:var(--eko-green)">${fmt(totalRec)}</div>
     </div>
     <div class="stat-card" style="text-align:center;padding:.75rem .5rem">
@@ -651,7 +651,7 @@ function renderResumoAnualControle(lancs) {
   const saldoTotal = totalRec-totalGast;
   el.innerHTML = `
     <div style="display:flex;justify-content:space-between;font-size:10px;font-weight:700;color:var(--text-muted);padding-bottom:.375rem;border-bottom:1px solid var(--border);margin-bottom:.125rem">
-      <span style="min-width:28px">MÊS</span><span style="color:var(--eko-green);text-align:right;flex:1">REC.</span><span style="color:var(--red);text-align:right;flex:1">GASTO</span><span style="text-align:right;flex:1">SALDO</span>
+      <span style="min-width:28px">MÊS</span><span style="color:var(--eko-green);text-align:right;flex:1">ENT.</span><span style="color:var(--red);text-align:right;flex:1">GASTO</span><span style="text-align:right;flex:1">SALDO</span>
     </div>
     ${linhas.join('')}
     <div style="display:flex;align-items:center;justify-content:space-between;padding:.625rem 0;font-size:12px;font-weight:800;margin-top:.25rem;border-top:1px solid var(--border)">
@@ -725,7 +725,7 @@ window.adicionarCategoria = async function() {
   nomeEl.value = '';
   await renderListaCategorias();
   await renderCategoriasBotoes();
-  toast('✅ Categoria adicionada em ' + (tipo==='gasto'?'Gastos':'Receitas') + '!');
+  toast('✅ Categoria adicionada em ' + (tipo==='gasto'?'Gastos':'Entradas') + '!');
 };
 
 // ── Lançamentos por categoria (excluir) ──────────────────────
@@ -819,7 +819,7 @@ async function renderHubControle() {
 
 // ── Integração: registrar gasto ao pagar dívida/meta ─────────
 async function cfSugerirLancamento(tipo, valor, categoriaId, categoriaNome) {
-  const ok = confirm(`💡 Deseja registrar ${fmt(valor)} como ${tipo==='gasto'?'gasto':'receita'} em "${categoriaNome}" no Controle Financeiro?`);
+  const ok = confirm(`💡 Deseja registrar ${fmt(valor)} como ${tipo==='gasto'?'gasto':'entrada'} em "${categoriaNome}" no Controle Financeiro?`);
   if(!ok) return;
   const now = new Date();
   await saveCFLancamento({

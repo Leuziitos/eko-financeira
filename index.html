@@ -343,7 +343,7 @@
       <div style="font-size:17px;font-weight:800">⏪ Recuperação rápida</div>
       <button onclick="fecharOverlay('overlay-recuperacao')" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-muted)">✕</button>
     </div>
-    <div style="font-size:13px;color:var(--text-muted);margin-bottom:1rem">Registre gastos e receitas de dias anteriores rapidamente.</div>
+    <div style="font-size:13px;color:var(--text-muted);margin-bottom:1rem">Registre gastos e entradas de dias anteriores rapidamente.</div>
     <!-- Seletor de data -->
     <div style="margin-bottom:1rem">
       <label style="font-size:12px;font-weight:700;color:var(--text-muted);display:block;margin-bottom:6px">DATA DO LANÇAMENTO</label>
@@ -353,7 +353,7 @@
     <!-- Tipo -->
     <div style="display:flex;gap:8px;margin-bottom:1rem">
       <button id="rec-tipo-gasto" onclick="selecionarTipoRec('gasto')" style="flex:1;padding:.5rem;border-radius:10px;border:2px solid var(--red);background:var(--red-light);color:var(--red);font-weight:700;font-size:13px;cursor:pointer">💸 Gasto</button>
-      <button id="rec-tipo-receita" onclick="selecionarTipoRec('receita')" style="flex:1;padding:.5rem;border-radius:10px;border:2px solid var(--border);background:var(--surface);color:var(--text-muted);font-weight:700;font-size:13px;cursor:pointer">💵 Receita</button>
+      <button id="rec-tipo-receita" onclick="selecionarTipoRec('receita')" style="flex:1;padding:.5rem;border-radius:10px;border:2px solid var(--border);background:var(--surface);color:var(--text-muted);font-weight:700;font-size:13px;cursor:pointer">💵 Entrada</button>
     </div>
     <!-- Valor -->
     <div style="margin-bottom:1rem">
@@ -1074,7 +1074,7 @@
     <div style="margin-bottom:1.25rem">
       <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Módulo</div>
       <div style="font-size:22px;font-weight:800">💰 Controle Financeiro</div>
-      <div style="font-size:13px;color:var(--text-muted);margin-top:4px">Registre receitas e gastos, veja seu histórico</div>
+      <div style="font-size:13px;color:var(--text-muted);margin-top:4px">Registre entradas e gastos, veja seu histórico</div>
     </div>
     <!-- Saldo do mês — visível em ambas as abas -->
     <div class="card" id="cf-saldo-topo" style="padding:1rem;margin-bottom:1rem">
@@ -1096,11 +1096,10 @@
         <!-- Tipo -->
         <div style="display:flex;gap:8px;margin-bottom:1rem">
           <button id="tipo-btn-gasto" onclick="selecionarTipoLancamento('gasto')" style="flex:1;padding:.625rem;border-radius:10px;border:2px solid var(--red);background:var(--red-light);color:var(--red);font-weight:700;font-size:13px;cursor:pointer;transition:all .2s">💸 Gasto</button>
-          <button id="tipo-btn-receita" onclick="selecionarTipoLancamento('receita')" style="flex:1;padding:.625rem;border-radius:10px;border:2px solid var(--border);background:var(--surface);color:var(--text-muted);font-weight:700;font-size:13px;cursor:pointer;transition:all .2s">💵 Receita</button>
+          <button id="tipo-btn-receita" onclick="selecionarTipoLancamento('receita')" style="flex:1;padding:.625rem;border-radius:10px;border:2px solid var(--border);background:var(--surface);color:var(--text-muted);font-weight:700;font-size:13px;cursor:pointer;transition:all .2s">💵 Entrada</button>
         </div>
         <!-- Valor -->
         <div style="margin-bottom:1rem">
-          <label style="font-size:12px;font-weight:700;color:var(--text-muted);display:block;margin-bottom:6px">VALOR</label>
           <input id="cf-valor" type="text" inputmode="numeric" placeholder="R$ 0,00" class="input" style="font-size:20px;font-weight:800;text-align:center">
         </div>
         <!-- Data -->
@@ -1182,7 +1181,7 @@
       <div style="margin-bottom:1rem">
         <div style="display:flex;gap:6px;margin-bottom:8px">
           <button id="cf-add-tipo-gasto" onclick="cfSetAddTipo('gasto')" style="flex:1;padding:.4rem;border-radius:8px;border:2px solid var(--red);background:var(--red-light);color:var(--red);font-weight:700;font-size:12px;cursor:pointer">💸 Gasto</button>
-          <button id="cf-add-tipo-receita" onclick="cfSetAddTipo('receita')" style="flex:1;padding:.4rem;border-radius:8px;border:2px solid var(--border);background:var(--surface);color:var(--text-muted);font-weight:700;font-size:12px;cursor:pointer">💵 Receita</button>
+          <button id="cf-add-tipo-receita" onclick="cfSetAddTipo('receita')" style="flex:1;padding:.4rem;border-radius:8px;border:2px solid var(--border);background:var(--surface);color:var(--text-muted);font-weight:700;font-size:12px;cursor:pointer">💵 Entrada</button>
         </div>
         <div style="display:flex;gap:8px">
           <input id="cf-nova-cat-nome" type="text" placeholder="Nome da categoria" class="input" style="flex:1;font-size:14px">
@@ -1191,7 +1190,7 @@
       </div>
       <div style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.5rem">Gastos</div>
       <div id="cf-lista-cats-gasto" style="margin-bottom:1rem"></div>
-      <div style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.5rem">Receitas</div>
+      <div style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.5rem">Entradas</div>
       <div id="cf-lista-cats-receita"></div>
     </div>
   </div>
