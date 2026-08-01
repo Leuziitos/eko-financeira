@@ -80,7 +80,12 @@
     <div class="card card-accent">
       <div id="login-msg" class="msg"></div>
       <div class="field"><label>E-mail</label><input type="email" id="login-email" placeholder="seu@email.com" autocomplete="email"></div>
-      <div class="field" style="margin-bottom:.5rem"><label>Senha</label><input type="password" id="login-senha" placeholder="••••••••" autocomplete="current-password"></div>
+      <div class="field" style="margin-bottom:.5rem"><label>Senha</label>
+        <div style="position:relative">
+          <input type="password" id="login-senha" placeholder="••••••••" autocomplete="current-password" style="padding-right:44px">
+          <button type="button" onclick="toggleSenha('login-senha', this)" aria-label="Mostrar senha" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:16px;padding:6px;line-height:1">👁</button>
+        </div>
+      </div>
       <div style="text-align:right;margin-bottom:.875rem">
         <button class="link-btn" onclick="ir('screen-esqueci-senha')" style="font-size:12px">Esqueci minha senha</button>
       </div>
@@ -140,7 +145,10 @@
       <div class="field"><label>Renda mensal (R$) <span style="font-weight:400;color:var(--text-hint)">(opcional)</span></label><input type="text" inputmode="numeric" id="cad-renda" placeholder="R$ 0,00"><div class="field-hint">💡 Opcional. Se informada, usamos para calcular o percentual da renda comprometida nos módulos de dívidas e objetivos.</div></div>
       <div class="field">
         <label>Senha</label>
-        <input type="password" id="cad-senha" placeholder="Mínimo 8 caracteres" autocomplete="new-password">
+        <div style="position:relative">
+          <input type="password" id="cad-senha" placeholder="Mínimo 8 caracteres" autocomplete="new-password" style="padding-right:44px">
+          <button type="button" onclick="toggleSenha('cad-senha', this)" aria-label="Mostrar senha" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:16px;padding:6px;line-height:1">👁</button>
+        </div>
         <div class="field-hint">🔒 Use uma senha diferente das habituais. Caso esqueça, use a opção "Esqueci minha senha" na tela de login.</div>
       </div>
       <button class="btn btn-primary" onclick="criarConta()">Criar minha conta</button>
@@ -159,7 +167,6 @@
     </div>
     <div style="display:flex;gap:8px;align-items:center">
       <button class="user-pill" onclick="ir('screen-perfil')" style="font-size:11px">⚙️ Perfil</button>
-      <button class="user-pill" onclick="logout()">Sair</button>
     </div>
   </div>
   <div class="content">
@@ -379,7 +386,6 @@
 <div id="screen-prontuario" class="screen">
   <div class="topbar">
     <button class="back-btn" onclick="ir('screen-hub')">← Voltar</button>
-    <button class="user-pill" onclick="logout()">Sair</button>
   </div>
   <div class="content">
     <div style="margin-bottom:1.25rem">
@@ -455,7 +461,6 @@
 <div id="screen-diagnosticos" class="screen">
   <div class="topbar">
     <button class="back-btn" onclick="ir('screen-hub')">← Voltar</button>
-    <button class="user-pill" onclick="logout()">Sair</button>
   </div>
   <div class="content">
     <div style="margin-bottom:1.25rem">
@@ -555,7 +560,6 @@
 <div id="screen-metas" class="screen">
   <div class="topbar">
     <button class="back-btn" onclick="ir('screen-hub')">← Voltar</button>
-    <button class="user-pill" onclick="logout()">Sair</button>
   </div>
   <div class="content">
     <div style="margin-bottom:1.25rem">
@@ -576,7 +580,6 @@
 <div id="screen-meta-detalhe" class="screen">
   <div class="topbar">
     <button class="back-btn" onclick="voltarMetas()">← Metas</button>
-    <button class="user-pill" onclick="logout()">Sair</button>
   </div>
   <div class="content">
     <div style="margin-bottom:1.25rem">
@@ -614,7 +617,6 @@
 <div id="screen-dividas" class="screen">
   <div class="topbar">
     <button class="back-btn" onclick="ir('screen-hub')">← Voltar</button>
-    <button class="user-pill" onclick="logout()">Sair</button>
   </div>
   <div class="content">
     <div style="margin-bottom:1.25rem">
@@ -631,7 +633,6 @@
 <div id="screen-objetivos" class="screen">
   <div class="topbar">
     <button class="back-btn" onclick="ir('screen-hub')">← Voltar</button>
-    <button class="user-pill" onclick="logout()">Sair</button>
   </div>
   <div class="content">
     <div style="margin-bottom:1rem">
@@ -651,7 +652,6 @@
 <div id="screen-simulacoes" class="screen">
   <div class="topbar">
     <button class="back-btn" onclick="ir('screen-hub')">← Voltar</button>
-    <button class="user-pill" onclick="logout()">Sair</button>
   </div>
   <div class="content">
     <div style="margin-bottom:1.25rem">
@@ -810,7 +810,6 @@
 <div id="screen-reserva" class="screen">
   <div class="topbar">
     <button class="back-btn" onclick="ir('screen-hub')">← Voltar</button>
-    <button class="user-pill" onclick="logout()">Sair</button>
   </div>
   <div class="content">
     <div style="margin-bottom:1.25rem">
@@ -1000,7 +999,6 @@
 <div id="screen-planilha" class="screen">
   <div class="topbar">
     <button class="back-btn" onclick="ir('screen-hub')">← Voltar</button>
-    <button class="user-pill" onclick="logout()">Sair</button>
   </div>
   <div class="content">
     <div style="margin-bottom:1.25rem">
@@ -1044,7 +1042,6 @@
 <div id="screen-controle" class="screen">
   <div class="topbar">
     <button class="back-btn" onclick="ir('screen-hub')">← Voltar</button>
-    <button class="user-pill" onclick="logout()">Sair</button>
   </div>
   <div class="content">
     <div style="margin-bottom:1.25rem">
@@ -1187,7 +1184,6 @@
 <div id="screen-aulas" class="screen">
   <div class="topbar">
     <button class="back-btn" onclick="ir('screen-hub')">← Voltar</button>
-    <button class="user-pill" onclick="logout()">Sair</button>
   </div>
   <div class="content">
     <div style="margin-bottom:1.25rem">
@@ -1312,7 +1308,10 @@
 <div id="overlay-meta" class="overlay hidden">
   <div class="sheet">
     <div class="sheet-handle"></div>
-    <div style="font-size:17px;font-weight:800;margin-bottom:1.25rem" id="sheet-meta-title">Nova meta</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem">
+      <div style="font-size:17px;font-weight:800" id="sheet-meta-title">Nova meta</div>
+      <button onclick="fecharOverlay('overlay-meta')" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-muted);line-height:1;padding:4px">✕</button>
+    </div>
     <div id="sheet-meta-msg" class="msg"></div>
     <div style="margin-bottom:.5rem"><div style="font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:6px;letter-spacing:.07em;text-transform:uppercase">Categoria</div>
     <div class="cat-grid">
@@ -1337,7 +1336,10 @@
 <div id="overlay-deposito" class="overlay hidden">
   <div class="sheet">
     <div class="sheet-handle"></div>
-    <div style="font-size:17px;font-weight:800;margin-bottom:.25rem" id="dep-titulo"></div>
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:.25rem">
+      <div style="font-size:17px;font-weight:800" id="dep-titulo"></div>
+      <button onclick="fecharOverlay('overlay-deposito')" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-muted);line-height:1;padding:4px">✕</button>
+    </div>
     <div style="font-size:13px;color:var(--text-muted);margin-bottom:1.25rem;font-weight:500" id="dep-subtitulo"></div>
     <div id="dep-fase1">
       <div class="field"><label>Quanto você acumulou de verdade? (R$)</label><input type="number" id="dep-valor" placeholder="0,00" min="0"></div>
@@ -1359,7 +1361,10 @@
 <div id="overlay-divida" class="overlay hidden">
   <div class="sheet">
     <div class="sheet-handle"></div>
-    <div style="font-size:17px;font-weight:800;margin-bottom:1.25rem" id="sheet-divida-title">Nova dívida</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem">
+      <div style="font-size:17px;font-weight:800" id="sheet-divida-title">Nova dívida</div>
+      <button onclick="fecharOverlay('overlay-divida')" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-muted);line-height:1;padding:4px">✕</button>
+    </div>
     <div id="sheet-divida-msg" class="msg"></div>
     <div style="margin-bottom:.5rem"><div style="font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:6px;letter-spacing:.07em;text-transform:uppercase">Tipo</div>
     <div class="tipo-grid">
@@ -1387,7 +1392,10 @@
 <div id="overlay-pagamento" class="overlay hidden">
   <div class="sheet">
     <div class="sheet-handle"></div>
-    <div style="font-size:17px;font-weight:800;margin-bottom:.25rem" id="pag-titulo"></div>
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:.25rem">
+      <div style="font-size:17px;font-weight:800" id="pag-titulo"></div>
+      <button onclick="fecharOverlay('overlay-pagamento')" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-muted);line-height:1;padding:4px">✕</button>
+    </div>
     <div style="font-size:13px;color:var(--text-muted);margin-bottom:1.25rem" id="pag-subtitulo"></div>
 
     <!-- Fase 1: escolher tipo -->
@@ -1446,7 +1454,10 @@
 <div id="overlay-objetivo" class="overlay hidden">
   <div class="sheet">
     <div class="sheet-handle"></div>
-    <div style="font-size:17px;font-weight:800;margin-bottom:1.25rem" id="sheet-obj-title">Novo objetivo</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem">
+      <div style="font-size:17px;font-weight:800" id="sheet-obj-title">Novo objetivo</div>
+      <button onclick="fecharOverlay('overlay-objetivo')" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-muted);line-height:1;padding:4px">✕</button>
+    </div>
     <div id="sheet-obj-msg" class="msg"></div>
     <div class="field"><label>Descrição</label><input type="text" id="obj-nome" placeholder="Ex: Entrada do apartamento"></div>
     <div class="field"><label>Valor a acumular (R$)</label><input type="number" id="obj-valor" placeholder="Ex: 50000" oninput="calcularObjetivo()"></div>

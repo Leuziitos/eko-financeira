@@ -69,6 +69,16 @@ async function carregarApp() {
   }
 }
 
+// Alterna visibilidade dos campos de senha (login/cadastro)
+window.toggleSenha = function(id, btn) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const mostrar = el.type === 'password';
+  el.type = mostrar ? 'text' : 'password';
+  btn.textContent = mostrar ? '🙈' : '👁';
+  btn.setAttribute('aria-label', mostrar ? 'Ocultar senha' : 'Mostrar senha');
+};
+
 window.fazerLogin = async function() {
   limparMsg('login-msg');
   const email = document.getElementById('login-email').value.trim().toLowerCase();
