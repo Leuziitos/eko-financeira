@@ -21,3 +21,15 @@ export function abrirOverlay(id) {
   document.getElementById(id).classList.remove('hidden');
   setupMoneyInputs(); // garante máscara em todos os campos visíveis
 }
+
+// Anti duplo-toque nos saves: captura o botão que originou o clique
+// (via window.event, mesmo padrão já usado nos onclick do HTML) para
+// desabilitá-lo durante o await. Uso:
+//   const btn = btnDoClique(); if (btn) btn.disabled = true;
+//   try { ... } finally { liberarBotao(btn); }
+export function btnDoClique() {
+  const ev = window.event;
+  const alvo = ev && (ev.target || ev.currentTarget);
+  return alvo && alvo.closest ? alvo.closest('button') : null;
+}
+export function liberarBotao(btn) { if (btn) btn.disabled = false; }

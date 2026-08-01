@@ -18,7 +18,7 @@ import { fmt, fmtK } from '../utils/format.js';
 import { parseMoney, setupMoneyInputs } from '../utils/money.js';
 import { taxaReal, calcFV, calcPMTparaFV, irSobreJuros } from '../utils/finance-math.js';
 import { debounce } from '../utils/debounce.js';
-import { toast } from '../utils/dom.js';
+import { toast, btnDoClique, liberarBotao } from '../utils/dom.js';
 import { renderProntuario } from './prontuario.js';
 
 // ════════════════════════════════════════════════
@@ -356,6 +356,8 @@ window.criarMetaDeAcumulacao = function() {
 
 // ── Salvar no Firestore ───────────────────────────────
 window.salvarSimulacaoAp = async function() {
+  const btn = btnDoClique(); if (btn) btn.disabled = true;
+  try {
   const idadeAtual   = parseInt(document.getElementById('ap-idade').value) || 0;
   const idadeAposent = parseInt(document.getElementById('ap-idade-aposent').value) || 65;
   const rendaMensal  = parseMoney(document.getElementById('ap-renda').value) || 0;
@@ -375,6 +377,7 @@ window.salvarSimulacaoAp = async function() {
   if(card){ card.style.display=''; setTimeout(()=>card.style.display='none', 4000); }
   toast('✅ Simulação salva!');
   await carregarHistoricoSimulacoes();
+  } finally { liberarBotao(btn); }
 };
 
 window.salvarSimulacaoApProntuario = async function() {
@@ -384,6 +387,8 @@ window.salvarSimulacaoApProntuario = async function() {
 };
 
 window.salvarSimulacaoAc = async function() {
+  const btn = btnDoClique(); if (btn) btn.disabled = true;
+  try {
   const inicial = parseMoney(document.getElementById('ac-inicial').value) || 0;
   const aporte  = parseMoney(document.getElementById('ac-aporte').value) || 0;
   const anos    = parseInt(document.getElementById('ac-anos').value) || 0;
@@ -402,6 +407,7 @@ window.salvarSimulacaoAc = async function() {
   if(card){ card.style.display=''; setTimeout(()=>card.style.display='none', 4000); }
   toast('✅ Simulação salva!');
   await carregarHistoricoSimulacoes();
+  } finally { liberarBotao(btn); }
 };
 
 window.salvarSimulacaoAcProntuario = async function() {

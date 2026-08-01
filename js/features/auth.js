@@ -15,7 +15,7 @@ import { db, auth, logEko, doc, getDoc, setDoc, collection, query, where, onSnap
 import { store } from '../core/store.js';
 import { ir, onEnter } from '../core/router.js';
 import { parseMoney, setupMoneyInputs } from '../utils/money.js';
-import { showMsg, limparMsg, toast } from '../utils/dom.js';
+import { showMsg, limparMsg, toast, btnDoClique, liberarBotao } from '../utils/dom.js';
 import { renderHub } from './hub.js';
 import { renderProntuario } from './prontuario.js';
 import { renderDiagnosticos } from './diagnosticos.js';
@@ -126,6 +126,8 @@ window.fazerLogin = async function() {
 };
 
 window.criarConta = async function() {
+  const btn = btnDoClique(); if (btn) btn.disabled = true;
+  try {
   limparMsg('cad-msg');
   const nome = document.getElementById('cad-nome').value.trim();
   const email = document.getElementById('cad-email').value.trim().toLowerCase();
@@ -145,6 +147,7 @@ window.criarConta = async function() {
     const erros = { 'auth/email-already-in-use':'E-mail já cadastrado.', 'auth/weak-password':'Senha fraca — use ao menos 8 caracteres.', 'auth/invalid-email':'E-mail inválido.' };
     showMsg('cad-msg','error', erros[e.code] || 'Erro ao criar conta. Tente novamente.');
   }
+  } finally { liberarBotao(btn); }
 };
 
 window.logout = async function() {

@@ -15,7 +15,7 @@ import { store } from '../core/store.js';
 import { ir } from '../core/router.js';
 import { fmt, esc } from '../utils/format.js';
 import { parseMoney } from '../utils/money.js';
-import { showMsg, limparMsg, toast, abrirOverlay, fecharOverlay } from '../utils/dom.js';
+import { showMsg, limparMsg, toast, abrirOverlay, fecharOverlay, btnDoClique, liberarBotao } from '../utils/dom.js';
 import { cfSugerirLancamento } from './controle.js';
 import { renderProntuario } from './prontuario.js';
 
@@ -179,12 +179,15 @@ window.abrirEditarMeta=function(){
   abrirOverlay('overlay-meta');
 };
 window.salvarMeta=async function(){
+  const btn=btnDoClique();if(btn)btn.disabled=true;
+  try{
   limparMsg('sheet-meta-msg');
   const nome=document.getElementById('meta-nome').value.trim();const val=parseMoney(document.getElementById('meta-valor').value);const meses=parseInt(document.getElementById('meta-meses').value);const inicio=document.getElementById('meta-inicio').value;const dia=parseInt(document.getElementById('meta-dia').value);
   if(!nome||!val||!meses||!inicio||!dia||dia<1||dia>28){showMsg('sheet-meta-msg','error','Preencha todos os campos. Dia entre 1 e 28.');return;}
   if(editandoMeta){const deps=metaAtual.depositos.slice(0,meses);while(deps.length<meses)deps.push({pago:false,parcial:false,extra:false,valor:0});Object.assign(metaAtual,{nome,meta:val,meses,dia,inicio,mensal:val/meses,catIcon:catSelecionada.icon,catNome:catSelecionada.nome,depositos:deps});await saveMeta2(metaAtual);fecharOverlay('overlay-meta');renderMetaDetalhe();}
   else{const deps=Array(meses).fill(null).map(()=>({pago:false,parcial:false,extra:false,valor:0}));const nova={nome,meta:val,meses,dia,inicio,mensal:val/meses,catIcon:catSelecionada.icon,catNome:catSelecionada.nome,saldoExtra:0,depositos:deps,email:store.sessao.email};await saveMeta2(nova);fecharOverlay('overlay-meta');await renderMetas();logEko('meta_criada');toast('✅ Meta criada!');}
   await renderProntuario();
+  }finally{liberarBotao(btn);}
 };
 window.resetarMetaAtual=async function(){if(!confirm('Resetar esta meta?'))return;const n=metaAtual.depositos.length;metaAtual.depositos=Array(n).fill(null).map(()=>({pago:false,parcial:false,extra:false,valor:0}));metaAtual.mensal=metaAtual.meta/n;metaAtual.saldoExtra=0;await saveMeta2(metaAtual);renderMetaDetalhe();toast('Meta resetada.');};
 
@@ -197,11 +200,14 @@ window.abrirDeposito=function(i){
   abrirOverlay('overlay-deposito');
 };
 window.confirmarDeposito=async function(){
+  const btn=btnDoClique();if(btn)btn.disabled=true;
+  try{
   const val=parseMoney(document.getElementById('dep-valor').value)||0;const meta=metaAtual;const previsto=meta.mensal;valorDepositado=val;
   if(Math.abs(val-previsto)<0.01){meta.depositos[mesAtual]={pago:true,parcial:false,extra:false,valor:val};await saveMeta2(meta);fecharOverlay('overlay-deposito');const pct=Math.min(100,Math.round((calcAcumulado(meta)/meta.meta)*100));toast('🎉 Atualizado! Você concluiu '+pct+'% desta meta.');renderMetaDetalhe();if(val>0)setTimeout(()=>cfSugerirLancamento('gasto',val,'metas','🎯 Metas'),600);}
   else if(val>previsto){meta.depositos[mesAtual]={pago:true,parcial:false,extra:true,valor:val};await saveMeta2(meta);mostrarFase2Extra(val-previsto);}
   else if(val>0){meta.depositos[mesAtual]={pago:true,parcial:true,extra:false,valor:val};await saveMeta2(meta);mostrarFase2Deficit(previsto-val);}
   else{window.naoConseguiu();}
+  }finally{liberarBotao(btn);}
 };
 window.naoConseguiu=async function(){const meta=metaAtual;meta.depositos[mesAtual]={pago:true,parcial:true,extra:false,valor:0};await saveMeta2(meta);mostrarFase2Deficit(meta.mensal);};
 

@@ -14,7 +14,7 @@ import { ir } from '../core/router.js';
 import { fmt, esc } from '../utils/format.js';
 import { parseMoney } from '../utils/money.js';
 import { calcPMT } from '../utils/finance-math.js';
-import { showMsg, limparMsg, toast, abrirOverlay, fecharOverlay } from '../utils/dom.js';
+import { showMsg, limparMsg, toast, abrirOverlay, fecharOverlay, btnDoClique, liberarBotao } from '../utils/dom.js';
 import { saveMeta2, renderMetas } from './metas.js';
 import { renderProntuario } from './prontuario.js';
 
@@ -120,12 +120,15 @@ async function renderObjetivos(){
 
 window.abrirCriarObjetivo=function(){window._editandoObjetivoId=null;document.getElementById('sheet-obj-title').textContent='Novo objetivo';['obj-nome','obj-valor','obj-saldo','obj-meses','obj-obs'].forEach(id=>document.getElementById(id).value='');document.getElementById('obj-rent').value='1.00';document.getElementById('obj-preview').style.display='none';limparMsg('sheet-obj-msg');abrirOverlay('overlay-objetivo');};
 window.salvarObjetivo=async function(){
+  const btn=btnDoClique();if(btn)btn.disabled=true;
+  try{
   limparMsg('sheet-obj-msg');const nome=document.getElementById('obj-nome').value.trim();const valor=parseMoney(document.getElementById('obj-valor').value);const saldo=parseMoney(document.getElementById('obj-saldo').value)||0;const meses=parseInt(document.getElementById('obj-meses').value);const rent=(parseFloat(document.getElementById('obj-rent').value)||1)/100;const obs=document.getElementById('obj-obs').value.trim();
   if(!nome||!valor||!meses){showMsg('sheet-obj-msg','error','Preencha nome, valor e prazo.');return;}
   const pmt=Math.max(0,calcPMT(saldo,valor,rent,meses));
   if(window._editandoObjetivoId){const objs=await getObjetivos();const obj=objs.find(o=>o._id===window._editandoObjetivoId);if(obj){Object.assign(obj,{nome,valor,saldo,meses,rent:rent*100,pmt,obs});await saveObjetivo(obj);}window._editandoObjetivoId=null;toast('✅ Objetivo atualizado!');}
   else{const obj={nome,valor,saldo,meses,rent:rent*100,pmt,obs,email:store.sessao.email,ordem:Date.now()};await saveObjetivo(obj);toast('✅ Objetivo cadastrado!');}
   fecharOverlay('overlay-objetivo');await renderObjetivos();await renderProntuario();
+  }finally{liberarBotao(btn);}
 };
 
 window.abrirObjetivos=async function(){try{await renderObjetivos();}catch(e){console.error(e);}ir('screen-objetivos');};

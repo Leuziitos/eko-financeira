@@ -14,7 +14,7 @@ import { store } from '../core/store.js';
 import { ir } from '../core/router.js';
 import { fmt, esc } from '../utils/format.js';
 import { parseMoney } from '../utils/money.js';
-import { showMsg, limparMsg, toast, abrirOverlay, fecharOverlay } from '../utils/dom.js';
+import { showMsg, limparMsg, toast, abrirOverlay, fecharOverlay, btnDoClique, liberarBotao } from '../utils/dom.js';
 import { cfSugerirLancamento } from './controle.js';
 import { renderProntuario } from './prontuario.js';
 
@@ -148,12 +148,15 @@ window.editarDivida=async function(id){
 
 window.abrirCriarDivida=function(){tipoDividaSel={icon:'💳',nome:'Cartão'};window._editandoDividaId=null;document.getElementById('sheet-divida-title').textContent='Nova dívida';['divida-nome','divida-credor','divida-parcela','divida-total-parcelas','divida-ja-pago','divida-juros','divida-vencimento'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});document.getElementById('divida-total-calc').style.display='none';document.querySelectorAll('.tipo-btn').forEach(b=>b.classList.remove('selected'));limparMsg('sheet-divida-msg');abrirOverlay('overlay-divida');};
 window.salvarDivida=async function(){
+  const btn=btnDoClique();if(btn)btn.disabled=true;
+  try{
   limparMsg('sheet-divida-msg');
   const nome=document.getElementById('divida-nome').value.trim();const credor=document.getElementById('divida-credor').value.trim();const parcela=parseMoney(document.getElementById('divida-parcela').value);const restantes=parseInt(document.getElementById('divida-parcelas-restantes').value);const juros=parseFloat(document.getElementById('divida-juros').value);const vencimento=parseInt(document.getElementById('divida-vencimento').value);
   if(!nome||!parcela||!restantes||!juros||!vencimento){showMsg('sheet-divida-msg','error','Preencha todos os campos obrigatórios.');return;}
   if(vencimento<1||vencimento>28){showMsg('sheet-divida-msg','error','Dia entre 1 e 28.');return;}
   const divida={nome,credor,tipoIcon:tipoDividaSel.icon,tipoNome:tipoDividaSel.nome,parcela,parcelasRestantes:restantes,juros,vencimento,emAtraso:false,valorAtrasado:0,historicoPagamentos:[],email:store.sessao.email};
   await saveDivida2(divida);fecharOverlay('overlay-divida');await renderDividas();toast('✅ Dívida cadastrada!');await renderProntuario();
+  }finally{liberarBotao(btn);}
 };
 window.excluirDivida=async function(id){
   if(!confirm('Excluir esta dívida?'))return;
@@ -204,12 +207,15 @@ window.abrirPagamento=async function(id){
   abrirOverlay('overlay-pagamento');
 };
 window.confirmarPagamento=async function(){
+  const btn=btnDoClique();if(btn)btn.disabled=true;
+  try{
   const val=parseMoney(document.getElementById('pag-valor').value)||0;const div=dividaAtual;
   if(!div.historicoPagamentos)div.historicoPagamentos=[];
   if(val>=div.parcela){div.parcelasRestantes=Math.max(0,(div.parcelasRestantes||1)-1);div.emAtraso=false;div.valorAtrasado=0;div.historicoPagamentos.push({tipo:'parcela',valor:val,data:new Date().toISOString()});}
   else if(val>0){div.emAtraso=true;div.valorAtrasado=div.parcela-val;div.historicoPagamentos.push({tipo:'parcela_parcial',valor:val,data:new Date().toISOString()});}
   await saveDivida2(div);const quitada=await verificarDividaQuitada(div);
   if(!quitada){fecharOverlay('overlay-pagamento');await renderDividas();toast(val>=div.parcela?'✅ Parcela registrada! Restam '+div.parcelasRestantes+'x':'⚠️ Pagamento parcial registrado.');if(val>0)setTimeout(()=>cfSugerirLancamento('gasto',val,'dividas','💳 Dívidas'),600);}
+  }finally{liberarBotao(btn);}
 };
 window.naoConseguiuPagar=async function(){const div=dividaAtual;div.emAtraso=true;div.valorAtrasado=(div.valorAtrasado||0)+div.parcela;if(!div.historicoPagamentos)div.historicoPagamentos=[];div.historicoPagamentos.push({tipo:'nao_pago',valor:0,data:new Date().toISOString()});await saveDivida2(div);fecharOverlay('overlay-pagamento');await renderDividas();const jurosExtra=div.parcela*(div.juros/100);toast('⚠️ Registrado. ~'+fmt(jurosExtra)+' em juros extras este mês.');};
 

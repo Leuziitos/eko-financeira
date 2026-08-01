@@ -12,7 +12,7 @@ import { store } from '../core/store.js';
 import { ir } from '../core/router.js';
 import { fmt, fmtInput, esc } from '../utils/format.js';
 import { parseMoney } from '../utils/money.js';
-import { toast, abrirOverlay, fecharOverlay } from '../utils/dom.js';
+import { toast, abrirOverlay, fecharOverlay, btnDoClique, liberarBotao } from '../utils/dom.js';
 import { saveMeta2 } from './metas.js';
 
 // ════ RESERVA DE EMERGÊNCIA ════════════════════════════════
@@ -380,6 +380,8 @@ window.abrirOverlayAporteReserva = function() {
 };
 
 window.salvarAporteReserva = async function() {
+  const btn = btnDoClique(); if (btn) btn.disabled = true;
+  try {
   const msg = document.getElementById('res-aporte-msg');
   const valor = parseMoney(document.getElementById('res-aporte-valor').value);
   if (!valor || valor <= 0) { msg.textContent = 'Informe um valor válido.'; msg.className = 'msg error'; return; }
@@ -403,6 +405,7 @@ window.salvarAporteReserva = async function() {
   try { renderPainelReserva(); } catch(e) { console.error('renderPainel aporte', e); }
   try { atualizarHubReserva(); } catch(e) {}
   try { logEko('reserva_aporte', { valor }); } catch(e) {}
+  } finally { liberarBotao(btn); }
 };
 
 window.abrirOverlayUsarReserva = function() {
@@ -413,6 +416,8 @@ window.abrirOverlayUsarReserva = function() {
 };
 
 window.salvarUsoReserva = async function() {
+  const btn = btnDoClique(); if (btn) btn.disabled = true;
+  try {
   const msg = document.getElementById('res-uso-msg');
   const valor = parseMoney(document.getElementById('res-uso-valor').value);
   if (!valor || valor <= 0) { msg.textContent = 'Informe um valor válido.'; msg.className = 'msg error'; return; }
@@ -436,6 +441,7 @@ window.salvarUsoReserva = async function() {
   try { renderPainelReserva(); } catch(e) { console.error('renderPainel uso', e); }
   try { atualizarHubReserva(); } catch(e) {}
   try { logEko('reserva_uso', { valor }); } catch(e) {}
+  } finally { liberarBotao(btn); }
 };
 
 

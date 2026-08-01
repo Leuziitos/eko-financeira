@@ -11,7 +11,7 @@ import { store } from '../core/store.js';
 import { ir } from '../core/router.js';
 import { fmt, esc } from '../utils/format.js';
 import { parseMoney, applyMoneyMask } from '../utils/money.js';
-import { showMsg, limparMsg, toast, abrirOverlay, fecharOverlay } from '../utils/dom.js';
+import { showMsg, limparMsg, toast, abrirOverlay, fecharOverlay, btnDoClique, liberarBotao } from '../utils/dom.js';
 
 // ════════════════════════════════════════════════
 // CONTROLE FINANCEIRO
@@ -427,6 +427,8 @@ async function renderCategoriasGrid(gridId, onSelect, tipoFiltro) {
 }
 
 window.salvarLancamento = async function() {
+  const btn = btnDoClique(); if (btn) btn.disabled = true;
+  try {
   limparMsg('cf-msg');
   const valor = parseMoney(document.getElementById('cf-valor').value);
   if (!valor || valor <= 0) { showMsg('cf-msg','error','Informe o valor.'); return; }
@@ -461,6 +463,7 @@ window.salvarLancamento = async function() {
   // Resetar data para hoje
   selecionarDataLancamento('hoje');
   await renderHubControle();
+  } finally { liberarBotao(btn); }
 };
 
 // ── Carteira ─────────────────────────────────────────────────
