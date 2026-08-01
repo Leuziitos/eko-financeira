@@ -123,7 +123,7 @@ window.selecionarFonteReserva = async function(fonte) {
       for (let i = 1; i <= 3; i++) {
         const d = new Date(agora.getFullYear(), agora.getMonth() - i, 1);
         const mesKey = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2,'0');
-        const q = query(collection(db,'controle'), where('email','==',store.sessao.email), where('mes','==',mesKey), where('tipo','==','gasto'));
+        const q = query(collection(db,'controle'), where('email','==',store.sessao.email), where('chaveMes','==',mesKey), where('tipo','==','gasto'));
         const snap = await getDocs(q);
         if (!snap.empty) {
           let soma = 0; snap.forEach(d2 => soma += (d2.data().valor || 0));

@@ -323,10 +323,12 @@ window.adicionarLancamentoRec = function() {
   const dataFinal = dataCustom || recDataSelecionada || new Date().toISOString().slice(0,10);
   const d = new Date(dataFinal + 'T12:00:00');
 
+  // Grava sempre o id (string) — nunca o objeto categoria inteiro
+  const recCatId = typeof recCatSelecionada === 'object' ? recCatSelecionada.id : recCatSelecionada;
   recLancamentos.push({
     tipo: recTipoAtual,
     valor,
-    categoria: recCatSelecionada.id || recCatSelecionada,
+    categoria: String(recCatId),
     mes: d.getMonth(),
     ano: d.getFullYear(),
     chaveMes: cfChaveMes(d.getFullYear(), d.getMonth()),
