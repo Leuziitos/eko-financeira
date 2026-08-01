@@ -265,20 +265,21 @@
       </div>
     </div>
 
+    <!-- Melhorias do app: Feedback + Indicar agrupados -->
+    <div class="card" style="border-left:4px solid var(--eko-green);margin-bottom:.75rem">
+      <div class="hub-card-title" style="font-size:14px;margin-bottom:10px">🛠️ Melhorias do app</div>
+      <div class="pront-item" onclick="abrirFeedback()" style="cursor:pointer">
+        <div class="pront-item-left"><div class="pront-item-icon">💬</div><div class="pront-item-title">Bug ou sugestão</div></div>
+        <span style="color:var(--eko-green);font-size:14px">→</span>
+      </div>
+      <div class="pront-item" onclick="abrirIndicar()" style="cursor:pointer">
+        <div class="pront-item-left"><div class="pront-item-icon">📣</div><div class="pront-item-title">Indique o app</div></div>
+        <span style="color:var(--eko-green);font-size:14px">→</span>
+      </div>
+    </div>
+
     <div style="text-align:center;font-size:12px;color:var(--text-muted);margin-top:.5rem">
       📱 Siga <strong>@ekofinanceira</strong> — novo vídeo toda semana
-    </div>
-    <div style="margin-top:1rem;display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      <div onclick="abrirFeedback()" style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:.875rem 1rem;cursor:pointer;transition:opacity .2s" onmouseover="this.style.opacity='.7'" onmouseout="this.style.opacity='1'">
-        <div style="font-size:20px;margin-bottom:4px">💬</div>
-        <div style="font-size:12px;font-weight:700">Bug ou sugestão?</div>
-        <div style="font-size:11px;color:var(--text-muted);margin-top:2px">Sua opinião melhora o Eko</div>
-      </div>
-      <div onclick="abrirIndicar()" style="background:var(--eko-green-light);border:1px solid var(--eko-green);border-radius:14px;padding:.875rem 1rem;cursor:pointer;transition:opacity .2s" onmouseover="this.style.opacity='.7'" onmouseout="this.style.opacity='1'">
-        <div style="font-size:20px;margin-bottom:4px">🌱</div>
-        <div style="font-size:12px;font-weight:700;color:var(--eko-green-dark)">Indique o app!</div>
-        <div style="font-size:11px;color:var(--text-muted);margin-top:2px">Ajude mais pessoas</div>
-      </div>
     </div>
   </div>
 </div>
@@ -1105,7 +1106,11 @@
         <!-- Data -->
         <div style="margin-bottom:1rem">
           <label style="font-size:12px;font-weight:700;color:var(--text-muted);display:block;margin-bottom:6px">DATA</label>
-          <button id="cf-data-chip" onclick="alternarDataLancamento()" style="display:inline-flex;align-items:center;gap:6px;padding:.5rem .875rem;border-radius:99px;border:2px solid var(--eko-green);background:var(--eko-green-light);color:var(--eko-green-dark);font-weight:700;font-size:12px;cursor:pointer;font-family:inherit"></button>
+          <div style="display:flex;gap:8px">
+            <button id="cf-data-hoje" onclick="selecionarDataLancamento('hoje')" style="flex:1;padding:.5rem;border-radius:8px;border:2px solid var(--eko-green);background:var(--eko-green-light);color:var(--eko-green-dark);font-weight:700;font-size:12px;cursor:pointer">Hoje</button>
+            <button id="cf-data-ontem" onclick="selecionarDataLancamento('ontem')" style="flex:1;padding:.5rem;border-radius:8px;border:2px solid var(--border);background:var(--surface);color:var(--text-muted);font-weight:700;font-size:12px;cursor:pointer">Ontem</button>
+            <button id="cf-data-outro" onclick="selecionarDataLancamento('outro')" style="flex:1;padding:.5rem;border-radius:8px;border:2px solid var(--border);background:var(--surface);color:var(--text-muted);font-weight:700;font-size:12px;cursor:pointer">📅 Outra data</button>
+          </div>
           <input id="cf-data-custom" type="date" class="input" style="margin-top:8px;display:none">
         </div>
         <!-- Categoria -->

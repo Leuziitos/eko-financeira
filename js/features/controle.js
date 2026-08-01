@@ -130,7 +130,7 @@ async function renderControleFinanceiro() {
   cfCatsExpandido = false;
   cfMesVis = new Date().getMonth();
   cfAnoVis = new Date().getFullYear();
-  resetarDataLancamento();
+  selecionarDataLancamento('hoje');
   await mostrarTabControle('registrar');
   await renderCategoriasBotoes();
   // Boas-vindas se não tiver lançamentos ainda + saldo do topo
@@ -228,54 +228,40 @@ window.selecionarCategoriaCF = function(id) {
 
 
 // ════ CONTROLE FINANCEIRO — DATA RETROATIVA ════════════════
-let cfDataSelecionada = 'hoje'; // 'hoje' | 'outro'
+let cfDataSelecionada = 'hoje'; // 'hoje' | 'ontem' | 'outro'
 
-function chipDataHoje() {
-  return '📅 Hoje, ' + new Date().toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'});
-}
-
-function resetarDataLancamento() {
-  cfDataSelecionada = 'hoje';
-  const chip = document.getElementById('cf-data-chip');
-  if (chip) chip.textContent = chipDataHoje();
+window.selecionarDataLancamento = function(opcao) {
+  cfDataSelecionada = opcao;
+  ['hoje','ontem','outro'].forEach(op => {
+    const btn = document.getElementById('cf-data-' + op);
+    if (!btn) return;
+    const sel = op === opcao;
+    btn.style.borderColor = sel ? 'var(--eko-green)' : 'var(--border)';
+    btn.style.background = sel ? 'var(--eko-green-light)' : 'var(--surface)';
+    btn.style.color = sel ? 'var(--eko-green-dark)' : 'var(--text-muted)';
+  });
   const custom = document.getElementById('cf-data-custom');
-  if (custom) { custom.style.display = 'none'; custom.value = ''; }
-}
-
-// Chip único de data: padrão "hoje"; clique abre o date picker,
-// segundo clique fecha e volta para hoje
-window.alternarDataLancamento = function() {
-  const custom = document.getElementById('cf-data-custom');
-  const chip = document.getElementById('cf-data-chip');
-  if (!custom || !chip) return;
-  if (custom.style.display === 'none') {
-    cfDataSelecionada = 'outro';
-    custom.style.display = '';
-    custom.value = new Date().toISOString().slice(0,10);
-    custom.onchange = function() {
-      if (!this.value) return;
-      const hojeIso = new Date().toISOString().slice(0,10);
-      chip.textContent = this.value === hojeIso
-        ? chipDataHoje()
-        : '📅 ' + new Date(this.value + 'T12:00:00').toLocaleDateString('pt-BR');
-    };
-    // Abre o calendário nativo imediatamente — antes disso o clique só
-    // revelava o campo, exigindo um segundo toque para o seletor aparecer.
+  if (custom) custom.style.display = opcao === 'outro' ? '' : 'none';
+  if (opcao === 'outro' && custom) {
+    // Abre o calendário nativo imediatamente ao selecionar "Outra data"
+    // (mantém a correção do bug do seletor — sem isso o campo só ficava
+    // visível, exigindo um segundo toque para o calendário abrir).
     if (typeof custom.showPicker === 'function') {
       try { custom.showPicker(); } catch(e) { custom.focus(); }
     } else {
       custom.focus();
     }
-  } else {
-    resetarDataLancamento();
   }
 };
 
 function getDataLancamento() {
-  if (cfDataSelecionada === 'outro') {
-    const val = document.getElementById('cf-data-custom')?.value;
-    if (val) return new Date(val + 'T12:00:00');
+  if (cfDataSelecionada === 'hoje') return new Date();
+  if (cfDataSelecionada === 'ontem') {
+    const d = new Date(); d.setDate(d.getDate() - 1); return d;
   }
+  // outro
+  const val = document.getElementById('cf-data-custom')?.value;
+  if (val) return new Date(val + 'T12:00:00');
   return new Date();
 }
 
@@ -510,7 +496,7 @@ window.salvarLancamento = async function() {
   const bv = document.getElementById('cf-boas-vindas');
   if(bv) bv.style.display = 'none';
   // Resetar data para hoje
-  resetarDataLancamento();
+  selecionarDataLancamento('hoje');
   await renderHubControle();
   } finally { liberarBotao(btn); }
 };
