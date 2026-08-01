@@ -425,21 +425,54 @@ async function getSimulacoes() {
   } catch(e) { return []; }
 }
 
+let _simsCache = []; // simulações carregadas — usado por carregarSimulacaoSalva para reaplicar valores sem nova query
+
 async function carregarHistoricoSimulacoes() {
   const sims = await getSimulacoes();
+  _simsCache = sims;
   const wrap = document.getElementById('sim-historico');
   const lista = document.getElementById('sim-historico-lista');
   if (!sims.length) { wrap.style.display='none'; return; }
   wrap.style.display = '';
+  // Cursor pointer + sombra leve no hover (var(--shadow) já respeita tema claro/escuro)
+  const cardAttrs = `style="cursor:pointer;transition:box-shadow .2s,transform .2s" onmouseover="this.style.boxShadow='var(--shadow)';this.style.transform='translateY(-1px)'" onmouseout="this.style.boxShadow='none';this.style.transform='none'"`;
   lista.innerHTML = sims.slice(0,5).map(s => {
     const dt = new Date(s.criadoEm).toLocaleDateString('pt-BR',{day:'2-digit',month:'short',year:'numeric'});
     if (s.tipo === 'aposentadoria') {
-      return `<div class="pront-item"><div class="pront-item-left"><div class="pront-item-icon">🏖️</div><div><div class="pront-item-title">Aposentadoria — ${fmt(s.rendaMensal)}/mês</div><div class="pront-item-sub">Guardar ${fmt(s.pmtMensal)}/mês · rent. ${s.rent}%/m · ${dt}</div></div></div></div>`;
+      return `<div class="pront-item" onclick="carregarSimulacaoSalva('${s._id}')" ${cardAttrs}><div class="pront-item-left"><div class="pront-item-icon">🏖️</div><div><div class="pront-item-title">Aposentadoria — ${fmt(s.rendaMensal)}/mês</div><div class="pront-item-sub">Guardar ${fmt(s.pmtMensal)}/mês · rent. ${s.rent}%/m · ${dt}</div></div></div></div>`;
     } else {
-      return `<div class="pront-item"><div class="pront-item-left"><div class="pront-item-icon">💰</div><div><div class="pront-item-title">Acumulação — ${fmt(s.aporte)}/mês por ${s.anos}a</div><div class="pront-item-sub">Líquido: ${fmt(s.patrimonioLiquido||s.patrimonioFinal)} · ${dt}</div></div></div></div>`;
+      return `<div class="pront-item" onclick="carregarSimulacaoSalva('${s._id}')" ${cardAttrs}><div class="pront-item-left"><div class="pront-item-icon">💰</div><div><div class="pront-item-title">Acumulação — ${fmt(s.aporte)}/mês por ${s.anos}a</div><div class="pront-item-sub">Líquido: ${fmt(s.patrimonioLiquido||s.patrimonioFinal)} · ${dt}</div></div></div></div>`;
     }
   }).join('');
 }
+
+// Carrega os valores de uma simulação salva no formulário correspondente
+// e recalcula — mesmo efeito de o usuário ter preenchido manualmente.
+window.carregarSimulacaoSalva = function(id) {
+  const s = _simsCache.find(x => x._id === id);
+  if (!s) return;
+  const fmtCampoMoeda = v => v ? 'R$ ' + Number(v).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2}) : '';
+  if (s.tipo === 'aposentadoria') {
+    switchSimTab('aposent');
+    document.getElementById('ap-idade').value = s.idadeAtual || '';
+    document.getElementById('ap-idade-aposent').value = s.idadeAposent || '';
+    document.getElementById('ap-renda').value = fmtCampoMoeda(s.rendaMensal);
+    document.getElementById('ap-patrimonio').value = fmtCampoMoeda(s.patrimonioAtual);
+    document.getElementById('ap-rent').value = s.rent ?? 1.0;
+    document.getElementById('ap-infl').value = s.infl ?? 0.4;
+    document.getElementById('ap-ir').value = s.aliqIR ?? 15;
+    calcularAposentadoria();
+  } else {
+    switchSimTab('acum');
+    document.getElementById('ac-inicial').value = fmtCampoMoeda(s.inicial);
+    document.getElementById('ac-aporte').value = fmtCampoMoeda(s.aporte);
+    document.getElementById('ac-anos').value = s.anos || '';
+    document.getElementById('ac-rent').value = s.rent ?? 1.0;
+    document.getElementById('ac-infl').value = s.infl ?? 0.4;
+    document.getElementById('ac-ir').value = s.aliqIR ?? 15;
+    calcularAcumulacao();
+  }
+};
 
 window.abrirSimulacoes = async function() {
   ir('screen-simulacoes');

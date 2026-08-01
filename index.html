@@ -692,6 +692,12 @@
       ⚠️ <strong>Importante:</strong> Estas simulações são educacionais. Os valores são estimativas baseadas em premissas fixas e não constituem consultoria financeira. Resultados reais podem variar.
     </div>
 
+    <!-- Histórico simulações — no topo; oculto se não houver simulações salvas -->
+    <div id="sim-historico" class="sim-historico" style="display:none">
+      <div class="section-title" style="margin-bottom:8px">📋 Simulações salvas</div>
+      <div id="sim-historico-lista"></div>
+    </div>
+
     <!-- Tabs -->
     <div class="sim-tabs">
       <button class="sim-tab active" id="tab-aposent" onclick="switchSimTab('aposent')">🏖️ Aposentadoria</button>
@@ -821,12 +827,6 @@
         <button class="btn" onclick="compartilharSimulacaoAc()" style="width:100%;margin-bottom:.5rem">📤 Compartilhar resultado</button>
         <button class="btn" onclick="criarMetaDeAcumulacao()" style="width:100%;margin-bottom:.5rem">🎯 Criar meta financeira com este valor</button>
       </div>
-    </div>
-
-    <!-- Histórico simulações -->
-    <div id="sim-historico" class="sim-historico" style="display:none">
-      <div class="section-title" style="margin-bottom:8px">📋 Simulações salvas</div>
-      <div id="sim-historico-lista"></div>
     </div>
   </div>
 </div>
