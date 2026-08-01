@@ -1,10 +1,48 @@
-const CACHE_NAME = 'eko-financeira-v3';
+const CACHE_NAME = 'eko-financeira-v4'; // v4: modularização (CSS/JS externos)
 const ASSETS = [
   '/',
   '/index.html',
   '/manifest.json',
   '/icons/icon-192x192.png',
   '/icons/icon-512x512.png',
+  // CSS
+  '/assets/css/base.css',
+  '/assets/css/components.css',
+  '/assets/css/features.css',
+  // JS — entry point e fundação
+  '/js/main.js',
+  '/js/config.js',
+  '/js/core/firebase.js',
+  '/js/core/store.js',
+  '/js/core/router.js',
+  '/js/core/theme.js',
+  '/js/core/errors.js',
+  '/js/utils/format.js',
+  '/js/utils/money.js',
+  '/js/utils/dom.js',
+  '/js/utils/finance-math.js',
+  '/js/utils/debounce.js',
+  // JS — features
+  '/js/features/onboarding.js',
+  '/js/features/planilha.js',
+  '/js/features/aulas.js',
+  '/js/features/dica-ia.js',
+  '/js/features/feedback.js',
+  '/js/features/controle.js',
+  '/js/features/metas.js',
+  '/js/features/dividas.js',
+  '/js/features/objetivos.js',
+  '/js/features/simulacoes.js',
+  '/js/features/reserva.js',
+  '/js/features/diagnosticos.js',
+  '/js/features/hub.js',
+  '/js/features/prontuario.js',
+  '/js/features/auth.js',
+  '/js/features/push-optin.js',
+  // JS — PWA
+  '/js/pwa/install-banner.js',
+  '/js/pwa/sw-register.js',
+  '/js/pwa/onesignal-init.js',
 ];
 
 // Instala e faz cache dos assets principais
