@@ -131,6 +131,12 @@ window.salvarObjetivo=async function(){
   }finally{liberarBotao(btn);}
 };
 
-window.abrirObjetivos=async function(){try{await renderObjetivos();}catch(e){console.error(e);}ir('screen-objetivos');};
+window.abrirObjetivos=async function(){
+  // Navega primeiro e mostra loading — as queries chegam depois (padrão abrirReserva)
+  document.getElementById('objetivos-balde').innerHTML='';
+  document.getElementById('objetivos-lista').innerHTML='<div class="loading"><span class="spinner"></span>Carregando objetivos...</div>';
+  ir('screen-objetivos');
+  try{await renderObjetivos();}catch(e){console.error(e);}
+};
 
 export { getObjetivos };

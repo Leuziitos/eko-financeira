@@ -246,8 +246,11 @@ window.aplicarAjuste=async function(){
 };
 
 window.abrirMetas=async function(){
-  try{await renderMetas();}catch(e){console.error(e);}
+  // Navega primeiro e mostra loading — as queries chegam depois (padrão abrirReserva)
+  document.getElementById('metas-resumo').innerHTML='';
+  document.getElementById('metas-lista').innerHTML='<div class="loading"><span class="spinner"></span>Carregando metas...</div>';
   ir('screen-metas');
+  try{await renderMetas();}catch(e){console.error(e);}
   // Verificar reserva e mostrar aviso se incompleta
   try {
     const snap = await getDoc(doc(db,'reserva',store.sessao.email));

@@ -219,6 +219,12 @@ window.confirmarPagamento=async function(){
 };
 window.naoConseguiuPagar=async function(){const div=dividaAtual;div.emAtraso=true;div.valorAtrasado=(div.valorAtrasado||0)+div.parcela;if(!div.historicoPagamentos)div.historicoPagamentos=[];div.historicoPagamentos.push({tipo:'nao_pago',valor:0,data:new Date().toISOString()});await saveDivida2(div);fecharOverlay('overlay-pagamento');await renderDividas();const jurosExtra=div.parcela*(div.juros/100);toast('⚠️ Registrado. ~'+fmt(jurosExtra)+' em juros extras este mês.');};
 
-window.abrirDividas=async function(){try{await renderDividas();}catch(e){console.error(e);}ir('screen-dividas');};
+window.abrirDividas=async function(){
+  // Navega primeiro e mostra loading — as queries chegam depois (padrão abrirReserva)
+  document.getElementById('dividas-resumo').innerHTML='';
+  document.getElementById('dividas-lista').innerHTML='<div class="loading"><span class="spinner"></span>Carregando dívidas...</div>';
+  ir('screen-dividas');
+  try{await renderDividas();}catch(e){console.error(e);}
+};
 
 export { getDividas };

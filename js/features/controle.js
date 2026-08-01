@@ -117,8 +117,11 @@ function cfNomeMes(mes, ano) {
 }
 
 window.abrirControleFinanceiro = async function() {
-  await renderControleFinanceiro();
+  // Navega primeiro e mostra loading — as queries chegam depois (padrão abrirReserva)
+  const grid = document.getElementById('cf-categorias-grid');
+  if (grid) grid.innerHTML = '<div class="loading" style="grid-column:1/-1;padding:1rem"><span class="spinner"></span>Carregando...</div>';
   ir('screen-controle');
+  await renderControleFinanceiro();
 };
 
 async function renderControleFinanceiro() {
