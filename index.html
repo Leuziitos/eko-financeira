@@ -1486,6 +1486,12 @@ import { parseMoney, applyMoneyMask, setupMoneyInputs } from '/js/utils/money.js
 import { showMsg, limparMsg, toast, abrirOverlay, fecharOverlay } from '/js/utils/dom.js';
 import { calcPMT, taxaReal, calcFV, calcPMTparaFV, irSobreJuros } from '/js/utils/finance-math.js';
 import { debounce } from '/js/utils/debounce.js';
+// Features autocontidas (Fase 3)
+import { iniciarOnboarding } from '/js/features/onboarding.js';
+import { getAulasConcluidas } from '/js/features/aulas.js';
+import { renderDicaIA } from '/js/features/dica-ia.js';
+import '/js/features/planilha.js';
+import '/js/features/feedback.js';
 
 let _unsubscribeMetas = null; // guarda unsubscribe do onSnapshot
 
@@ -1521,34 +1527,7 @@ async function saveDiag(data) {
   await addDoc(collection(db,'diagnosticos'), data);
 }
 
-// ── ONBOARDING ──────────────────────────────────────────────
-const ONBOARD = [
-  {icon:'📊', title:'Bem-vindo à Eko Financeira', desc:'Seu hub completo de educação e organização financeira. Planeje hoje para conquistar amanhã.'},
-  {icon:'🔍', title:'Diagnósticos Financeiros', desc:'Descubra em qual ciclo você está, o quanto está preparado para se aposentar e como está sua relação com o dinheiro em casal.'},
-  {icon:'🎯', title:'Metas e Objetivos', desc:'Crie metas financeiras, acompanhe seu progresso e ajuste quando precisar — sem abandonar o plano.'},
-  {icon:'📈', title:'Simulações Inteligentes', desc:'Simule sua aposentadoria e acumulação de patrimônio com cálculos reais e cenários comparativos.'},
-  {icon:'🏆', title:'Seu Prontuário Financeiro', desc:'Tudo que você faz no app alimenta seu prontuário — um histórico completo da sua evolução financeira.'}
-];
-let obIdx = 0;
-
-function renderOnboard() {
-  const ob = ONBOARD[obIdx];
-  document.getElementById('ob-icon').textContent = ob.icon;
-  document.getElementById('ob-title').textContent = ob.title;
-  document.getElementById('ob-desc').textContent = ob.desc;
-  document.getElementById('ob-btn').textContent = obIdx < ONBOARD.length-1 ? 'Próximo' : 'Começar!';
-  const dots = document.getElementById('ob-dots');
-  dots.innerHTML = ONBOARD.map((_,i) => `<div class="onboard-dot ${i===obIdx?'active':''}"></div>`).join('');
-}
-
-window.nextOnboard = function() {
-  if (obIdx < ONBOARD.length-1) { obIdx++; renderOnboard(); }
-  else finishOnboard();
-};
-window.finishOnboard = function() {
-  localStorage.setItem('eko_onboard_done', '1');
-  ir('screen-login');
-};
+// ── Onboarding → /js/features/onboarding.js ──────────────
 
 // ── AUTH ──────────────────────────────────────────────
 async function carregarApp() {
@@ -1967,6 +1946,7 @@ async function renderProntuario() {
   avDiv.innerHTML = avisos.length ? avisos.map(a => `<div class="aviso-item ${a.tipo}"><span>${a.icon}</span><div><div style="font-size:13px;font-weight:600">${a.titulo}</div><div style="font-size:12px;color:var(--text-muted)">${a.desc}</div></div></div>`).join('') : '<div class="pront-empty">Nenhum aviso no momento ✅</div>';
 }
 
+window.renderProntuario = renderProntuario; // ponte transitoria (Fase 3): aulas.js — vira import na Fase 5
 async function calcConquistas(diags) {
   const ciclo = diags.find(d => d.tipo === 'ciclo');
   const indep = diags.find(d => d.tipo === 'independencia');
@@ -2470,6 +2450,7 @@ function calcProjecao(meta){
 async function getMetas(){
   try{const q=query(collection(db,'metas'),where('email','==',store.sessao.email));const snap=await getDocs(q);const r=[];snap.forEach(d=>r.push({...d.data(),_id:d.id}));return r.filter(m=>!m.excluida).sort((a,b)=>(a.criadoEm||'')>(b.criadoEm||'')?1:-1);}catch(e){return[];}
 }
+window.getMetas = getMetas; // ponte transitoria (Fase 3): dica-ia.js — vira import na Fase 4
 async function saveMeta2(meta){
   const{_id,...data}=meta;
   if(_id){await setDoc(doc(db,'metas',_id),data);}
@@ -2655,6 +2636,7 @@ window.calcularTotalDivida=function(){
 };
 
 async function getDividas(){try{const q=query(collection(db,'dividas'),where('email','==',store.sessao.email));const snap=await getDocs(q);const r=[];snap.forEach(d=>r.push({...d.data(),_id:d.id}));return r.filter(d=>!d.excluida).sort((a,b)=>((b.juros||0)-(a.juros||0)));}catch(e){return[];}}
+window.getDividas = getDividas; // ponte transitoria (Fase 3): dica-ia.js — vira import na Fase 4
 async function saveDivida2(divida){const{_id,...data}=divida;if(_id){await setDoc(doc(db,'dividas',_id),data);}else{data.email=store.sessao.email;data.criadoEm=new Date().toISOString();const ref=await addDoc(collection(db,'dividas'),data);divida._id=ref.id;}}
 
 function statusDivida(divida){
@@ -2784,6 +2766,7 @@ window.naoConseguiuPagar=async function(){const div=dividaAtual;div.emAtraso=tru
 // FASE 2 — OBJETIVOS FINANCEIROS
 // ════════════════════════════════════════════════
 async function getObjetivos(){try{const q=query(collection(db,'objetivos'),where('email','==',store.sessao.email));const snap=await getDocs(q);const r=[];snap.forEach(d=>r.push({...d.data(),_id:d.id}));return r.filter(o=>!o.excluida).sort((a,b)=>(a.ordem||99)-(b.ordem||99));}catch(e){return[];}}
+window.getObjetivos = getObjetivos; // ponte transitoria (Fase 3): dica-ia.js — vira import na Fase 4
 async function saveObjetivo(obj){const{_id,...data}=obj;if(_id){await setDoc(doc(db,'objetivos',_id),data);}else{data.email=store.sessao.email;data.criadoEm=new Date().toISOString();const ref=await addDoc(collection(db,'objetivos'),data);obj._id=ref.id;}}
 
 window.calcularObjetivo=function(){
@@ -3870,206 +3853,9 @@ async function atualizarHubReserva() {
 
 // ════════════════════════════════════════════════
 
-window.abrirPlanilha = function() { ir('screen-planilha'); };
+// ── Planilha → /js/features/planilha.js ──────────────────
 
-window.baixarPlanilha = function() {
-  // Link direto para planilha PEF no Google Drive / site
-  const url = 'https://ekofinanceira.com.br/planilha'; // Atualizar com URL real
-  window.open(url, '_blank');
-  toast('📥 Abrindo link de download...');
-};
-
-window.abrirVideo = function(tipo) {
-  let url = '';
-  if (tipo === 'planilha') url = 'https://youtube.com/@ekofinanceira'; // Atualizar com URL real
-  else url = 'https://youtube.com/@ekofinanceira';
-  window.open(url, '_blank');
-};
-
-// ════════════════════════════════════════════════
-// FASE 3 — AULAS PEF
-// ════════════════════════════════════════════════
-
-const AULAS_PEF = [
-  {
-    num: 1, titulo: 'O que é educação financeira?',
-    desc: 'Educação financeira é o conhecimento que ajuda a administrar o dinheiro de forma consciente, equilibrando gastos, poupando para o futuro e evitando dívidas.',
-    tags: ['Mentalidade', 'Fundamentos'],
-    videoId: 'MAQuyNDlXMY',
-    reflexao: 'Qual é a sua relação emocional com o dinheiro? Você o vê como ferramenta ou como fonte de ansiedade?'
-  },
-  {
-    num: 2, titulo: 'Estabeleça os seus objetivos',
-    desc: 'Ter objetivos financeiros estabelecidos é essencial para direcionar seus esforços, evitar gastos desnecessários e alcançar metas de forma mais eficiente.',
-    tags: ['Objetivos', 'Planejamento'],
-    videoId: 'X2u96WDe-lY',
-    reflexao: 'Você tem objetivos financeiros claros? Escreva agora os 3 principais que quer conquistar nos próximos anos.'
-  },
-  {
-    num: 3, titulo: 'Conheça e controle seus gastos',
-    desc: 'Conhecer e controlar seus gastos é fundamental para evitar desperdícios, manter o equilíbrio financeiro e alcançar suas metas com mais segurança.',
-    tags: ['Orçamento', 'Controle'],
-    videoId: 'qqv_X7UIR5Q',
-    reflexao: 'Você sabe exatamente para onde vai cada real da sua renda? Liste as 3 principais despesas do último mês.'
-  },
-  {
-    num: 4, titulo: 'Gestão de riscos pessoais',
-    desc: 'A gestão de riscos pessoais é crucial para proteger suas finanças contra imprevistos, garantindo estabilidade e evitando prejuízos que comprometam seus objetivos.',
-    tags: ['Proteção', 'Riscos'],
-    videoId: 'n4YR7aOXo8Y',
-    reflexao: 'Quais são os principais riscos financeiros na sua vida hoje? Você está protegido contra imprevistos?'
-  },
-  {
-    num: 5, titulo: 'Crie a sua reserva de emergência',
-    desc: 'Criar uma reserva de emergência é essencial para lidar com imprevistos financeiros sem comprometer seu orçamento ou objetivos de longo prazo.',
-    tags: ['Reserva', 'Segurança'],
-    videoId: 'qtUNTPVBd4g',
-    reflexao: 'Você tem reserva de emergência? Quantos meses de gastos ela cobre atualmente?'
-  },
-  {
-    num: 6, titulo: 'Invista',
-    desc: 'Investir é essencial para fazer o dinheiro crescer, proteger seu poder de compra e alcançar objetivos financeiros de médio e longo prazo.',
-    tags: ['Investimentos', 'Crescimento'],
-    videoId: 'b4d8ZkGXBJU',
-    reflexao: 'O que te impede de começar a investir hoje? Qual seria o primeiro passo que você poderia dar?'
-  },
-  {
-    num: 7, titulo: 'Liberdade financeira',
-    desc: 'A liberdade financeira é importante porque permite viver sem depender exclusivamente de um salário, garantindo segurança e escolhas para o futuro.',
-    tags: ['Liberdade', 'Independência'],
-    videoId: 'MsaRtq92dc4',
-    reflexao: 'O que a liberdade financeira significa para você? Escreva em uma frase o seu "porquê" financeiro.'
-  },
-  {
-    num: 8, titulo: 'Quais as opções para investir o seu dinheiro?',
-    desc: 'As alternativas de investimento de forma simples e objetiva, desde renda fixa até renda variável.',
-    tags: ['Investimentos', 'Opções'],
-    videoId: 'k7FFCTbzaKQ',
-    reflexao: 'Qual tipo de investimento mais combina com seu perfil e objetivo atual? Conservador, moderado ou arrojado?'
-  },
-  {
-    num: 9, titulo: 'Minha trajetória com a educação financeira',
-    desc: 'A trajetória de 2017 a 2025: como começar a organizar as finanças, como os aportes evoluem e quais mudanças são fundamentais para a construção de patrimônio.',
-    tags: ['Trajetória', 'Inspiração'],
-    videoId: 'f63GancxD7s',
-    reflexao: 'Como está a sua trajetória financeira? O que mudou (ou precisa mudar) para você avançar para o próximo nível?'
-  },
-  {
-    num: 10, titulo: 'A jornada é feita por curvas',
-    desc: 'Como os gastos evoluem (e oscilam) ao longo de 3 anos — as categorias que mais consomem a receita e o que aprender nesse processo.',
-    tags: ['Gastos', 'Evolução'],
-    videoId: 'OQ_QqEeyl4g',
-    reflexao: 'Olhando seus últimos 3 anos, sua situação financeira melhorou? Quais curvas você enfrentou?'
-  },
-  {
-    num: 11, titulo: 'Migração do débito para o crédito',
-    desc: 'Como migrar do crédito para o débito e como essa estratégia pode gerar um ganho financeiro mensal.',
-    tags: ['Crédito', 'Estratégia'],
-    videoId: 'A2jtrMTXo90',
-    reflexao: 'Você usa mais débito ou crédito no dia a dia? Qual o impacto disso nas suas finanças mensais?'
-  },
-  {
-    num: 12, titulo: 'Gastos evitáveis — Carro',
-    desc: 'Como evitar gastos com manutenção corretiva do carro e as lições aprendidas rodando 18 mil quilômetros.',
-    tags: ['Gastos', 'Veículo'],
-    videoId: '-iZzrA_G14w',
-    reflexao: 'Quais são os gastos evitáveis na sua vida que você ainda não eliminou? Qual deles você pode cortar agora?'
-  }
-];
-
-async function getAulasConcluidas() {
-  try {
-    const q = query(collection(db,'aulas'), where('email','==',store.sessao.email));
-    const snap = await getDocs(q); const r = {};
-    snap.forEach(d => { const data = d.data(); r[data.aulaNum] = true; });
-    return r;
-  } catch(e) { return {}; }
-}
-
-async function renderAulas() {
-  const concluidas = await getAulasConcluidas();
-  const total = Object.keys(concluidas).length;
-  const pct = Math.round((total / 12) * 100);
-
-  // Progress circle
-  const circunf = 138.2;
-  document.getElementById('aula-prog-circle').style.strokeDashoffset = circunf - (circunf * pct / 100);
-  document.getElementById('aula-prog-pct').textContent = pct + '%';
-  document.getElementById('aulas-concluidas-count').textContent = total;
-  document.getElementById('aulas-badge').style.display = total === 12 ? '' : 'none';
-
-  const lista = document.getElementById('aulas-lista');
-  lista.innerHTML = '';
-  AULAS_PEF.forEach(aula => {
-    const concluida = !!concluidas[aula.num];
-    const div = document.createElement('div');
-    div.className = 'aula-card' + (concluida ? ' concluida' : '');
-    div.onclick = () => abrirAulaDetalhe(aula, concluida);
-    div.innerHTML = `
-      <div class="aula-num">Aula ${aula.num}</div>
-      <div class="aula-titulo">${aula.titulo}</div>
-      <div class="aula-desc">${aula.desc}</div>
-      <div style="margin-top:8px" class="aula-tags">${aula.tags.map(t=>`<span class="aula-tag">${t}</span>`).join('')}</div>
-    `;
-    lista.appendChild(div);
-  });
-}
-
-window.abrirAulas = async function() {
-  ir('screen-aulas');
-  await renderAulas();
-};
-
-function abrirAulaDetalhe(aula, concluida) {
-  const html = `
-    <div style="font-size:10px;font-weight:800;color:var(--text-muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px">Aula ${aula.num} de 12</div>
-    <div style="font-size:17px;font-weight:800;color:var(--text);line-height:1.3;margin-bottom:.375rem">${aula.titulo}</div>
-    <div style="font-size:13px;color:var(--text-muted);margin-bottom:.875rem;line-height:1.55">${aula.desc}</div>
-    <div style="margin-bottom:.875rem;display:flex;gap:6px;flex-wrap:wrap">${aula.tags.map(t=>`<span class="aula-tag">${t}</span>`).join('')}</div>
-
-    <div style="position:relative;width:100%;border-radius:14px;overflow:hidden;background:linear-gradient(135deg,#FF0000,#CC0000);margin-bottom:1.25rem;cursor:pointer" onclick="window.open('https://www.youtube.com/watch?v=${aula.videoId}','_blank')">
-      <div style="display:flex;align-items:center;gap:14px;padding:1.25rem">
-        <div style="width:52px;height:52px;background:rgba(255,255,255,.2);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0">
-          <div style="font-size:22px;margin-left:3px">▶</div>
-        </div>
-        <div>
-          <div style="font-size:14px;font-weight:800;color:#fff">Assistir no YouTube</div>
-          <div style="font-size:12px;color:rgba(255,255,255,.8);margin-top:2px">${aula.titulo}</div>
-        </div>
-      </div>
-    </div>
-
-    <div style="background:var(--amber-light);border-radius:12px;padding:12px 14px;border-left:3px solid var(--amber);margin-bottom:1.25rem">
-      <div style="font-size:11px;font-weight:800;color:var(--amber);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">💭 Reflexão</div>
-      <div style="font-size:13px;color:#7A4010;line-height:1.6">${aula.reflexao}</div>
-    </div>
-
-    <div style="display:grid;gap:.5rem">
-      ${concluida
-        ? `<div style="text-align:center;padding:.75rem;background:var(--eko-green-light);border-radius:12px;font-size:14px;font-weight:700;color:var(--eko-green-dark)">✅ Você já concluiu esta aula!</div>`
-        : `<button class="btn btn-primary" onclick="marcarAulaConcluida(${aula.num})">✅ Marcar como concluída</button>`
-      }
-      <button class="btn" onclick="fecharOverlay('overlay-aula')">Fechar</button>
-    </div>
-  `;
-  document.getElementById('aula-detail-content').innerHTML = html;
-  abrirOverlay('overlay-aula');
-}
-
-window.marcarAulaConcluida = async function(num) {
-  try {
-    // Verificar se já existe
-    const q = query(collection(db,'aulas'), where('email','==',store.sessao.email), where('aulaNum','==',num));
-    const snap = await getDocs(q);
-    if (snap.empty) {
-      await addDoc(collection(db,'aulas'), { email:store.sessao.email, aulaNum:num, concluidaEm:new Date().toISOString() });
-    }
-    fecharOverlay('overlay-aula');
-    toast('🎓 Aula ' + num + ' concluída! Continue assim!');
-    await renderAulas();
-    await renderProntuario();
-  } catch(e) { toast('❌ Erro ao registrar. Tente novamente.'); }
-};
+// ── Aulas PEF → /js/features/aulas.js ────────────────────
 
 // Atualizar prontuário com simulações
 // ════════════════════════════════════════════════
@@ -4138,92 +3924,7 @@ async function renderResumoMensal() {
     </div>`;
 }
 
-// ════════════════════════════════════════════════
-// FASE 4 — DICA FINANCEIRA IA (Claude API)
-// ════════════════════════════════════════════════
-
-let _dicaCache = null;
-let _dicaCacheData = null;
-
-async function renderDicaIA() {
-  const el = document.getElementById('hub-dica');
-  if (!el) return;
-
-  // Cache por dia em localStorage (persiste entre abas e recarregamentos)
-  const hoje = new Date().toISOString().slice(0,10); // YYYY-MM-DD
-  const cacheKey = 'eko_dica_' + store.sessao.email + '_' + hoje;
-  const cached = localStorage.getItem(cacheKey);
-  if (cached) {
-    el.innerHTML = renderDicaHtml(cached);
-    return;
-  }
-
-  // Mostra loading
-  el.innerHTML = `<div class="dica-card"><div class="dica-card-label">💡 Dica do dia</div><div class="dica-loading"><span class="spinner"></span> Gerando sua dica personalizada...</div></div>`;
-
-  try {
-    // Coleta contexto do usuário
-    let metas = [], dividas = [], objetivos = [];
-    try { metas = await getMetas(); } catch(e){}
-    try { dividas = await getDividas(); } catch(e){}
-    try { objetivos = await getObjetivos(); } catch(e){}
-
-    const renda = store.sessao.renda || 0;
-    const totalDividas = dividas.reduce((s,d) => s + (d.parcela*(d.parcelasRestantes||0)), 0);
-    const totalMetas = metas.filter(m=>!m.concluida).length;
-    const metasConc = metas.filter(m=>m.concluida).length;
-    const dividasAtraso = dividas.filter(d=>d.emAtraso).length;
-
-    const contexto = [
-      renda > 0 ? `Renda mensal: R$ ${renda.toLocaleString('pt-BR')}` : null,
-      totalMetas > 0 ? `${totalMetas} meta(s) financeira(s) ativa(s)` : null,
-      metasConc > 0 ? `${metasConc} meta(s) já concluída(s)` : null,
-      dividas.length > 0 ? `${dividas.length} dívida(s) ativa(s), total R$ ${totalDividas.toLocaleString('pt-BR', {maximumFractionDigits:0})}` : null,
-      dividasAtraso > 0 ? `${dividasAtraso} dívida(s) em atraso` : null,
-      objetivos.length > 0 ? `${objetivos.length} objetivo(s) de longo prazo` : null,
-    ].filter(Boolean).join('; ');
-
-    const prompt = `Você é um assistente de educação financeira do app Eko Financeira, desenvolvido por Leonardo Braulino (Projeto PEF).
-
-Contexto do usuário: ${contexto || 'usuário iniciando no app'}.
-
-Gere UMA dica financeira prática, motivadora e personalizada para este usuário. 
-Regras:
-- Máximo 2 frases curtas e diretas
-- Tom encorajador e acessível, sem jargões
-- Baseada no contexto do usuário quando disponível
-- Sem emojis excessivos — apenas 1 no início
-- Não cite valores exatos do usuário, use referências gerais
-- Responda APENAS com o texto da dica, sem título nem introdução`;
-
-    const response = await fetch('/.netlify/functions/dica', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contexto, prompt })
-    });
-
-    const data = await response.json();
-    const dica = data?.dica?.trim() || '';
-
-    if (dica) {
-      localStorage.setItem(cacheKey, dica);
-      el.innerHTML = renderDicaHtml(dica);
-    } else {
-      el.innerHTML = '';
-    }
-  } catch(e) {
-    console.error('dica ia', e);
-    el.innerHTML = ''; // falha silenciosa
-  }
-}
-
-function renderDicaHtml(texto) {
-  return `<div class="dica-card">
-    <div class="dica-card-label">💡 Dica do dia</div>
-    <div class="dica-card-texto">${texto}</div>
-    <div style="margin-top:.5rem;font-size:10px;color:var(--eko-green-dark);font-weight:600;opacity:.7">Por Leonardo Braulino · PEF</div>
-  </div>`;
-}
+// ── Dica IA → /js/features/dica-ia.js ────────────────────
 
 // ════════════════════════════════════════════════
 // FASE 4 — REVISÃO TRIMESTRAL
@@ -5058,81 +4759,13 @@ async function cfSugerirLancamento(tipo, valor, categoriaId, categoriaNome) {
 
 // ════════════════════════════════════════════════
 
-// ════════════════════════════════════════════════
-// FEEDBACK
-// ════════════════════════════════════════════════
-let fbTipoAtual = 'bug';
-
-
-window.abrirIndicar = function() {
-  abrirOverlay('overlay-indicar');
-};
-
-window.indicarWhatsApp = function() {
-  const msg = encodeURIComponent('Ei! Estou usando a Eko Financeira para organizar minhas finanças. É gratuito e incrível! 🌱\n\nAcessa aqui: https://app.ekofinanceira.com.br');
-  window.open('https://wa.me/?text=' + msg, '_blank');
-};
-
-window.indicarInstagram = function() {
-  window.open('https://instagram.com/ekofinanceira', '_blank');
-};
-
-window.abrirFeedback = function() {
-  fbTipoAtual = 'bug';
-  selecionarTipoFeedback('bug');
-  const msg = document.getElementById('fb-mensagem');
-  if(msg) msg.value = '';
-  limparMsg('fb-msg');
-  abrirOverlay('overlay-feedback');
-};
-
-window.selecionarTipoFeedback = function(tipo) {
-  fbTipoAtual = tipo;
-  const tipos = {
-    bug:      {cor:'var(--red)',    bg:'var(--red-light)',        label:'🐛 Bug'},
-    sugestao: {cor:'var(--eko-green)', bg:'var(--eko-green-light)', label:'💡 Sugestão'},
-    elogio:   {cor:'#f59e0b',      bg:'#fef3c7',                 label:'👍 Elogio'},
-  };
-  ['bug','sugestao','elogio'].forEach(t => {
-    const btn = document.getElementById('fb-tipo-'+t);
-    if(!btn) return;
-    if(t === tipo) {
-      btn.style.border = `2px solid ${tipos[t].cor}`;
-      btn.style.background = tipos[t].bg;
-      btn.style.color = tipos[t].cor;
-    } else {
-      btn.style.border = '2px solid var(--border)';
-      btn.style.background = 'var(--surface)';
-      btn.style.color = 'var(--text-muted)';
-    }
-  });
-};
-
-window.enviarFeedback = async function() {
-  limparMsg('fb-msg');
-  const mensagem = document.getElementById('fb-mensagem').value.trim();
-  if(!mensagem) { showMsg('fb-msg','error','Escreva sua mensagem antes de enviar.'); return; }
-  try {
-    await addDoc(collection(db,'feedbacks'), {
-      email: store.sessao.email,
-      tipo: fbTipoAtual,
-      mensagem,
-      criadoEm: new Date().toISOString(),
-      lido: false,
-    });
-    fecharOverlay('overlay-feedback');
-    toast('💬 Feedback enviado! Obrigado! 🌱');
-    logEko('feedback_enviado', {tipo: fbTipoAtual});
-  } catch(e) {
-    showMsg('fb-msg','error','Erro ao enviar. Verifique sua conexão.');
-  }
-};
+// ── Feedback + Indicar → /js/features/feedback.js ────────
 
 // ════════════════════════════════════════════════
 
 async function init() {
   const obDone = localStorage.getItem('eko_onboard_done');
-  if (!obDone) { obIdx = 0; renderOnboard(); ir('screen-onboarding'); return; }
+  if (!obDone) { iniciarOnboarding(); return; }
   ir('screen-login'); // aguarda onAuthStateChanged
 }
 
