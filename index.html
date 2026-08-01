@@ -1477,15 +1477,13 @@
 // /js/. Este bloco inline encolhe a cada fase até virar main.js.
 import '/js/core/theme.js';
 import { SESS_KEY, PUSH_OPTIN_KEY } from '/js/config.js';
-import { db, auth, logEko, doc, getDoc, setDoc, deleteDoc, collection, getDocs, addDoc, query, where, runTransaction, onSnapshot, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail } from '/js/core/firebase.js';
+import { db, auth, logEko, doc, getDoc, setDoc, collection, getDocs, query, where, onSnapshot, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail } from '/js/core/firebase.js';
 import { store } from '/js/core/store.js';
 import { ir, onEnter } from '/js/core/router.js';
 import '/js/core/errors.js';
-import { fmt, fmtK, fmtInput, esc, diasAte } from '/js/utils/format.js';
+import { fmt, esc, diasAte } from '/js/utils/format.js';
 import { parseMoney, applyMoneyMask, setupMoneyInputs } from '/js/utils/money.js';
-import { showMsg, limparMsg, toast, abrirOverlay, fecharOverlay } from '/js/utils/dom.js';
-import { calcPMT, taxaReal, calcFV, calcPMTparaFV, irSobreJuros } from '/js/utils/finance-math.js';
-import { debounce } from '/js/utils/debounce.js';
+import { showMsg, limparMsg, toast } from '/js/utils/dom.js';
 // Features autocontidas (Fase 3)
 import { iniciarOnboarding } from '/js/features/onboarding.js';
 import { getAulasConcluidas } from '/js/features/aulas.js';
@@ -1494,7 +1492,7 @@ import '/js/features/planilha.js';
 import '/js/features/feedback.js';
 // Features de domínio (Fase 4)
 import { getCFLancamentos, cfChaveMes, renderHubControle } from '/js/features/controle.js';
-import { getMetas, saveMeta2, calcAcumulado, statusMeta, renderMetas } from '/js/features/metas.js';
+import { getMetas, calcAcumulado, statusMeta } from '/js/features/metas.js';
 import { getDividas } from '/js/features/dividas.js';
 import { getObjetivos } from '/js/features/objetivos.js';
 import { getSimulacoes } from '/js/features/simulacoes.js';
