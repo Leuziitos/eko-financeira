@@ -127,15 +127,25 @@ window.abrirControleFinanceiro = async function() {
 async function renderControleFinanceiro() {
   cfTipoAtual = 'gasto';
   cfCatSelecionada = null;
+  cfCatsExpandido = false;
   cfMesVis = new Date().getMonth();
   cfAnoVis = new Date().getFullYear();
+  resetarDataLancamento();
   await mostrarTabControle('registrar');
   await renderCategoriasBotoes();
-  // Boas-vindas se não tiver lançamentos ainda
+  // Boas-vindas se não tiver lançamentos ainda + saldo do topo
+  // (reusa os lançamentos já buscados — sem query extra)
   try {
     const lancs = await getCFLancamentos();
     const bv = document.getElementById('cf-boas-vindas');
     if (bv) bv.style.display = lancs.length === 0 ? 'block' : 'none';
+    const now = new Date();
+    const chaveAtual = cfChaveMes(now.getFullYear(), now.getMonth());
+    const doMesAtual = lancs.filter(l => l.chaveMes === chaveAtual);
+    renderSaldoTopo(
+      doMesAtual.filter(l => l.tipo === 'receita').reduce((s,l) => s + l.valor, 0),
+      doMesAtual.filter(l => l.tipo === 'gasto').reduce((s,l) => s + l.valor, 0)
+    );
   } catch(e){}
   // Limpa valor
   const vEl = document.getElementById('cf-valor');
@@ -160,6 +170,7 @@ window.mostrarTabControle = async function(tab) {
 window.selecionarTipoLancamento = async function(tipo) {
   cfTipoAtual = tipo;
   cfCatSelecionada = null;
+  cfCatsExpandido = false;
   const btnG = document.getElementById('tipo-btn-gasto');
   const btnR = document.getElementById('tipo-btn-receita');
   if(tipo==='gasto') {
@@ -172,19 +183,33 @@ window.selecionarTipoLancamento = async function(tipo) {
   await renderCategoriasBotoes();
 };
 
+let cfCatsExpandido = false; // colapsado: mostra só as 5 primeiras
+
 async function renderCategoriasBotoes() {
   const cats = await getCFCategorias();
   const lista = (cats[cfTipoAtual] || []).filter(c => c.visivel);
   const grid = document.getElementById('cf-categorias-grid');
   if (!grid) return;
-  grid.innerHTML = lista.map(c => {
+  const visiveis = cfCatsExpandido ? lista : lista.slice(0, 5);
+  grid.innerHTML = visiveis.map(c => {
     const safeId = c.id.replace(/'/g,"\\'");
     return `<button onclick="selecionarCategoriaCF('${safeId}')" id="cfcat-${c.id}"
       style="padding:.5rem .25rem;border-radius:10px;border:2px solid var(--border);background:var(--surface);font-size:11px;font-weight:700;cursor:pointer;transition:all .2s;line-height:1.4;color:var(--text)">
       ${c.nome}
     </button>`;
   }).join('');
+  if (!cfCatsExpandido && lista.length > 5) {
+    grid.innerHTML += `<button onclick="expandirCategoriasCF()"
+      style="padding:.5rem .25rem;border-radius:10px;border:2px dashed var(--border-strong);background:var(--surface2);font-size:11px;font-weight:700;cursor:pointer;transition:all .2s;line-height:1.4;color:var(--eko-green)">
+      + Ver todas (${lista.length})
+    </button>`;
+  }
 }
+
+window.expandirCategoriasCF = function() {
+  cfCatsExpandido = true;
+  renderCategoriasBotoes();
+};
 
 window.selecionarCategoriaCF = function(id) {
   cfCatSelecionada = id;
@@ -203,30 +228,47 @@ window.selecionarCategoriaCF = function(id) {
 
 
 // ════ CONTROLE FINANCEIRO — DATA RETROATIVA ════════════════
-let cfDataSelecionada = 'hoje'; // 'hoje' | 'ontem' | 'outro'
+let cfDataSelecionada = 'hoje'; // 'hoje' | 'outro'
 
-window.selecionarDataLancamento = function(opcao) {
-  cfDataSelecionada = opcao;
-  ['hoje','ontem','outro'].forEach(op => {
-    const btn = document.getElementById('cf-data-' + op);
-    if (!btn) return;
-    const sel = op === opcao;
-    btn.style.borderColor = sel ? 'var(--eko-green)' : 'var(--border)';
-    btn.style.background = sel ? 'var(--eko-green-light)' : 'var(--surface)';
-    btn.style.color = sel ? 'var(--eko-green-dark)' : 'var(--text-muted)';
-  });
+function chipDataHoje() {
+  return '📅 Hoje, ' + new Date().toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'});
+}
+
+function resetarDataLancamento() {
+  cfDataSelecionada = 'hoje';
+  const chip = document.getElementById('cf-data-chip');
+  if (chip) chip.textContent = chipDataHoje();
   const custom = document.getElementById('cf-data-custom');
-  if (custom) custom.style.display = opcao === 'outro' ? '' : 'none';
+  if (custom) { custom.style.display = 'none'; custom.value = ''; }
+}
+
+// Chip único de data: padrão "hoje"; clique abre o date picker,
+// segundo clique fecha e volta para hoje
+window.alternarDataLancamento = function() {
+  const custom = document.getElementById('cf-data-custom');
+  const chip = document.getElementById('cf-data-chip');
+  if (!custom || !chip) return;
+  if (custom.style.display === 'none') {
+    cfDataSelecionada = 'outro';
+    custom.style.display = '';
+    custom.value = new Date().toISOString().slice(0,10);
+    custom.onchange = function() {
+      if (!this.value) return;
+      const hojeIso = new Date().toISOString().slice(0,10);
+      chip.textContent = this.value === hojeIso
+        ? chipDataHoje()
+        : '📅 ' + new Date(this.value + 'T12:00:00').toLocaleDateString('pt-BR');
+    };
+  } else {
+    resetarDataLancamento();
+  }
 };
 
 function getDataLancamento() {
-  if (cfDataSelecionada === 'hoje') return new Date();
-  if (cfDataSelecionada === 'ontem') {
-    const d = new Date(); d.setDate(d.getDate() - 1); return d;
+  if (cfDataSelecionada === 'outro') {
+    const val = document.getElementById('cf-data-custom')?.value;
+    if (val) return new Date(val + 'T12:00:00');
   }
-  // outro
-  const val = document.getElementById('cf-data-custom')?.value;
-  if (val) return new Date(val + 'T12:00:00');
   return new Date();
 }
 
@@ -456,18 +498,28 @@ window.salvarLancamento = async function() {
   toast(cfTipoAtual==='gasto' ? '💸 Gasto registrado!' : '💵 Receita registrada!');
   document.getElementById('cf-valor').value = '';
   cfCatSelecionada = null;
-  document.querySelectorAll('#cf-categorias-grid button').forEach(b => {
-    b.style.border = '2px solid var(--border)';
-    b.style.background = 'var(--surface)';
-    b.style.color = 'var(--text)';
-  });
+  cfCatsExpandido = false; // expansão reseta ao salvar
+  await renderCategoriasBotoes();
   const bv = document.getElementById('cf-boas-vindas');
   if(bv) bv.style.display = 'none';
   // Resetar data para hoje
-  selecionarDataLancamento('hoje');
+  resetarDataLancamento();
   await renderHubControle();
   } finally { liberarBotao(btn); }
 };
+
+// ── Saldo do topo (Entradas / Saídas / Saldo do mês visível) ─
+function renderSaldoTopo(totalRec, totalGast) {
+  const e = document.getElementById('cf-topo-entradas');
+  const s = document.getElementById('cf-topo-saidas');
+  const sd = document.getElementById('cf-topo-saldo');
+  if (!e || !s || !sd) return;
+  const saldo = totalRec - totalGast;
+  e.textContent = fmt(totalRec);
+  s.textContent = fmt(totalGast);
+  sd.textContent = fmt(saldo);
+  sd.style.color = saldo >= 0 ? 'var(--eko-green)' : 'var(--red)';
+}
 
 // ── Carteira ─────────────────────────────────────────────────
 window.navegarMesControle = async function(dir) {
@@ -495,6 +547,9 @@ async function renderCarteiraControle() {
   const totalRec  = doMes.filter(l=>l.tipo==='receita').reduce((s,l)=>s+l.valor,0);
   const totalGast = doMes.filter(l=>l.tipo==='gasto').reduce((s,l)=>s+l.valor,0);
   const saldo = totalRec - totalGast;
+
+  // Saldo do topo acompanha o mês visível (dados já calculados — sem query extra)
+  renderSaldoTopo(totalRec, totalGast);
 
   // Resumo do mês
   const resumoEl = document.getElementById('cf-resumo-mes');
@@ -731,6 +786,9 @@ async function renderHubControle() {
     const totalRec  = doMes.filter(l=>l.tipo==='receita').reduce((s,l)=>s+l.valor,0);
     const totalGast = doMes.filter(l=>l.tipo==='gasto').reduce((s,l)=>s+l.valor,0);
     const saldo = totalRec-totalGast;
+    // Mantém o saldo do topo em sincronia após saves — só quando o mês
+    // visível é o atual, para não sobrescrever a navegação do Histórico
+    if (cfMesVis === now.getMonth() && cfAnoVis === now.getFullYear()) renderSaldoTopo(totalRec, totalGast);
     const sub = document.getElementById('hub-controle-sub');
     if(!sub) return;
     if(!doMes.length) {

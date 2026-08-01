@@ -1050,12 +1050,20 @@
     <div style="margin-bottom:1.25rem">
       <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Módulo</div>
       <div style="font-size:22px;font-weight:800">💰 Controle Financeiro</div>
-      <div style="font-size:13px;color:var(--text-muted);margin-top:4px">Registre receitas e gastos, veja sua carteira</div>
+      <div style="font-size:13px;color:var(--text-muted);margin-top:4px">Registre receitas e gastos, veja seu histórico</div>
+    </div>
+    <!-- Saldo do mês — visível em ambas as abas -->
+    <div class="card" id="cf-saldo-topo" style="padding:1rem;margin-bottom:1rem">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1.2fr;gap:8px;align-items:center">
+        <div style="text-align:center"><div class="slabel">Entradas</div><div id="cf-topo-entradas" style="font-size:14px;font-weight:800;color:var(--eko-green)">—</div></div>
+        <div style="text-align:center"><div class="slabel">Saídas</div><div id="cf-topo-saidas" style="font-size:14px;font-weight:800;color:var(--red)">—</div></div>
+        <div style="text-align:center"><div class="slabel">Saldo</div><div id="cf-topo-saldo" style="font-size:20px;font-weight:800">—</div></div>
+      </div>
     </div>
     <!-- Tabs -->
     <div style="display:flex;gap:8px;margin-bottom:1.25rem">
       <button id="tab-registrar" class="btn btn-primary" onclick="mostrarTabControle('registrar')" style="flex:1;font-size:13px;padding:.6rem">➕ Registrar</button>
-      <button id="tab-carteira" class="btn" onclick="mostrarTabControle('carteira')" style="flex:1;font-size:13px;padding:.6rem;background:var(--surface);border:1px solid var(--border);color:var(--text)">👜 Carteira</button>
+      <button id="tab-carteira" class="btn" onclick="mostrarTabControle('carteira')" style="flex:1;font-size:13px;padding:.6rem;background:var(--surface);border:1px solid var(--border);color:var(--text)">📜 Histórico</button>
     </div>
     <!-- TAB REGISTRAR -->
     <div id="controle-tab-registrar">
@@ -1074,11 +1082,7 @@
         <!-- Data -->
         <div style="margin-bottom:1rem">
           <label style="font-size:12px;font-weight:700;color:var(--text-muted);display:block;margin-bottom:6px">DATA</label>
-          <div style="display:flex;gap:8px">
-            <button id="cf-data-hoje" onclick="selecionarDataLancamento('hoje')" style="flex:1;padding:.5rem;border-radius:8px;border:2px solid var(--eko-green);background:var(--eko-green-light);color:var(--eko-green-dark);font-weight:700;font-size:12px;cursor:pointer">Hoje</button>
-            <button id="cf-data-ontem" onclick="selecionarDataLancamento('ontem')" style="flex:1;padding:.5rem;border-radius:8px;border:2px solid var(--border);background:var(--surface);color:var(--text-muted);font-weight:700;font-size:12px;cursor:pointer">Ontem</button>
-            <button id="cf-data-outro" onclick="selecionarDataLancamento('outro')" style="flex:1;padding:.5rem;border-radius:8px;border:2px solid var(--border);background:var(--surface);color:var(--text-muted);font-weight:700;font-size:12px;cursor:pointer">Outra data</button>
-          </div>
+          <button id="cf-data-chip" onclick="alternarDataLancamento()" style="display:inline-flex;align-items:center;gap:6px;padding:.5rem .875rem;border-radius:99px;border:2px solid var(--eko-green);background:var(--eko-green-light);color:var(--eko-green-dark);font-weight:700;font-size:12px;cursor:pointer;font-family:inherit"></button>
           <input id="cf-data-custom" type="date" class="input" style="margin-top:8px;display:none">
         </div>
         <!-- Categoria -->
