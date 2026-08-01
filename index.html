@@ -163,17 +163,6 @@
     </div>
   </div>
   <div class="content">
-    <!-- Prontuário shortcut -->
-    <div class="card card-accent" onclick="ir('screen-prontuario')" style="cursor:pointer;background:linear-gradient(135deg,var(--eko-blue),var(--eko-blue-mid));border:none;margin-bottom:1rem">
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <div>
-          <div style="font-size:12px;color:rgba(255,255,255,.7);font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Prontuário Financeiro</div>
-          <div style="font-size:16px;font-weight:700;color:#fff">Ver meu histórico completo →</div>
-        </div>
-        <div style="font-size:32px">📋</div>
-      </div>
-    </div>
-
     <!-- Resumo mensal -->
     <div id="hub-resumo-mensal" style="margin-bottom:1rem"></div>
 
@@ -192,16 +181,29 @@
 
     <!-- Módulos -->
     <div class="section-title">Módulos</div>
-    <div class="hub-grid">
-      <div class="hub-card" onclick="ir('screen-prontuario')">
-        <div class="hub-card-icon">📋</div>
-        <div class="hub-card-title">Prontuário</div>
-        <div class="hub-card-sub">Seu histórico completo</div>
+
+    <!-- Destaque: Controle Financeiro -->
+    <div class="card" onclick="abrirControleFinanceiro()" style="cursor:pointer;background:var(--eko-green-light);border:1.5px solid var(--eko-green);padding:1.125rem 1.25rem;margin-bottom:10px">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="font-size:32px">💰</div>
+          <div>
+            <div style="font-size:15px;font-weight:800">Controle Financeiro</div>
+            <div class="hub-card-sub" id="hub-controle-sub" style="font-size:12px">Receitas e gastos</div>
+          </div>
+        </div>
+        <div style="font-size:18px;color:var(--eko-green);font-weight:700">→</div>
       </div>
-      <div class="hub-card" onclick="abrirDiagnosticos()">
-        <div class="hub-card-icon">📊</div>
-        <div class="hub-card-title">Diagnósticos</div>
-        <div class="hub-card-sub">3 testes financeiros</div>
+    </div>
+
+    <div class="hub-grid">
+      <!-- Card agrupado: Prontuário + Diagnósticos -->
+      <div class="hub-card" style="grid-column:1/-1;cursor:default">
+        <div class="hub-card-title" style="font-size:14px;margin-bottom:10px">👤 Meu Perfil</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <button onclick="ir('screen-prontuario')" style="padding:.75rem .5rem;border-radius:12px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;transition:all .2s">📋 Prontuário</button>
+          <button onclick="abrirDiagnosticos()" style="padding:.75rem .5rem;border-radius:12px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;transition:all .2s">🔍 Diagnósticos</button>
+        </div>
       </div>
       <div class="hub-card" onclick="abrirMetas()">
         <div class="hub-card-icon">🎯</div>
@@ -211,32 +213,17 @@
       <div class="hub-card" onclick="abrirDividas()">
         <div class="hub-card-icon">💳</div>
         <div class="hub-card-title">Minhas Dívidas</div>
-        <div class="hub-card-sub">Organize e priorize</div>
+        <div class="hub-card-sub">Gerencie suas dívidas</div>
       </div>
       <div class="hub-card" onclick="abrirSimulacoes()">
         <div class="hub-card-icon">📈</div>
         <div class="hub-card-title">Simulações</div>
         <div class="hub-card-sub">Aposentadoria & Acumulação</div>
       </div>
-      <div class="hub-card" onclick="abrirObjetivos()">
-        <div class="hub-card-icon">🏆</div>
-        <div class="hub-card-title">Objetivos</div>
-        <div class="hub-card-sub">Planejamento de longo prazo</div>
-      </div>
-      <div class="hub-card" onclick="abrirControleFinanceiro()">
-        <div class="hub-card-icon">💰</div>
-        <div class="hub-card-title">Controle Financeiro</div>
-        <div class="hub-card-sub" id="hub-controle-sub">Receitas e gastos</div>
-      </div>
       <div class="hub-card" onclick="abrirReserva()">
         <div class="hub-card-icon">🛡️</div>
         <div class="hub-card-title">Reserva de Emergência</div>
         <div class="hub-card-sub" id="hub-reserva-sub">Sua proteção financeira</div>
-      </div>
-      <div class="hub-card" onclick="abrirPlanilha()">
-        <div class="hub-card-icon">📊</div>
-        <div class="hub-card-title">Planilha Excel</div>
-        <div class="hub-card-sub">Controle financeiro offline</div>
       </div>
       <div class="hub-card" onclick="abrirAulas()">
         <div class="hub-card-icon">🎬</div>
