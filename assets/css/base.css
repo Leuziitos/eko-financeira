@@ -1,0 +1,33 @@
+/* ═══════════════════════════════════════════════════════════
+ * Eko Financeira — base.css
+ * Fundação: fonte, design tokens (:root), temas claro/escuro,
+ * reset, tipografia global, shell do app (#app, .screen).
+ * Ordem das regras preservada do index.html original — não reordenar.
+ * ═══════════════════════════════════════════════════════════ */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+:root {
+  --eko-green:#00C896;--eko-green-dark:#007A5E;--eko-green-light:#E0F7F1;
+  --eko-blue:#0D1B2A;--eko-blue-mid:#1A3A5C;--eko-blue-light:#E6F1FB;
+  --amber:#BA7517;--amber-light:#FAEEDA;
+  --red:#A32D2D;--red-light:#FCEBEB;
+  --purple:#534AB7;--purple-light:#EEEDFE;
+}
+[data-theme="light"]{
+  --bg:#F0F4F8;--surface:#fff;--surface2:#F7F9FB;--surface3:#EEF2F6;
+  --text:#0F1923;--text-muted:#5A6A7A;--text-hint:#9AAAB8;
+  --border:#DDE4EC;--border-strong:#C5D0DB;
+  --shadow:0 2px 16px rgba(15,25,35,.08);--shadow-lg:0 8px 32px rgba(15,25,35,.12);
+}
+[data-theme="dark"]{
+  --bg:#0D1117;--surface:#161B22;--surface2:#1C2333;--surface3:#243044;
+  --text:#F0F6FC;--text-muted:#B0BEC5;--text-hint:#6E7F8D;
+  --border:#30363D;--border-strong:#484F58;
+  --shadow:0 2px 16px rgba(0,0,0,.4);--shadow-lg:0 8px 32px rgba(0,0,0,.5);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);font-family:'Plus Jakarta Sans',sans-serif;color:var(--text);-webkit-font-smoothing:antialiased;transition:background .3s,color .3s}
+#app{max-width:430px;margin:0 auto;min-height:100vh;position:relative}
+.screen{display:none;min-height:100vh;padding-bottom:3rem;animation:fadeIn .25s ease}
+.screen.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
