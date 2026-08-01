@@ -160,3 +160,9 @@
 .jornada-item.done{border-color:var(--eko-green);opacity:.6}
 .jornada-num{width:24px;height:24px;border-radius:50%;background:var(--eko-green);color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .jornada-item.done .jornada-num{background:var(--border)}
+
+/* Hub — pasta "Minha Jornada" (details/summary nativo, sem JS extra) */
+.hub-jornada-folder summary{cursor:pointer;list-style:none}
+.hub-jornada-folder summary::-webkit-details-marker{display:none}
+.hub-jornada-folder summary::after{content:'▾';float:right;color:var(--text-muted);font-size:14px;transition:transform .2s}
+.hub-jornada-folder[open] summary::after{transform:rotate(180deg)}

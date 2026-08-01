@@ -173,24 +173,12 @@
     <!-- Resumo mensal -->
     <div id="hub-resumo-mensal" style="margin-bottom:1rem"></div>
 
-    <!-- Dica financeira IA -->
-    <div id="hub-dica" style="margin-bottom:1rem"></div>
-
-    <!-- Revisão trimestral -->
-    <div id="hub-push-optin" style="display:none;margin-bottom:1rem"></div>
-    <div id="hub-revisao" style="margin-bottom:1rem"></div>
-
-    <!-- Avisos rápidos -->
-    <div id="hub-avisos"></div>
-
-    <!-- Jornada -->
-    <div id="hub-jornada" style="margin-bottom:1.25rem"></div>
-
-    <!-- Módulos -->
-    <div class="section-title">Módulos</div>
-
-    <!-- Destaque: Controle Financeiro -->
-    <div class="card" onclick="abrirControleFinanceiro()" style="cursor:pointer;background:var(--eko-green-light);border:1.5px solid var(--eko-green);padding:1.125rem 1.25rem;margin-bottom:10px">
+    <!-- ━━━ HOJE ━━━ -->
+    <div style="display:flex;align-items:center;gap:10px;margin:1.5rem 0 .75rem">
+      <span style="font-size:11px;font-weight:800;color:var(--text-hint);text-transform:uppercase;letter-spacing:.1em;white-space:nowrap">Hoje</span>
+      <span style="flex:1;height:1px;background:var(--border)"></span>
+    </div>
+    <div class="card" onclick="abrirControleFinanceiro()" style="cursor:pointer;background:var(--surface);border:1px solid var(--border);border-left:4px solid var(--eko-green);padding:1.125rem 1.25rem;margin-bottom:.75rem">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
         <div style="display:flex;align-items:center;gap:12px">
           <div style="font-size:32px">💰</div>
@@ -203,41 +191,80 @@
       </div>
     </div>
 
-    <div class="hub-grid">
-      <!-- Card agrupado: Prontuário + Diagnósticos -->
-      <div class="hub-card" style="grid-column:1/-1;cursor:default">
-        <div class="hub-card-title" style="font-size:14px;margin-bottom:10px">👤 Meu Perfil</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-          <button onclick="ir('screen-prontuario')" style="padding:.75rem .5rem;border-radius:12px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;transition:all .2s">📋 Prontuário</button>
-          <button onclick="abrirDiagnosticos()" style="padding:.75rem .5rem;border-radius:12px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;transition:all .2s">🔍 Diagnósticos</button>
+    <!-- ━━━ MINHA JORNADA ━━━ -->
+    <div style="display:flex;align-items:center;gap:10px;margin:1.5rem 0 .75rem">
+      <span style="font-size:11px;font-weight:800;color:var(--text-hint);text-transform:uppercase;letter-spacing:.1em;white-space:nowrap">Minha jornada</span>
+      <span style="flex:1;height:1px;background:var(--border)"></span>
+    </div>
+    <details class="card hub-jornada-folder" open style="border-left:4px solid var(--eko-blue-mid);margin-bottom:.75rem">
+      <summary style="font-size:14px;font-weight:800">🗂️ Minha Jornada</summary>
+      <div style="margin-top:.875rem">
+        <div class="pront-item" onclick="ir('screen-prontuario')" style="cursor:pointer">
+          <div class="pront-item-left"><div class="pront-item-icon">📋</div><div class="pront-item-title">Prontuário</div></div>
+          <span style="color:var(--eko-green);font-size:14px">→</span>
+        </div>
+        <div class="pront-item" onclick="abrirDiagnosticos()" style="cursor:pointer">
+          <div class="pront-item-left"><div class="pront-item-icon">🔍</div><div class="pront-item-title">Diagnósticos</div></div>
+          <span style="color:var(--eko-green);font-size:14px">→</span>
+        </div>
+        <div style="margin-top:4px">
+          <div style="font-size:11px;font-weight:700;color:var(--text-hint);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">💡 Dica do dia</div>
+          <div id="hub-dica"></div>
         </div>
       </div>
-      <div class="hub-card" onclick="abrirMetas()">
+    </details>
+
+    <!-- Jornada — próximo passo -->
+    <div id="hub-jornada" style="margin-bottom:1.25rem"></div>
+
+    <!-- Avisos rápidos -->
+    <div id="hub-avisos"></div>
+
+    <!-- Revisão trimestral -->
+    <div id="hub-push-optin" style="display:none;margin-bottom:1rem"></div>
+    <div id="hub-revisao" style="margin-bottom:1rem"></div>
+
+    <!-- ━━━ FINANÇAS ━━━ -->
+    <div style="display:flex;align-items:center;gap:10px;margin:1.5rem 0 .75rem">
+      <span style="font-size:11px;font-weight:800;color:var(--text-hint);text-transform:uppercase;letter-spacing:.1em;white-space:nowrap">Finanças</span>
+      <span style="flex:1;height:1px;background:var(--border)"></span>
+    </div>
+    <div class="hub-grid">
+      <div class="hub-card" onclick="abrirMetas()" style="border-left:3px solid var(--purple)">
         <div class="hub-card-icon">🎯</div>
         <div class="hub-card-title">Metas Financeiras</div>
         <div class="hub-card-sub" id="hub-metas-sub">Acompanhe seu progresso</div>
       </div>
-      <div class="hub-card" onclick="abrirDividas()">
+      <div class="hub-card" onclick="abrirDividas()" style="border-left:3px solid var(--purple)">
         <div class="hub-card-icon">💳</div>
         <div class="hub-card-title">Minhas Dívidas</div>
         <div class="hub-card-sub">Gerencie suas dívidas</div>
       </div>
-      <div class="hub-card" onclick="abrirSimulacoes()">
-        <div class="hub-card-icon">📈</div>
-        <div class="hub-card-title">Simulações</div>
-        <div class="hub-card-sub">Aposentadoria & Acumulação</div>
-      </div>
-      <div class="hub-card" onclick="abrirReserva()">
+      <div class="hub-card" onclick="abrirReserva()" style="border-left:3px solid var(--purple)">
         <div class="hub-card-icon">🛡️</div>
         <div class="hub-card-title">Reserva de Emergência</div>
         <div class="hub-card-sub" id="hub-reserva-sub">Sua proteção financeira</div>
       </div>
-      <div class="hub-card" onclick="abrirAulas()">
-        <div class="hub-card-icon">🎬</div>
+      <div class="hub-card" onclick="abrirSimulacoes()" style="border-left:3px solid var(--purple)">
+        <div class="hub-card-icon">📈</div>
+        <div class="hub-card-title">Simulações</div>
+        <div class="hub-card-sub">Aposentadoria & Acumulação</div>
+      </div>
+    </div>
+
+    <!-- ━━━ APRENDER ━━━ -->
+    <div style="display:flex;align-items:center;gap:10px;margin:1.5rem 0 .75rem">
+      <span style="font-size:11px;font-weight:800;color:var(--text-hint);text-transform:uppercase;letter-spacing:.1em;white-space:nowrap">Aprender</span>
+      <span style="flex:1;height:1px;background:var(--border)"></span>
+    </div>
+    <div class="hub-card" onclick="abrirAulas()" style="border-left:4px solid var(--amber);cursor:pointer;display:flex;align-items:center;gap:14px;margin-bottom:1.25rem">
+      <div class="hub-card-icon" style="margin-bottom:0;font-size:32px">🎓</div>
+      <div>
         <div class="hub-card-title">Aulas PEF</div>
         <div class="hub-card-sub">12 aulas de educação financeira</div>
       </div>
     </div>
+
     <div style="text-align:center;font-size:12px;color:var(--text-muted);margin-top:.5rem">
       📱 Siga <strong>@ekofinanceira</strong> — novo vídeo toda semana
     </div>
