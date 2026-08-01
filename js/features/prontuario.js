@@ -90,7 +90,7 @@ async function renderProntuario() {
       let html=`<div class="pront-item"><div class="pront-item-left"><div class="pront-item-icon">🎯</div><div><div class="pront-item-title">${metasAtivas2.length} meta(s) ativa(s)</div><div class="pront-item-sub">Acumulado: ${fmt(totalAcum)}</div></div></div><span class="badge badge-green">${metas.length} total</span></div>`;
       if(metasConcluidas.length){
         html+=`<div style="margin-top:8px"><div class="section-title">🏆 Metas concluídas</div>`;
-        html+=metasConcluidas.map(m=>`<div class="pront-item" style="margin-bottom:6px;opacity:.8"><div class="pront-item-left"><div class="pront-item-icon">${m.catIcon||'🎯'}</div><div><div class="pront-item-title">${m.nome}</div><div class="pront-item-sub">Concluída em ${new Date(m.concluidaEm).toLocaleDateString('pt-BR',{month:'long',year:'numeric'})} · ${fmt(calcAcumulado(m))}</div></div></div><span class="badge badge-green">✅</span></div>`).join('');
+        html+=metasConcluidas.map(m=>`<div class="pront-item" style="margin-bottom:6px;opacity:.8"><div class="pront-item-left"><div class="pront-item-icon">${m.catIcon||'🎯'}</div><div><div class="pront-item-title">${esc(m.nome)}</div><div class="pront-item-sub">Concluída em ${new Date(m.concluidaEm).toLocaleDateString('pt-BR',{month:'long',year:'numeric'})} · ${fmt(calcAcumulado(m))}</div></div></div><span class="badge badge-green">✅</span></div>`).join('');
         html+=`</div>`;
       }
       document.getElementById('pront-metas-resumo').innerHTML=html;

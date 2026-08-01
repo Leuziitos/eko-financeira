@@ -7,6 +7,7 @@
  * ═══════════════════════════════════════════════════════════ */
 
 import { store } from '../core/store.js';
+import { esc } from '../utils/format.js';
 import { getMetas } from './metas.js';
 import { getDividas } from './dividas.js';
 import { getObjetivos } from './objetivos.js';
@@ -93,7 +94,7 @@ Regras:
 function renderDicaHtml(texto) {
   return `<div class="dica-card">
     <div class="dica-card-label">💡 Dica do dia</div>
-    <div class="dica-card-texto">${texto}</div>
+    <div class="dica-card-texto">${esc(texto)}</div>
     <div style="margin-top:.5rem;font-size:10px;color:var(--eko-green-dark);font-weight:600;opacity:.7">Por Leonardo Braulino · PEF</div>
   </div>`;
 }
