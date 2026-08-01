@@ -1472,115 +1472,25 @@
 <div id="toast" class="toast"></div>
 
 <script type="module">
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js';
-import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, getDocs, addDoc, query, where, orderBy, runTransaction, onSnapshot } from 'https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js';
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail } from 'https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js';
-import { getAnalytics, logEvent } from 'https://www.gstatic.com/firebasejs/11.0.1/firebase-analytics.js';
+// ═══ FUNDAÇÃO (Fase 2 da modularização) ═══════════════════
+// Firebase, tema, store, router, erros e utilitários vivem em
+// /js/. Este bloco inline encolhe a cada fase até virar main.js.
+import '/js/core/theme.js';
+import { SESS_KEY, PUSH_OPTIN_KEY } from '/js/config.js';
+import { db, auth, logEko, doc, getDoc, setDoc, deleteDoc, collection, getDocs, addDoc, query, where, runTransaction, onSnapshot, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail } from '/js/core/firebase.js';
+import { store } from '/js/core/store.js';
+import { ir, onEnter } from '/js/core/router.js';
+import '/js/core/errors.js';
+import { fmt, fmtK, fmtInput, esc, diasAte } from '/js/utils/format.js';
+import { parseMoney, applyMoneyMask, setupMoneyInputs } from '/js/utils/money.js';
+import { showMsg, limparMsg, toast, abrirOverlay, fecharOverlay } from '/js/utils/dom.js';
+import { calcPMT, taxaReal, calcFV, calcPMTparaFV, irSobreJuros } from '/js/utils/finance-math.js';
+import { debounce } from '/js/utils/debounce.js';
 
-const firebaseConfig = {
-  apiKey: "AIzaSyAu5cMIkf6zn6sTt3M5eTV5uoPE002ad2k",
-  authDomain: "eko-financeira.firebaseapp.com",
-  projectId: "eko-financeira",
-  storageBucket: "eko-financeira.firebasestorage.app",
-  messagingSenderId: "600120589786",
-  appId: "1:600120589786:web:b71b059b58b15caae4d4e3",
-  measurementId: "G-ZJBF8CPZ9R"
-};
-
-const firebaseApp = initializeApp(firebaseConfig);
-const db = getFirestore(firebaseApp);
-const auth = getAuth(firebaseApp);
-const analytics = getAnalytics(firebaseApp);
-// Push via OneSignal (ver bloco no final do arquivo)
-
-// Helper para logar eventos com segurança
-function logEko(evento, params = {}) {
-  try { logEvent(analytics, evento, params); } catch(e) {}
-}
-const SESS_KEY = 'eko_sess';
-let sessao = null;
 let _unsubscribeMetas = null; // guarda unsubscribe do onSnapshot
 
-// ── THEME ──────────────────────────────────────────────
-const savedTheme = localStorage.getItem('eko_theme') || 'light';
-document.documentElement.setAttribute('data-theme', savedTheme);
-document.getElementById('theme-btn').textContent = savedTheme === 'dark' ? '☀️' : '🌙';
-window.toggleTheme = function() {
-  const cur = document.documentElement.getAttribute('data-theme');
-  const next = cur === 'dark' ? 'light' : 'dark';
-  document.documentElement.setAttribute('data-theme', next);
-  document.getElementById('theme-btn').textContent = next === 'dark' ? '☀️' : '🌙';
-  localStorage.setItem('eko_theme', next);
-};
-
-// ── HELPERS ──────────────────────────────────────────────
-function ir(id) {
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
-  window.scrollTo(0,0);
-  // Empurra estado no histórico para interceptar botão voltar do browser/celular
-  history.pushState({screen: id}, '', '#' + id);
-  // Analytics — registra navegação entre módulos
-  const telas = {
-    'screen-hub':          'hub',
-    'screen-metas':        'metas',
-    'screen-dividas':      'dividas',
-    'screen-objetivos':    'objetivos',
-    'screen-simulacoes':   'simulacoes',
-    'screen-aulas':        'aulas',
-    'screen-planilha':     'planilha',
-    'screen-reserva':      'reserva',
-    'screen-diagnosticos': 'diagnosticos',
-    'screen-prontuario':   'prontuario',
-    'screen-controle':     'controle',
-  };
-  if (telas[id]) logEko('screen_view', { screen_name: telas[id] });
-}
-window.ir = ir;
-
-// Navegação para telas públicas (sem autenticação)
-let _telaAnteriorPublico = 'screen-cadastro';
-function irPublico(id) {
-  _telaAnteriorPublico = document.querySelector('.screen.active')?.id || 'screen-cadastro';
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
-  window.scrollTo(0,0);
-}
-function voltarPublico() {
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.getElementById(_telaAnteriorPublico).classList.add('active');
-  window.scrollTo(0,0);
-}
-window.irPublico = irPublico;
-window.voltarPublico = voltarPublico;
-
-// Intercepta botão voltar do browser/celular
-window.addEventListener('popstate', function(e) {
-  if (e.state && e.state.screen) {
-    // Volta para a tela anterior dentro do app
-    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-    const el = document.getElementById(e.state.screen);
-    if (el) { el.classList.add('active'); window.scrollTo(0,0); }
-  } else {
-    // Se não tem estado, vai pro hub para não sair do app
-    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-    const hub = document.getElementById('screen-hub');
-    if (hub) { hub.classList.add('active'); window.scrollTo(0,0); }
-    history.pushState({screen: 'screen-hub'}, '', '#screen-hub');
-  }
-});
 // hashSenha mantido para migração de usuários legados (hash antigo no Firestore)
 async function hashSenha(s) { const e = new TextEncoder().encode(s); const b = await crypto.subtle.digest('SHA-256', e); return Array.from(new Uint8Array(b)).map(x => x.toString(16).padStart(2,'0')).join(''); }
-function fmt(v) { return 'R$ ' + Number(v).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2}); }
-function esc(str) {
-  if (str === null || str === undefined) return '';
-  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#x27;');
-}
-function showMsg(id, tipo, txt) { const el = document.getElementById(id); el.className = 'msg '+tipo; el.textContent = txt; }
-function limparMsg(id) { const el = document.getElementById(id); el.className = 'msg'; el.textContent = ''; }
-function toast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 3200); }
-function dataHoje() { return new Date().toLocaleDateString('pt-BR', {day:'2-digit', month:'short', year:'numeric'}); }
-function diasAte(dataISO) { const d = new Date(dataISO); const hoje = new Date(); return Math.ceil((d - hoje) / (1000*60*60*24)); }
 
 // ── FIRESTORE ──────────────────────────────────────────────
 async function getUser(email) { const snap = await getDoc(doc(db,'users',email)); return snap.exists() ? snap.data() : null; }
@@ -1595,10 +1505,10 @@ async function getDiags(email) {
   } catch(e) { console.error('getDiags error:', e); return []; }
 }
 async function saveDiag(data) {
-  data.email = sessao.email;
+  data.email = store.sessao.email;
   data.criadoEm = new Date().toISOString();
   // Conta quantas vezes já refez dentro do prazo atual
-  const existentes = await getDiags(sessao.email);
+  const existentes = await getDiags(store.sessao.email);
   const ultimo = existentes.find(d => d.tipo === data.tipo);
   if (ultimo) {
     const cfg = DIAGS_CONFIG.find(c => c.tipo === data.tipo);
@@ -1643,17 +1553,17 @@ window.finishOnboard = function() {
 // ── AUTH ──────────────────────────────────────────────
 async function carregarApp() {
   try {
-    const user = await getUser(sessao.email);
+    const user = await getUser(store.sessao.email);
     if (!user) { localStorage.removeItem(SESS_KEY); ir('screen-login'); return; }
-    sessao.nome = user.nome;
-    sessao.renda = user.renda || 0;
+    store.sessao.nome = user.nome;
+    store.sessao.renda = user.renda || 0;
     const hora = new Date().getHours();
     const saud = hora < 12 ? 'Bom dia' : hora < 18 ? 'Boa tarde' : 'Boa noite';
     document.getElementById('hub-greeting').textContent = saud + ', ' + user.nome.split(' ')[0] + '! 👋';
     setupMoneyInputs(); // FASE 4 BUG 5 — máscara monetária
     // Item 1 — listener em tempo real para badge de metas no hub
     try {
-      const metasQ = query(collection(db,'metas'), where('email','==',sessao.email));
+      const metasQ = query(collection(db,'metas'), where('email','==',store.sessao.email));
       if (_unsubscribeMetas) { _unsubscribeMetas(); _unsubscribeMetas = null; }
       _unsubscribeMetas = onSnapshot(metasQ, (snap) => {
         const metas = [];
@@ -1760,7 +1670,7 @@ window.criarConta = async function() {
 window.logout = async function() {
   if (_unsubscribeMetas) { _unsubscribeMetas(); _unsubscribeMetas = null; }
   try { await signOut(auth); } catch(e) {}
-  sessao = null;
+  store.sessao = null;
   localStorage.removeItem(SESS_KEY);
   document.getElementById('login-email').value = '';
   document.getElementById('login-senha').value = '';
@@ -1796,32 +1706,28 @@ window.salvarPerfil = async function() {
   const whatsapp = document.getElementById('perfil-whatsapp').value.trim();
   const renda = parseMoney(document.getElementById('perfil-renda').value) || 0;
   if (!nome) { showMsg('perfil-msg','error','Nome obrigatório.'); return; }
-  const user = await getUser(sessao.email);
-  await setUser(sessao.email, {...user, nome, whatsapp:whatsapp.replace(/\D/g,''), renda});
-  sessao.nome = nome; sessao.renda = renda;
-  localStorage.setItem(SESS_KEY, JSON.stringify(sessao));
+  const user = await getUser(store.sessao.email);
+  await setUser(store.sessao.email, {...user, nome, whatsapp:whatsapp.replace(/\D/g,''), renda});
+  store.sessao.nome = nome; store.sessao.renda = renda;
+  localStorage.setItem(SESS_KEY, JSON.stringify(store.sessao));
   showMsg('perfil-msg','success','Perfil atualizado!');
   toast('✅ Perfil atualizado!');
 };
 
 async function carregarPerfil() {
-  const user = await getUser(sessao.email);
+  const user = await getUser(store.sessao.email);
   if (!user) return;
   document.getElementById('perfil-nome').value = user.nome || '';
   document.getElementById('perfil-whatsapp').value = user.whatsapp || '';
   document.getElementById('perfil-renda').value = user.renda ? 'R$ ' + Number(user.renda).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2}) : '';
   document.getElementById('perfil-email').value = user.email || '';
 }
-// Carregar perfil quando entrar na tela
-const origIr = window.ir;
-window.ir = function(id) {
-  origIr(id);
-  if (id === 'screen-perfil') carregarPerfil();
-};
+// Carregar perfil quando entrar na tela (hook do router — substitui o antigo monkey-patch de window.ir)
+onEnter('screen-perfil', carregarPerfil);
 
 // ── HUB ──────────────────────────────────────────────
 async function renderHub() {
-  const diags = await getDiags(sessao.email);
+  const diags = await getDiags(store.sessao.email);
 
   // metas summary in hub
   try {
@@ -1928,12 +1834,12 @@ async function gerarAvisoControle() {
 
 // ── PRONTUÁRIO ──────────────────────────────────────────────
 async function renderProntuario() {
-  const user = await getUser(sessao.email);
+  const user = await getUser(store.sessao.email);
   if (!user) return;
   document.getElementById('pront-nome').textContent = user.nome;
   const desde = new Date(user.criadoEm).toLocaleDateString('pt-BR', {month:'long', year:'numeric'});
   document.getElementById('pront-membro').textContent = 'Membro desde ' + desde;
-  const diags = await getDiags(sessao.email);
+  const diags = await getDiags(store.sessao.email);
 
   // diags — clickable
   const tipos = [
@@ -1961,7 +1867,7 @@ async function renderProntuario() {
 
   // Reserva de Emergência no prontuário
   try {
-    const snapRes = await getDoc(doc(db, 'reserva', sessao.email));
+    const snapRes = await getDoc(doc(db, 'reserva', store.sessao.email));
     const elRes = document.getElementById('pront-reserva-resumo');
     if (elRes) {
       if (snapRes.exists()) {
@@ -2008,7 +1914,7 @@ async function renderProntuario() {
       `<div class="pront-item-left"><div class="pront-item-icon">💳</div><div><div class="pront-item-title">${dividas.length} dívida(s) ativa(s)</div><div class="pront-item-sub">Total: ${fmt(totalDividas)}</div></div></div><span class="badge badge-red">${dividas.filter(d=>d.emAtraso).length} em atraso</span>` :
       'Nenhuma dívida cadastrada';
     const totalObjetivos = objetivos.reduce((s,o)=>s+(o.pmt||0),0);
-    const renda = sessao.renda||0;
+    const renda = store.sessao.renda||0;
     const pctRenda = renda>0?Math.round((totalObjetivos/renda)*100):0;
     document.getElementById('pront-objetivos-resumo').className = objetivos.length ? 'pront-item' : 'pront-empty';
     document.getElementById('pront-objetivos-resumo').innerHTML = objetivos.length ?
@@ -2086,7 +1992,7 @@ const DIAGS_CONFIG = [
 ];
 
 async function renderDiagnosticos() {
-  const diags = await getDiags(sessao.email);
+  const diags = await getDiags(store.sessao.email);
   const el = document.getElementById('diag-cards');
   el.innerHTML = DIAGS_CONFIG.map(cfg => {
     const ultimo = diags.find(d => d.tipo === cfg.tipo);
@@ -2150,7 +2056,7 @@ const DESCS_CICLO = {
 };
 
 window.abrirDiagDetalhe = async function(tipo) {
-  const diags = await getDiags(sessao.email);
+  const diags = await getDiags(store.sessao.email);
   const cfg = DIAGS_CONFIG.find(d => d.tipo === tipo);
   const hist = diags.filter(d => d.tipo === tipo).sort((a,b) => b.criadoEm > a.criadoEm ? 1 : -1);
   const ultimo = hist[0];
@@ -2278,7 +2184,7 @@ window.gerarMetaDeObjetivo = async function(id) {
     catNome: 'Objetivo',
     saldoExtra: 0,
     depositos: deps,
-    email: sessao.email,
+    email: store.sessao.email,
     origemObjetivoId: id
   };
   await saveMeta2(nova);
@@ -2334,14 +2240,6 @@ async function verificarDividaQuitada(div) {
 
 // ── Navegação Fase 2 ──────────────────────────────────────
 // ── Funções recuperadas ───────────────────────────────────
-
-function calcPMT(pv, fv, i, n) {
-  if(!n || n <= 0) return 0;
-  if(!i || i === 0) return Math.max(0, (fv - pv) / n);
-  const fator = Math.pow(1 + i, n);
-  const result = (fv - pv * fator) * i / (fator - 1);
-  return Math.max(0, result);
-}
 
 async function finalizarQuiz() {
   let pontos = 0;
@@ -2532,7 +2430,7 @@ async function renderResultado(tipo,pontos,resultado){
     todosHTML+=[{r:'Relação Saudável',range:'8+ pts',c:'expansao'},{r:'Em Construção',range:'-7 a +7 pts',c:'equilibrio'},{r:'Diálogo Iniciante',range:'-20 a -8 pts',c:'atencao'}].map(n=>`<div class="resultado-ciclo ${n.c}" style="padding:12px 16px;margin-bottom:8px;text-align:left"><div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-weight:800;font-size:14px">${icons[n.r]} ${n.r}</div><div style="font-size:12px;margin-top:2px">${descs[n.r]}</div></div><div style="font-size:11px;font-weight:700;white-space:nowrap;margin-left:8px">${n.range}</div></div></div>`).join('');
   }
   document.getElementById('resultado-ciclos').innerHTML=todosHTML;
-  const diags=await getDiags(sessao.email);const hist=diags.filter(d=>d.tipo===tipo).slice(0,5);
+  const diags=await getDiags(store.sessao.email);const hist=diags.filter(d=>d.tipo===tipo).slice(0,5);
   if(hist.length>1){
     document.getElementById('resultado-historico').innerHTML=`<div class="section-title" style="margin-top:1rem">Histórico</div>${hist.map(h=>`<div class="pront-item" style="margin-bottom:6px"><div><div style="font-size:13px;font-weight:600">${esc(h.resultado)}</div><div style="font-size:11px;color:var(--text-muted)">${new Date(h.criadoEm).toLocaleDateString('pt-BR')} · ${h.pontos>0?'+':''}${h.pontos} pts</div></div><span class="badge ${(h.resultado?.includes('Expansão')||h.resultado?.includes('Referência')||h.resultado?.includes('Saudável')||h.resultado?.includes('Acima'))?'badge-green':(h.resultado?.includes('Equilíbrio')||h.resultado?.includes('Construção')||h.resultado?.includes('Comum'))?'badge-amber':'badge-red'}">${h.pontos>0?'+':''}${h.pontos}</span></div>`).join('')}`;
   }else{document.getElementById('resultado-historico').innerHTML='';}
@@ -2547,14 +2445,7 @@ function fmtMes(inicio,i){const[a,m]=inicio.split('-').map(Number);return new Da
 function prazoFinalMeta(meta){const n=meta.depositos.length;const[a,m]=meta.inicio.split('-').map(Number);return new Date(a,m-1+n-1,1).toLocaleDateString('pt-BR',{month:'short',year:'numeric'});}
 function calcAcumulado(meta){return meta.depositos.reduce((s,d)=>s+(d.valor||0),0);}
 function calcFaltante(meta){return Math.max(0,meta.meta-calcAcumulado(meta));}
-function fecharOverlay(id){document.getElementById(id).classList.add('hidden');}
-
-// Item 4 — reaplicar máscara ao abrir qualquer overlay
-function abrirOverlay(id) {
-  document.getElementById(id).classList.remove('hidden');
-  setupMoneyInputs(); // garante máscara em todos os campos visíveis
-}
-window.fecharOverlay=fecharOverlay;
+// abrirOverlay/fecharOverlay → /js/utils/dom.js
 
 function statusMeta(meta){
   const g=calcAcumulado(meta);if(g>=meta.meta-0.01)return 'concluida';
@@ -2577,12 +2468,12 @@ function calcProjecao(meta){
 }
 
 async function getMetas(){
-  try{const q=query(collection(db,'metas'),where('email','==',sessao.email));const snap=await getDocs(q);const r=[];snap.forEach(d=>r.push({...d.data(),_id:d.id}));return r.filter(m=>!m.excluida).sort((a,b)=>(a.criadoEm||'')>(b.criadoEm||'')?1:-1);}catch(e){return[];}
+  try{const q=query(collection(db,'metas'),where('email','==',store.sessao.email));const snap=await getDocs(q);const r=[];snap.forEach(d=>r.push({...d.data(),_id:d.id}));return r.filter(m=>!m.excluida).sort((a,b)=>(a.criadoEm||'')>(b.criadoEm||'')?1:-1);}catch(e){return[];}
 }
 async function saveMeta2(meta){
   const{_id,...data}=meta;
   if(_id){await setDoc(doc(db,'metas',_id),data);}
-  else{data.email=sessao.email;data.criadoEm=new Date().toISOString();const ref=await addDoc(collection(db,'metas'),data);meta._id=ref.id;}
+  else{data.email=store.sessao.email;data.criadoEm=new Date().toISOString();const ref=await addDoc(collection(db,'metas'),data);meta._id=ref.id;}
   // FASE 4 — sincronizar saldo acumulado com objetivo vinculado via transação (evita race condition)
   if(meta.origemObjetivoId){
     try{
@@ -2683,7 +2574,7 @@ window.salvarMeta=async function(){
   const nome=document.getElementById('meta-nome').value.trim();const val=parseMoney(document.getElementById('meta-valor').value);const meses=parseInt(document.getElementById('meta-meses').value);const inicio=document.getElementById('meta-inicio').value;const dia=parseInt(document.getElementById('meta-dia').value);
   if(!nome||!val||!meses||!inicio||!dia||dia<1||dia>28){showMsg('sheet-meta-msg','error','Preencha todos os campos. Dia entre 1 e 28.');return;}
   if(editandoMeta){const deps=metaAtual.depositos.slice(0,meses);while(deps.length<meses)deps.push({pago:false,parcial:false,extra:false,valor:0});Object.assign(metaAtual,{nome,meta:val,meses,dia,inicio,mensal:val/meses,catIcon:catSelecionada.icon,catNome:catSelecionada.nome,depositos:deps});await saveMeta2(metaAtual);fecharOverlay('overlay-meta');renderMetaDetalhe();}
-  else{const deps=Array(meses).fill(null).map(()=>({pago:false,parcial:false,extra:false,valor:0}));const nova={nome,meta:val,meses,dia,inicio,mensal:val/meses,catIcon:catSelecionada.icon,catNome:catSelecionada.nome,saldoExtra:0,depositos:deps,email:sessao.email};await saveMeta2(nova);fecharOverlay('overlay-meta');await renderMetas();logEko('meta_criada');toast('✅ Meta criada!');}
+  else{const deps=Array(meses).fill(null).map(()=>({pago:false,parcial:false,extra:false,valor:0}));const nova={nome,meta:val,meses,dia,inicio,mensal:val/meses,catIcon:catSelecionada.icon,catNome:catSelecionada.nome,saldoExtra:0,depositos:deps,email:store.sessao.email};await saveMeta2(nova);fecharOverlay('overlay-meta');await renderMetas();logEko('meta_criada');toast('✅ Meta criada!');}
   await renderProntuario();
 };
 window.resetarMetaAtual=async function(){if(!confirm('Resetar esta meta?'))return;const n=metaAtual.depositos.length;metaAtual.depositos=Array(n).fill(null).map(()=>({pago:false,parcial:false,extra:false,valor:0}));metaAtual.mensal=metaAtual.meta/n;metaAtual.saldoExtra=0;await saveMeta2(metaAtual);renderMetaDetalhe();toast('Meta resetada.');};
@@ -2763,8 +2654,8 @@ window.calcularTotalDivida=function(){
   }else el.style.display='none';
 };
 
-async function getDividas(){try{const q=query(collection(db,'dividas'),where('email','==',sessao.email));const snap=await getDocs(q);const r=[];snap.forEach(d=>r.push({...d.data(),_id:d.id}));return r.filter(d=>!d.excluida).sort((a,b)=>((b.juros||0)-(a.juros||0)));}catch(e){return[];}}
-async function saveDivida2(divida){const{_id,...data}=divida;if(_id){await setDoc(doc(db,'dividas',_id),data);}else{data.email=sessao.email;data.criadoEm=new Date().toISOString();const ref=await addDoc(collection(db,'dividas'),data);divida._id=ref.id;}}
+async function getDividas(){try{const q=query(collection(db,'dividas'),where('email','==',store.sessao.email));const snap=await getDocs(q);const r=[];snap.forEach(d=>r.push({...d.data(),_id:d.id}));return r.filter(d=>!d.excluida).sort((a,b)=>((b.juros||0)-(a.juros||0)));}catch(e){return[];}}
+async function saveDivida2(divida){const{_id,...data}=divida;if(_id){await setDoc(doc(db,'dividas',_id),data);}else{data.email=store.sessao.email;data.criadoEm=new Date().toISOString();const ref=await addDoc(collection(db,'dividas'),data);divida._id=ref.id;}}
 
 function statusDivida(divida){
   if(divida.emAtraso)return 'atrasada';
@@ -2828,7 +2719,7 @@ window.salvarDivida=async function(){
   const nome=document.getElementById('divida-nome').value.trim();const credor=document.getElementById('divida-credor').value.trim();const parcela=parseMoney(document.getElementById('divida-parcela').value);const restantes=parseInt(document.getElementById('divida-parcelas-restantes').value);const juros=parseFloat(document.getElementById('divida-juros').value);const vencimento=parseInt(document.getElementById('divida-vencimento').value);
   if(!nome||!parcela||!restantes||!juros||!vencimento){showMsg('sheet-divida-msg','error','Preencha todos os campos obrigatórios.');return;}
   if(vencimento<1||vencimento>28){showMsg('sheet-divida-msg','error','Dia entre 1 e 28.');return;}
-  const divida={nome,credor,tipoIcon:tipoDividaSel.icon,tipoNome:tipoDividaSel.nome,parcela,parcelasRestantes:restantes,juros,vencimento,emAtraso:false,valorAtrasado:0,historicoPagamentos:[],email:sessao.email};
+  const divida={nome,credor,tipoIcon:tipoDividaSel.icon,tipoNome:tipoDividaSel.nome,parcela,parcelasRestantes:restantes,juros,vencimento,emAtraso:false,valorAtrasado:0,historicoPagamentos:[],email:store.sessao.email};
   await saveDivida2(divida);fecharOverlay('overlay-divida');await renderDividas();toast('✅ Dívida cadastrada!');await renderProntuario();
 };
 window.excluirDivida=async function(id){
@@ -2892,19 +2783,19 @@ window.naoConseguiuPagar=async function(){const div=dividaAtual;div.emAtraso=tru
 // ════════════════════════════════════════════════
 // FASE 2 — OBJETIVOS FINANCEIROS
 // ════════════════════════════════════════════════
-async function getObjetivos(){try{const q=query(collection(db,'objetivos'),where('email','==',sessao.email));const snap=await getDocs(q);const r=[];snap.forEach(d=>r.push({...d.data(),_id:d.id}));return r.filter(o=>!o.excluida).sort((a,b)=>(a.ordem||99)-(b.ordem||99));}catch(e){return[];}}
-async function saveObjetivo(obj){const{_id,...data}=obj;if(_id){await setDoc(doc(db,'objetivos',_id),data);}else{data.email=sessao.email;data.criadoEm=new Date().toISOString();const ref=await addDoc(collection(db,'objetivos'),data);obj._id=ref.id;}}
+async function getObjetivos(){try{const q=query(collection(db,'objetivos'),where('email','==',store.sessao.email));const snap=await getDocs(q);const r=[];snap.forEach(d=>r.push({...d.data(),_id:d.id}));return r.filter(o=>!o.excluida).sort((a,b)=>(a.ordem||99)-(b.ordem||99));}catch(e){return[];}}
+async function saveObjetivo(obj){const{_id,...data}=obj;if(_id){await setDoc(doc(db,'objetivos',_id),data);}else{data.email=store.sessao.email;data.criadoEm=new Date().toISOString();const ref=await addDoc(collection(db,'objetivos'),data);obj._id=ref.id;}}
 
 window.calcularObjetivo=function(){
   const val=parseMoney(document.getElementById('obj-valor').value)||0;const saldo=parseMoney(document.getElementById('obj-saldo').value)||0;const meses=parseInt(document.getElementById('obj-meses').value)||0;const rent=(parseFloat(document.getElementById('obj-rent').value)||1)/100;const prev=document.getElementById('obj-preview');
   if(!val||!meses){prev.style.display='none';return;}
   const pmt=Math.max(0,calcPMT(saldo,val,rent,meses));const prazoAnos=Math.floor(meses/12);const prazoMeses=meses%12;const prazoStr=(prazoAnos>0?prazoAnos+'a ':'')+prazoMeses+'m';const dt=new Date();dt.setMonth(dt.getMonth()+meses);const conclusao=dt.toLocaleDateString('pt-BR',{month:'short',year:'numeric'});
-  const renda=sessao.renda||0;const viavel=renda>0?(pmt<=renda*0.3?'✅ Viável — dentro do recomendado':pmt<=renda*0.5?'⚠️ Desafiador — exigirá disciplina':'🔴 Difícil — considere aumentar o prazo'):'';
+  const renda=store.sessao.renda||0;const viavel=renda>0?(pmt<=renda*0.3?'✅ Viável — dentro do recomendado':pmt<=renda*0.5?'⚠️ Desafiador — exigirá disciplina':'🔴 Difícil — considere aumentar o prazo'):'';
   prev.style.display='block';prev.innerHTML=`<div style="font-size:14px;font-weight:700;color:var(--eko-green);margin-bottom:.5rem">💰 Valor mensal necessário: ${fmt(pmt)}</div><div style="font-size:12px;color:var(--text-muted);line-height:1.8">⏱️ Prazo: ${prazoStr} → conclusão em ${conclusao}${viavel?'<br>'+viavel:''}</div>`;
 };
 
 async function renderObjetivos(){
-  const objs=await getObjetivos();const renda=sessao.renda||0;const totalMensal=objs.reduce((s,o)=>s+(o.pmt||0),0);const pctRenda=renda>0?Math.round((totalMensal/renda)*100):0;
+  const objs=await getObjetivos();const renda=store.sessao.renda||0;const totalMensal=objs.reduce((s,o)=>s+(o.pmt||0),0);const pctRenda=renda>0?Math.round((totalMensal/renda)*100):0;
   const balde=document.getElementById('objetivos-balde');
   if(objs.length){balde.innerHTML=`<div class="obj-balde"><div style="font-size:13px;font-weight:700;margin-bottom:.75rem">🪣 Seu balde mensal</div>${objs.map(o=>`<div class="obj-bar"><div style="font-size:12px;color:var(--text-muted);width:110px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0">${esc(o.nome)}</div><div class="obj-bar-bg"><div class="obj-bar-fill" style="width:${totalMensal>0?Math.round(((o.pmt||0)/totalMensal)*100):0}%"></div></div><div style="font-size:12px;font-weight:700;white-space:nowrap;flex-shrink:0">${fmt(o.pmt||0)}</div></div>`).join('')}<div style="border-top:1px solid var(--border);margin-top:.75rem;padding-top:.75rem;display:flex;justify-content:space-between"><div style="font-size:13px;font-weight:700">Total mensal</div><div style="font-size:15px;font-weight:800;color:var(--eko-green)">${fmt(totalMensal)}</div></div>${renda>0?`<div style="font-size:12px;margin-top:6px;color:${pctRenda>30?'var(--red)':'var(--text-muted)'}">` + (pctRenda>30?'⚠️':'💡') + ` ${pctRenda}% da sua renda ${pctRenda>30?'— acima do ideal (30%)':'— dentro do recomendado'}</div>`:''}</div>`;}
   else balde.innerHTML='';
@@ -2933,7 +2824,7 @@ window.salvarObjetivo=async function(){
   if(!nome||!valor||!meses){showMsg('sheet-obj-msg','error','Preencha nome, valor e prazo.');return;}
   const pmt=Math.max(0,calcPMT(saldo,valor,rent,meses));
   if(window._editandoObjetivoId){const objs=await getObjetivos();const obj=objs.find(o=>o._id===window._editandoObjetivoId);if(obj){Object.assign(obj,{nome,valor,saldo,meses,rent:rent*100,pmt,obs});await saveObjetivo(obj);}window._editandoObjetivoId=null;toast('✅ Objetivo atualizado!');}
-  else{const obj={nome,valor,saldo,meses,rent:rent*100,pmt,obs,email:sessao.email,ordem:Date.now()};await saveObjetivo(obj);toast('✅ Objetivo cadastrado!');}
+  else{const obj={nome,valor,saldo,meses,rent:rent*100,pmt,obs,email:store.sessao.email,ordem:Date.now()};await saveObjetivo(obj);toast('✅ Objetivo cadastrado!');}
   fecharOverlay('overlay-objetivo');await renderObjetivos();await renderProntuario();
 };
 
@@ -2947,11 +2838,11 @@ async function renderJornada(diags){
   try{sims=await getSimulacoes();}catch(e){}
   try{objetivos=await getObjetivos();}catch(e){}
   try{
-    const snap=await getDoc(doc(db,'reserva',sessao.email));
+    const snap=await getDoc(doc(db,'reserva',store.sessao.email));
     if(snap.exists()) reserva=snap.data();
   }catch(e){}
   try{
-    const q=query(collection(db,'controle'),where('email','==',sessao.email));
+    const q=query(collection(db,'controle'),where('email','==',store.sessao.email));
     const snap=await getDocs(q);
     lancamentos=snap.docs.map(d=>d.data());
   }catch(e){}
@@ -2986,7 +2877,7 @@ window.abrirMetas=async function(){
   ir('screen-metas');
   // Verificar reserva e mostrar aviso se incompleta
   try {
-    const snap = await getDoc(doc(db,'reserva',sessao.email));
+    const snap = await getDoc(doc(db,'reserva',store.sessao.email));
     const avisoEl = document.getElementById('metas-aviso-reserva');
     if(avisoEl){
       if(!snap.exists() || (snap.data().saldoAtual < snap.data().meta)){
@@ -3014,35 +2905,7 @@ window.switchSimTab = function(tab) {
   document.getElementById('sim-acum').style.display = tab === 'acum' ? '' : 'none';
 };
 
-// ── Helpers matemáticos ──────────────────────────────
-// Taxa real: desconta inflação mensalmente (Fisher)
-function taxaReal(rent, infl) {
-  return (1 + rent/100) / (1 + infl/100) - 1;
-}
-
-// FV de uma série de aportes mensais + PV inicial
-function calcFV(pv, pmt, r, n) {
-  if (Math.abs(r) < 1e-10) return pv + pmt * n;
-  return pv * Math.pow(1+r, n) + pmt * (Math.pow(1+r, n) - 1) / r;
-}
-
-// PMT para atingir FV partindo de PV
-function calcPMTparaFV(fv, pv, r, n) {
-  if (Math.abs(r) < 1e-10) return Math.max(0, (fv - pv) / n);
-  const fator = Math.pow(1+r, n);
-  return Math.max(0, (fv - pv * fator) / ((fator - 1) / r));
-}
-
-// Lucro líquido após IR (IR só sobre os juros)
-function lucroLiquido(bruto, investido, aliqIR) {
-  const juros = Math.max(0, bruto - investido);
-  const ir = juros * (aliqIR / 100);
-  return bruto - ir;
-}
-
-function irSobreJuros(bruto, investido, aliqIR) {
-  return Math.max(0, bruto - investido) * (aliqIR / 100);
-}
+// ── Helpers matemáticos → /js/utils/finance-math.js ──────
 
 // Renderiza 3 cenários (conservador / base / otimista)
 function render3Cenarios(idEl, calcFn) {
@@ -3125,7 +2988,7 @@ window.calcularAposentadoria = function() {
   document.getElementById('ap-liquido').textContent = fmt(liquido);
 
   // Viabilidade
-  const rendaUsuario = sessao.renda || 0;
+  const rendaUsuario = store.sessao.renda || 0;
   let viabHtml = '';
   if (rendaUsuario > 0) {
     const pct = Math.round((pmt / rendaUsuario) * 100);
@@ -3361,12 +3224,6 @@ window.criarMetaDeAcumulacao = function() {
   }, 400);
 };
 
-function fmtK(v) {
-  if (v >= 1000000) return 'R$ ' + (v/1000000).toLocaleString('pt-BR', {minimumFractionDigits:1, maximumFractionDigits:1}) + 'M';
-  if (v >= 1000)    return 'R$ ' + (v/1000).toLocaleString('pt-BR',    {minimumFractionDigits:0, maximumFractionDigits:0}) + 'k';
-  return fmt(v);
-}
-
 // ── Salvar no Firestore ───────────────────────────────
 window.salvarSimulacaoAp = async function() {
   const idadeAtual   = parseInt(document.getElementById('ap-idade').value) || 0;
@@ -3382,7 +3239,7 @@ window.salvarSimulacaoAp = async function() {
   const ra    = Math.pow(1+r,12)-1;
   const patrimonioAlvo = rendaMensal * 12 / Math.max(0.01, ra);
   const pmt   = calcPMTparaFV(patrimonioAlvo, patrimonioAtual, r, meses);
-  await addDoc(collection(db,'simulacoes'), { tipo:'aposentadoria', email:sessao.email, idadeAtual, idadeAposent, rendaMensal, patrimonioAtual, rent, infl, aliqIR, patrimonioAlvo, pmtMensal:pmt, criadoEm:new Date().toISOString() });
+  await addDoc(collection(db,'simulacoes'), { tipo:'aposentadoria', email:store.sessao.email, idadeAtual, idadeAposent, rendaMensal, patrimonioAtual, rent, infl, aliqIR, patrimonioAlvo, pmtMensal:pmt, criadoEm:new Date().toISOString() });
   logEko('simulacao_salva', { tipo: 'aposentadoria' });
   const card = document.getElementById('ap-salvo-card');
   if(card){ card.style.display=''; setTimeout(()=>card.style.display='none', 4000); }
@@ -3409,7 +3266,7 @@ window.salvarSimulacaoAc = async function() {
   const investido = inicial + aporte * meses;
   const juros   = Math.max(0, bruto - investido);
   const liquido = bruto - juros*(aliqIR/100);
-  await addDoc(collection(db,'simulacoes'), { tipo:'acumulacao', email:sessao.email, inicial, aporte, anos, rent, infl, aliqIR, patrimonioFinal:bruto, totalInvestido:investido, patrimonioLiquido:liquido, criadoEm:new Date().toISOString() });
+  await addDoc(collection(db,'simulacoes'), { tipo:'acumulacao', email:store.sessao.email, inicial, aporte, anos, rent, infl, aliqIR, patrimonioFinal:bruto, totalInvestido:investido, patrimonioLiquido:liquido, criadoEm:new Date().toISOString() });
   logEko('simulacao_salva', { tipo: 'acumulacao' });
   const card = document.getElementById('ac-salvo-card');
   if(card){ card.style.display=''; setTimeout(()=>card.style.display='none', 4000); }
@@ -3425,7 +3282,7 @@ window.salvarSimulacaoAcProntuario = async function() {
 
 async function getSimulacoes() {
   try {
-    const q = query(collection(db,'simulacoes'), where('email','==',sessao.email));
+    const q = query(collection(db,'simulacoes'), where('email','==',store.sessao.email));
     const snap = await getDocs(q); const r = [];
     snap.forEach(d => r.push({...d.data(), _id:d.id}));
     return r.sort((a,b) => (a.criadoEm||'') > (b.criadoEm||'') ? -1 : 1);
@@ -3451,10 +3308,10 @@ async function carregarHistoricoSimulacoes() {
 window.abrirSimulacoes = async function() {
   ir('screen-simulacoes');
   setupMoneyInputs();
-  if (sessao && sessao.renda) {
+  if (store.sessao && store.sessao.renda) {
     const el = document.getElementById('ap-renda');
     if (el && !el.value) {
-      el.value = 'R$ ' + Number(sessao.renda).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+      el.value = 'R$ ' + Number(store.sessao.renda).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
     }
   }
   await carregarHistoricoSimulacoes();
@@ -3483,7 +3340,7 @@ const ONDE_GUARDAR_OPCOES = [
 
 window.abrirReserva = async function() {
   ir('screen-reserva');
-  const ref = doc(db, 'reserva', sessao.email);
+  const ref = doc(db, 'reserva', store.sessao.email);
   const snap = await getDoc(ref);
   if (snap.exists()) {
     reservaConfig = snap.data();
@@ -3573,7 +3430,7 @@ window.selecionarFonteReserva = async function(fonte) {
       for (let i = 1; i <= 3; i++) {
         const d = new Date(agora.getFullYear(), agora.getMonth() - i, 1);
         const mesKey = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2,'0');
-        const q = query(collection(db,'controle'), where('email','==',sessao.email), where('mes','==',mesKey), where('tipo','==','gasto'));
+        const q = query(collection(db,'controle'), where('email','==',store.sessao.email), where('mes','==',mesKey), where('tipo','==','gasto'));
         const snap = await getDocs(q);
         if (!snap.empty) {
           let soma = 0; snap.forEach(d2 => soma += (d2.data().valor || 0));
@@ -3691,7 +3548,7 @@ window.salvarConfigReserva = async function() {
 
   const meta = gastos * mesesSel;
   const config = {
-    email: sessao.email,
+    email: store.sessao.email,
     perfil: reservaPerfilSelecionado,
     gastosMensais: gastos,
     mesesCobertura: mesesSel,
@@ -3705,7 +3562,7 @@ window.salvarConfigReserva = async function() {
 
   try {
     msg.textContent = 'Salvando...'; msg.className = 'msg';
-    await setDoc(doc(db, 'reserva', sessao.email), config);
+    await setDoc(doc(db, 'reserva', store.sessao.email), config);
     reservaConfig = config;
   } catch(e) {
     msg.textContent = 'Erro ao salvar. Tente novamente.'; msg.className = 'msg error';
@@ -3842,7 +3699,7 @@ window.salvarAporteReserva = async function() {
 
   try {
     msg.textContent = 'Salvando...'; msg.className = 'msg';
-    await setDoc(doc(db, 'reserva', sessao.email), {
+    await setDoc(doc(db, 'reserva', store.sessao.email), {
       ...reservaConfig, saldoAtual: novoSaldo, historico: novoHistorico, atualizadoEm: new Date().toISOString()
     });
     reservaConfig.saldoAtual = novoSaldo;
@@ -3875,7 +3732,7 @@ window.salvarUsoReserva = async function() {
 
   try {
     msg.textContent = 'Salvando...'; msg.className = 'msg';
-    await setDoc(doc(db, 'reserva', sessao.email), {
+    await setDoc(doc(db, 'reserva', store.sessao.email), {
       ...reservaConfig, saldoAtual: novoSaldo, historico: novoHistorico, atualizadoEm: new Date().toISOString()
     });
     reservaConfig.saldoAtual = novoSaldo;
@@ -3947,7 +3804,7 @@ window.confirmarMetaReserva = async function() {
     catNome: 'Reserva',
     saldoExtra: 0,
     depositos: Array(meses).fill(null).map(() => ({pago:false, parcial:false, extra:false, valor:0})),
-    email: sessao.email,
+    email: store.sessao.email,
     origemReserva: true,
   };
 
@@ -3966,7 +3823,7 @@ window.confirmarMetaReserva = async function() {
 window.excluirReserva = async function() {
   if (!confirm('Tem certeza que deseja excluir sua reserva de emergência? Todo o histórico será perdido.')) return;
   try {
-    await deleteDoc(doc(db, 'reserva', sessao.email));
+    await deleteDoc(doc(db, 'reserva', store.sessao.email));
     reservaConfig = null;
     mostrarOnboardingReserva();
     reservaStep(1);
@@ -4000,7 +3857,7 @@ async function atualizarHubReserva() {
   const el = document.getElementById('hub-reserva-sub');
   if (!el) return;
   try {
-    const snap = await getDoc(doc(db, 'reserva', sessao.email));
+    const snap = await getDoc(doc(db, 'reserva', store.sessao.email));
     if (snap.exists()) {
       const { saldoAtual, meta } = snap.data();
       const pct = Math.min(100, Math.round((saldoAtual / meta) * 100));
@@ -4009,10 +3866,6 @@ async function atualizarHubReserva() {
       el.textContent = '⚠️ Ainda não configurada';
     }
   } catch(e) {}
-}
-
-function fmtInput(val) {
-  return 'R$ ' + val.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 }
 
 // ════════════════════════════════════════════════
@@ -4126,7 +3979,7 @@ const AULAS_PEF = [
 
 async function getAulasConcluidas() {
   try {
-    const q = query(collection(db,'aulas'), where('email','==',sessao.email));
+    const q = query(collection(db,'aulas'), where('email','==',store.sessao.email));
     const snap = await getDocs(q); const r = {};
     snap.forEach(d => { const data = d.data(); r[data.aulaNum] = true; });
     return r;
@@ -4206,10 +4059,10 @@ function abrirAulaDetalhe(aula, concluida) {
 window.marcarAulaConcluida = async function(num) {
   try {
     // Verificar se já existe
-    const q = query(collection(db,'aulas'), where('email','==',sessao.email), where('aulaNum','==',num));
+    const q = query(collection(db,'aulas'), where('email','==',store.sessao.email), where('aulaNum','==',num));
     const snap = await getDocs(q);
     if (snap.empty) {
-      await addDoc(collection(db,'aulas'), { email:sessao.email, aulaNum:num, concluidaEm:new Date().toISOString() });
+      await addDoc(collection(db,'aulas'), { email:store.sessao.email, aulaNum:num, concluidaEm:new Date().toISOString() });
     }
     fecharOverlay('overlay-aula');
     toast('🎓 Aula ' + num + ' concluída! Continue assim!');
@@ -4298,7 +4151,7 @@ async function renderDicaIA() {
 
   // Cache por dia em localStorage (persiste entre abas e recarregamentos)
   const hoje = new Date().toISOString().slice(0,10); // YYYY-MM-DD
-  const cacheKey = 'eko_dica_' + sessao.email + '_' + hoje;
+  const cacheKey = 'eko_dica_' + store.sessao.email + '_' + hoje;
   const cached = localStorage.getItem(cacheKey);
   if (cached) {
     el.innerHTML = renderDicaHtml(cached);
@@ -4315,7 +4168,7 @@ async function renderDicaIA() {
     try { dividas = await getDividas(); } catch(e){}
     try { objetivos = await getObjetivos(); } catch(e){}
 
-    const renda = sessao.renda || 0;
+    const renda = store.sessao.renda || 0;
     const totalDividas = dividas.reduce((s,d) => s + (d.parcela*(d.parcelasRestantes||0)), 0);
     const totalMetas = metas.filter(m=>!m.concluida).length;
     const metasConc = metas.filter(m=>m.concluida).length;
@@ -4385,7 +4238,7 @@ function renderRevisaoTrimestral(diags) {
   const TRES_MESES_MS = 90 * 24 * 60 * 60 * 1000;
 
   // Verifica última revisão registrada localmente
-  const ultimaRevisaoKey = 'eko_revisao_' + sessao.email;
+  const ultimaRevisaoKey = 'eko_revisao_' + store.sessao.email;
   const ultimaRevisao = localStorage.getItem(ultimaRevisaoKey);
 
   let mostrar = false;
@@ -4441,23 +4294,13 @@ function renderRevisaoTrimestral(diags) {
 
 window.iniciarRevisaoTrimestral = function() {
   // Registra que o usuário iniciou revisão hoje
-  localStorage.setItem('eko_revisao_' + sessao.email, new Date().toISOString());
+  localStorage.setItem('eko_revisao_' + store.sessao.email, new Date().toISOString());
   // Leva para diagnósticos
   abrirDiagnosticos();
   toast('🔄 Iniciando revisão trimestral...');
 };
 
-// ════════════════════════════════════════════════
-// UTILITÁRIO — DEBOUNCE
-// ════════════════════════════════════════════════
-function debounce(fn, ms) {
-  let timer;
-  return function(...args) {
-    clearTimeout(timer);
-    timer = setTimeout(() => fn.apply(this, args), ms);
-  };
-}
-
+// ── debounce → /js/utils/debounce.js ─────────────────────
 const calcularAposentadoriaDebounced = debounce(() => { try { calcularAposentadoria(); } catch(e){} }, 400);
 const calcularAcumulacaoDebounced    = debounce(() => { try { calcularAcumulacao(); }    catch(e){} }, 400);
 
@@ -4465,64 +4308,7 @@ const calcularAcumulacaoDebounced    = debounce(() => { try { calcularAcumulacao
 // UTILITÁRIO — MÁSCARA DE DINHEIRO
 // ════════════════════════════════════════════════
 
-function parseMoney(str) {
-  if (typeof str === 'number') return str;
-  // Remove tudo que não é dígito ou vírgula/ponto
-  const s = String(str).replace(/[^\d,.]/g, '');
-  // Se tem vírgula, trata como separador decimal BR
-  if (s.includes(',')) {
-    return parseFloat(s.replace(/\./g, '').replace(',', '.')) || 0;
-  }
-  return parseFloat(s) || 0;
-}
-
-window.applyMoneyMask = function applyMoneyMask(input) {
-  let val = input.value.replace(/\D/g, '');
-  if (!val) { input.value = ''; return; }
-  val = (parseInt(val) / 100).toFixed(2);
-  input.value = 'R$ ' + parseFloat(val).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
-
-function setupMoneyInputs() {
-  const ids = [
-    'cad-renda','perfil-renda',
-    'ap-renda','ap-patrimonio',
-    'ac-inicial','ac-aporte',
-    'meta-valor','dep-valor',
-    'divida-parcela','divida-ja-pago','pag-valor','pag-amort-valor',
-    'obj-valor','obj-saldo',
-  ];
-  ids.forEach(id => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.setAttribute('type','text');
-    el.setAttribute('inputmode','numeric');
-    el.removeAttribute('min');
-    el.oninput = function() {
-      const caret = this.selectionStart;
-      const prevLen = this.value.length;
-      applyMoneyMask(this);
-      const diff = this.value.length - prevLen;
-      try { this.setSelectionRange(caret + diff, caret + diff); } catch(e){}
-      // Dispara recálculos
-      if (id.startsWith('ap-')) { try { calcularAposentadoria(); } catch(e){} }
-      if (id.startsWith('ac-')) { try { calcularAcumulacao(); } catch(e){} }
-      if (id === 'divida-parcela' || id === 'divida-ja-pago') { try { calcularTotalDivida(); } catch(e){} }
-      if (id === 'obj-valor' || id === 'obj-saldo') { try { calcularObjetivo(); } catch(e){} }
-    };
-    el.onfocus = function() { if (!this.value) this.placeholder = 'R$ 0,00'; };
-  });
-
-  // Campos numéricos das simulações que NÃO são dinheiro mas precisam recalcular
-  ['ap-idade','ap-idade-aposent','ap-rent','ap-infl','ap-ir'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.oninput = () => { try { calcularAposentadoria(); } catch(e){} };
-  });
-  ['ac-anos','ac-rent','ac-infl','ac-ir'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.oninput = () => { try { calcularAcumulacao(); } catch(e){} };
-  });
-}
+// parseMoney/applyMoneyMask/setupMoneyInputs → /js/utils/money.js
 
 // Aplica máscara no campo de renda do cadastro já no carregamento
 document.addEventListener('DOMContentLoaded', () => {
@@ -4588,7 +4374,7 @@ window.cfSetAddTipo = function(tipo) {
 
 async function getCFCategorias() {
   try {
-    const snap = await getDoc(doc(db,'users',sessao.email));
+    const snap = await getDoc(doc(db,'users',store.sessao.email));
     const data = snap.exists() ? snap.data() : {};
     if (data.cfCategorias) return data.cfCategorias;
   } catch(e){}
@@ -4599,12 +4385,12 @@ async function getCFCategorias() {
 }
 
 async function saveCFCategorias(cats) {
-  try { await setDoc(doc(db,'users',sessao.email), {cfCategorias: cats}, {merge:true}); } catch(e){}
+  try { await setDoc(doc(db,'users',store.sessao.email), {cfCategorias: cats}, {merge:true}); } catch(e){}
 }
 
 async function getCFLancamentos() {
   try {
-    const q = query(collection(db,'controle'), where('email','==',sessao.email));
+    const q = query(collection(db,'controle'), where('email','==',store.sessao.email));
     const snap = await getDocs(q);
     const r = [];
     snap.forEach(d => r.push({...d.data(), _id:d.id}));
@@ -4618,7 +4404,7 @@ async function saveCFLancamento(lanc) {
     if (_id) {
       await setDoc(doc(db,'controle',_id), data);
     } else {
-      data.email = sessao.email;
+      data.email = store.sessao.email;
       data.criadoEm = new Date().toISOString();
       const ref = await addDoc(collection(db,'controle'), data);
       lanc._id = ref.id;
@@ -5328,7 +5114,7 @@ window.enviarFeedback = async function() {
   if(!mensagem) { showMsg('fb-msg','error','Escreva sua mensagem antes de enviar.'); return; }
   try {
     await addDoc(collection(db,'feedbacks'), {
-      email: sessao.email,
+      email: store.sessao.email,
       tipo: fbTipoAtual,
       mensagem,
       criadoEm: new Date().toISOString(),
@@ -5352,15 +5138,14 @@ async function init() {
 
 
 // ════ PUSH NOTIFICATIONS — OneSignal ════════════════════════
-const ONESIGNAL_APP_ID = 'c91df304-8d91-4528-bacd-edb75e918fb1';
-const PUSH_OPTIN_KEY = 'eko_push_optin_';
+// ONESIGNAL_APP_ID e PUSH_OPTIN_KEY → /js/config.js
 
 async function inicializarPush() {
   if (!('Notification' in window)) return;
   if (!('serviceWorker' in navigator)) return;
   if (typeof OneSignalDeferred === 'undefined') return;
 
-  const optinKey = PUSH_OPTIN_KEY + (sessao?.email || '');
+  const optinKey = PUSH_OPTIN_KEY + (store.sessao?.email || '');
   const jaRespondeu = localStorage.getItem(optinKey);
 
   // Se já tem permissão concedida, vincular email silenciosamente
@@ -5406,7 +5191,7 @@ window.ativarPush = async function() {
       // Vincular ao OneSignal após permissão concedida
       OneSignalDeferred.push(async (os) => {
         await os.User.PushSubscription.optIn();
-        await os.login(sessao?.email || '');
+        await os.login(store.sessao?.email || '');
       });
       toast('📱 Notificações ativadas! 🌱');
       logEko('push_ativado');
@@ -5421,17 +5206,17 @@ window.ativarPush = async function() {
 window.dispensarPush = function() {
   const el = document.getElementById('hub-push-optin');
   if (el) el.style.display = 'none';
-  const optinKey = PUSH_OPTIN_KEY + (sessao?.email || '');
+  const optinKey = PUSH_OPTIN_KEY + (store.sessao?.email || '');
   localStorage.setItem(optinKey, Date.now().toString());
 };
 
 async function vincularEmailOneSignal() {
-  if (!sessao?.email) return;
+  if (!store.sessao?.email) return;
   try {
     OneSignalDeferred.push(async (os) => {
       // Vincular email do usuário ao dispositivo no OneSignal
-      await os.login(sessao.email);
-      console.log('✅ OneSignal: usuário vinculado -', sessao.email);
+      await os.login(store.sessao.email);
+      console.log('✅ OneSignal: usuário vinculado -', store.sessao.email);
     });
   } catch(e) {
     console.error('Erro ao vincular email OneSignal:', e);
@@ -5457,7 +5242,7 @@ function inicializarMensagensPush() {
 onAuthStateChanged(auth, async (firebaseUser) => {
   if (firebaseUser) {
     // Usuário autenticado pelo Firebase Auth
-    sessao = { email: firebaseUser.email, nome: '', renda: 0 };
+    store.sessao = { email: firebaseUser.email, nome: '', renda: 0 };
     await carregarApp();
   } else {
     // Não autenticado — vai para login (a menos que esteja no onboarding)
@@ -5540,53 +5325,7 @@ if (isIOS() && !isEmStandalone()) {
   }
 }
 
-// ════════════════════════════════════════════════
-// ERRO GLOBAL — captura falhas críticas
-// ════════════════════════════════════════════════
-
-function mostrarErroGlobal(msg) {
-  const el = document.getElementById('screen-erro-global');
-  const msgEl = document.getElementById('erro-global-msg');
-  if (el) {
-    el.style.display = 'flex';
-    if (msg && msgEl) msgEl.textContent = msg;
-  }
-}
-
-// Captura erros JS não tratados
-window.addEventListener('error', (e) => {
-  // Ignora erros de extensões do browser e erros menores
-  if (!e.filename || e.filename.includes('extension')) return;
-  console.error('Erro global:', e);
-  // Só mostra a tela para erros críticos (não poluir por bugs menores)
-});
-
-// Captura promises rejeitadas não tratadas
-window.addEventListener('unhandledrejection', (e) => {
-  const msg = e.reason?.message || '';
-  // Firebase offline
-  if (msg.includes('offline') || msg.includes('network') || msg.includes('Failed to fetch')) {
-    mostrarErroGlobal('Sem conexão com a internet. Verifique sua rede e tente novamente.');
-    e.preventDefault();
-  }
-  // Firebase indisponível
-  if (msg.includes('unavailable') || msg.includes('UNAVAILABLE')) {
-    mostrarErroGlobal('O servidor está temporariamente indisponível. Aguarde alguns minutos e tente novamente.');
-    e.preventDefault();
-  }
-});
-
-// Detecta quando fica offline/online
-window.addEventListener('offline', () => {
-  mostrarErroGlobal('Você está sem internet. Reconecte e tente novamente.');
-});
-
-window.addEventListener('online', () => {
-  // Esconde a tela de erro quando voltar a conexão
-  const el = document.getElementById('screen-erro-global');
-  if (el) el.style.display = 'none';
-  toast('✅ Conexão restaurada!');
-});
+// ── Erro global → /js/core/errors.js ─────────────────────
 
 // ════════════════════════════════════════════════
 // PWA — Service Worker
