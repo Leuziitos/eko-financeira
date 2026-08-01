@@ -259,6 +259,13 @@ window.alternarDataLancamento = function() {
         ? chipDataHoje()
         : '📅 ' + new Date(this.value + 'T12:00:00').toLocaleDateString('pt-BR');
     };
+    // Abre o calendário nativo imediatamente — antes disso o clique só
+    // revelava o campo, exigindo um segundo toque para o seletor aparecer.
+    if (typeof custom.showPicker === 'function') {
+      try { custom.showPicker(); } catch(e) { custom.focus(); }
+    } else {
+      custom.focus();
+    }
   } else {
     resetarDataLancamento();
   }
@@ -550,6 +557,17 @@ async function renderCarteiraControle() {
 
   // Saldo do topo acompanha o mês visível (dados já calculados — sem query extra)
   renderSaldoTopo(totalRec, totalGast);
+
+  // Saldo acumulado total — soma de TODOS os lançamentos do usuário,
+  // independente do mês navegado (usa lancs inteiro, não doMes; sem query extra)
+  const totalRecAcumulado  = lancs.filter(l=>l.tipo==='receita').reduce((s,l)=>s+l.valor,0);
+  const totalGastAcumulado = lancs.filter(l=>l.tipo==='gasto').reduce((s,l)=>s+l.valor,0);
+  const saldoAcumulado = totalRecAcumulado - totalGastAcumulado;
+  const elSaldoAcum = document.getElementById('cf-saldo-acumulado-valor');
+  if (elSaldoAcum) {
+    elSaldoAcum.textContent = fmt(saldoAcumulado);
+    elSaldoAcum.style.color = saldoAcumulado >= 0 ? 'var(--eko-green)' : 'var(--red)';
+  }
 
   // Resumo do mês
   const resumoEl = document.getElementById('cf-resumo-mes');
