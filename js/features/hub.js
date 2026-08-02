@@ -33,7 +33,11 @@ async function renderHub() {
     const sub = document.getElementById('hub-metas-sub');
     if(sub) {
       if(metas.length===0) sub.textContent='Nenhuma meta ainda';
-      else sub.innerHTML=`${ativas} ativa(s)${conc>0?' · <span style="color:var(--eko-green)">'+conc+' concluída(s) 🏆</span>':''}`;
+      else {
+        const txtAtivas = ativas===1 ? '1 ativa' : `${ativas} ativas`;
+        const txtConc = conc===1 ? '1 concluída' : `${conc} concluídas`;
+        sub.innerHTML=`${txtAtivas}${conc>0?' · <span style="color:var(--eko-green)">'+txtConc+' 🏆</span>':''}`;
+      }
     }
   } catch(e){}
 

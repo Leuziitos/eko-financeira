@@ -173,6 +173,9 @@
     <!-- Resumo mensal -->
     <div id="hub-resumo-mensal" style="margin-bottom:1rem"></div>
 
+    <!-- Opt-in de notificações -->
+    <div id="hub-push-optin" style="display:none;margin-bottom:1rem"></div>
+
     <!-- ━━━ HOJE ━━━ -->
     <div style="display:flex;align-items:center;gap:10px;margin:1.5rem 0 .75rem">
       <span style="font-size:11px;font-weight:800;color:var(--text-hint);text-transform:uppercase;letter-spacing:.1em;white-space:nowrap">Hoje</span>
@@ -196,7 +199,7 @@
       <span style="font-size:11px;font-weight:800;color:var(--text-hint);text-transform:uppercase;letter-spacing:.1em;white-space:nowrap">Minha jornada</span>
       <span style="flex:1;height:1px;background:var(--border)"></span>
     </div>
-    <details class="card hub-jornada-folder" style="border-left:4px solid var(--eko-blue-mid);margin-bottom:.75rem">
+    <details class="card hub-jornada-folder" style="border-left:4px solid #3B82F6;margin-bottom:.75rem">
       <summary style="font-size:14px;font-weight:800">🗂️ Minha Jornada</summary>
       <div style="margin-top:.875rem">
         <div class="pront-item" onclick="ir('screen-prontuario')" style="cursor:pointer">
@@ -207,6 +210,8 @@
           <div class="pront-item-left"><div class="pront-item-icon">🔍</div><div class="pront-item-title">Diagnósticos</div></div>
           <span style="color:var(--eko-green);font-size:14px">→</span>
         </div>
+        <!-- Jornada — próximo passo (só visível com a pasta expandida) -->
+        <div id="hub-jornada" style="margin-top:4px"></div>
         <div style="margin-top:4px">
           <div style="font-size:11px;font-weight:700;color:var(--text-hint);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">💡 Dica do dia</div>
           <div id="hub-dica"></div>
@@ -214,14 +219,10 @@
       </div>
     </details>
 
-    <!-- Jornada — próximo passo -->
-    <div id="hub-jornada" style="margin-bottom:1.25rem"></div>
-
     <!-- Avisos rápidos -->
     <div id="hub-avisos"></div>
 
     <!-- Revisão trimestral -->
-    <div id="hub-push-optin" style="display:none;margin-bottom:1rem"></div>
     <div id="hub-revisao" style="margin-bottom:1rem"></div>
 
     <!-- ━━━ FINANÇAS ━━━ -->
@@ -230,22 +231,22 @@
       <span style="flex:1;height:1px;background:var(--border)"></span>
     </div>
     <div class="hub-grid">
-      <div class="hub-card" onclick="abrirMetas()" style="border-left:3px solid var(--purple)">
+      <div class="hub-card" onclick="abrirMetas()" style="border-left:3px solid #8B5CF6">
         <div class="hub-card-icon">🎯</div>
         <div class="hub-card-title">Metas Financeiras</div>
         <div class="hub-card-sub" id="hub-metas-sub">Acompanhe seu progresso</div>
       </div>
-      <div class="hub-card" onclick="abrirDividas()" style="border-left:3px solid var(--purple)">
+      <div class="hub-card" onclick="abrirDividas()" style="border-left:3px solid #8B5CF6">
         <div class="hub-card-icon">💳</div>
         <div class="hub-card-title">Minhas Dívidas</div>
         <div class="hub-card-sub">Gerencie suas dívidas</div>
       </div>
-      <div class="hub-card" onclick="abrirReserva()" style="border-left:3px solid var(--purple)">
+      <div class="hub-card" onclick="abrirReserva()" style="border-left:3px solid #8B5CF6">
         <div class="hub-card-icon">🛡️</div>
         <div class="hub-card-title">Reserva de Emergência</div>
         <div class="hub-card-sub" id="hub-reserva-sub">Sua proteção financeira</div>
       </div>
-      <div class="hub-card" onclick="abrirSimulacoes()" style="border-left:3px solid var(--purple)">
+      <div class="hub-card" onclick="abrirSimulacoes()" style="border-left:3px solid #8B5CF6">
         <div class="hub-card-icon">📈</div>
         <div class="hub-card-title">Simulações</div>
         <div class="hub-card-sub">Aposentadoria & Acumulação</div>
@@ -257,7 +258,7 @@
       <span style="font-size:11px;font-weight:800;color:var(--text-hint);text-transform:uppercase;letter-spacing:.1em;white-space:nowrap">Aprender</span>
       <span style="flex:1;height:1px;background:var(--border)"></span>
     </div>
-    <div class="hub-card" onclick="abrirAulas()" style="border-left:4px solid var(--amber);cursor:pointer;display:flex;align-items:center;gap:14px;margin-bottom:1.25rem">
+    <div class="hub-card" onclick="abrirAulas()" style="border-left:4px solid #F59E0B;cursor:pointer;display:flex;align-items:center;gap:14px;margin-bottom:1.25rem">
       <div class="hub-card-icon" style="margin-bottom:0;font-size:32px">🎓</div>
       <div>
         <div class="hub-card-title">Aulas PEF</div>
@@ -271,12 +272,12 @@
       <span style="flex:1;height:1px;background:var(--border)"></span>
     </div>
     <div class="hub-grid">
-      <div class="hub-card" onclick="abrirFeedback()" style="border-left:3px solid var(--eko-green)">
+      <div class="hub-card" onclick="abrirFeedback()" style="border-left:3px solid #6B7280">
         <div class="hub-card-icon">💬</div>
         <div class="hub-card-title">Bug ou sugestão</div>
         <div class="hub-card-sub">Sua opinião melhora o Eko</div>
       </div>
-      <div class="hub-card" onclick="abrirIndicar()" style="border-left:3px solid var(--eko-green)">
+      <div class="hub-card" onclick="abrirIndicar()" style="border-left:3px solid #6B7280">
         <div class="hub-card-icon">📣</div>
         <div class="hub-card-title">Indique o app</div>
         <div class="hub-card-sub">Ajude mais pessoas</div>
