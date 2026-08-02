@@ -192,11 +192,22 @@ window.marcarAulaConcluida = async function(num) {
     if (snap.empty) {
       await addDoc(collection(db,'aulas'), { email:store.sessao.email, aulaNum:num, concluidaEm:new Date().toISOString() });
     }
+  } catch(e) {
+    console.error('marcarAulaConcluida — erro ao gravar no Firestore:', e);
+    toast('❌ Erro ao registrar. Tente novamente.');
+    return;
+  }
+
+  // Gravação confirmada — a partir daqui, falha é só de tela (não de dado)
+  toast('✅ Aula concluída!');
+
+  try {
     fecharOverlay('overlay-aula');
-    toast('🎓 Aula ' + num + ' concluída! Continue assim!');
     await renderAulas();
     await renderProntuario();
-  } catch(e) { toast('❌ Erro ao registrar. Tente novamente.'); }
+  } catch(e) {
+    console.error('marcarAulaConcluida — erro ao atualizar a tela:', e);
+  }
 };
 
 export { getAulasConcluidas };
