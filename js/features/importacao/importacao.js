@@ -629,3 +629,40 @@ async function desfazerImportacao(importacaoId) {
 
   return lancamentos.length;
 }
+
+// ── GUIA DE EXPORTAÇÃO POR BANCO ──────────────────────────────
+// Só o Nubank tem passo a passo verificado (dado pronto). Os demais bancos
+// mostram a mesma orientação genérica — não temos confirmação dos rótulos
+// atuais de menu/botão de cada app pra apresentar como passo a passo
+// confiável; preferimos isso a arriscar instruções erradas.
+const GUIA_EXPORTACAO_NUBANK = [
+  'Abra o app do Nubank',
+  'Toque em "Configurações" (ícone ⚙️)',
+  'Selecione "Exportar dados"',
+  'Escolha o período e toque em "Exportar CSV"',
+  'Salve o arquivo e importe aqui',
+];
+const NOMES_BANCOS_GUIA = { nubank: 'Nubank', itau: 'Itaú', bradesco: 'Bradesco', santander: 'Santander', inter: 'Banco Inter', c6: 'C6 Bank', outro: 'Outro banco' };
+const MENSAGEM_GUIA_GENERICA = 'Ainda não temos o passo a passo específico deste banco. Procure por "exportar extrato" nas configurações do app do seu banco — geralmente em Extrato, Configurações ou Central de ajuda — e baixe no formato OFX ou CSV pra importar aqui.';
+
+window.mostrarGuiaBanco = function(banco) {
+  Object.keys(NOMES_BANCOS_GUIA).forEach(b => {
+    const btn = document.getElementById('importacao-guia-btn-' + b);
+    if (!btn) return;
+    const spanOutro = b === 'outro' ? 'grid-column:span 3;' : '';
+    if (b === banco) { btn.className = 'btn btn-sm btn-primary'; btn.style.cssText = spanOutro; }
+    else { btn.className = 'btn btn-sm'; btn.style.cssText = `background:var(--surface);border:1px solid var(--border);color:var(--text);${spanOutro}`; }
+  });
+
+  const el = document.getElementById('importacao-guia-conteudo');
+  if (!el) return;
+  const nome = NOMES_BANCOS_GUIA[banco] || banco;
+
+  if (banco === 'nubank') {
+    el.innerHTML = `<div style="font-size:13px;font-weight:700;margin-bottom:.5rem">${esc(nome)}:</div>
+      <ol style="font-size:13px;color:var(--text-muted);line-height:1.9;padding-left:1.25rem;margin:0">${GUIA_EXPORTACAO_NUBANK.map(p => `<li>${esc(p)}</li>`).join('')}</ol>`;
+  } else {
+    el.innerHTML = `<div style="font-size:13px;font-weight:700;margin-bottom:.5rem">${esc(nome)}:</div>
+      <div style="font-size:13px;color:var(--text-muted);line-height:1.7">${esc(MENSAGEM_GUIA_GENERICA)}</div>`;
+  }
+};

@@ -1229,6 +1229,32 @@
         <div id="importacao-categorias"></div>
       </div>
 
+      <!-- Guia de exportação por banco -->
+      <details class="card" style="margin-top:1.25rem">
+        <summary style="font-size:14px;font-weight:800;cursor:pointer">📚 Como exportar meu extrato</summary>
+        <div style="margin-top:.875rem">
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:1rem">
+            <button id="importacao-guia-btn-nubank" onclick="mostrarGuiaBanco('nubank')" class="btn btn-sm btn-primary">Nubank</button>
+            <button id="importacao-guia-btn-itau" onclick="mostrarGuiaBanco('itau')" class="btn btn-sm" style="background:var(--surface);border:1px solid var(--border);color:var(--text)">Itaú</button>
+            <button id="importacao-guia-btn-bradesco" onclick="mostrarGuiaBanco('bradesco')" class="btn btn-sm" style="background:var(--surface);border:1px solid var(--border);color:var(--text)">Bradesco</button>
+            <button id="importacao-guia-btn-santander" onclick="mostrarGuiaBanco('santander')" class="btn btn-sm" style="background:var(--surface);border:1px solid var(--border);color:var(--text)">Santander</button>
+            <button id="importacao-guia-btn-inter" onclick="mostrarGuiaBanco('inter')" class="btn btn-sm" style="background:var(--surface);border:1px solid var(--border);color:var(--text)">Inter</button>
+            <button id="importacao-guia-btn-c6" onclick="mostrarGuiaBanco('c6')" class="btn btn-sm" style="background:var(--surface);border:1px solid var(--border);color:var(--text)">C6</button>
+            <button id="importacao-guia-btn-outro" onclick="mostrarGuiaBanco('outro')" class="btn btn-sm" style="background:var(--surface);border:1px solid var(--border);color:var(--text);grid-column:span 3">Outro banco</button>
+          </div>
+          <div id="importacao-guia-conteudo">
+            <div style="font-size:13px;font-weight:700;margin-bottom:.5rem">Nubank:</div>
+            <ol style="font-size:13px;color:var(--text-muted);line-height:1.9;padding-left:1.25rem;margin:0">
+              <li>Abra o app do Nubank</li>
+              <li>Toque em "Configurações" (ícone ⚙️)</li>
+              <li>Selecione "Exportar dados"</li>
+              <li>Escolha o período e toque em "Exportar CSV"</li>
+              <li>Salve o arquivo e importe aqui</li>
+            </ol>
+          </div>
+        </div>
+      </details>
+
     </div>
   </div>
 </div>
