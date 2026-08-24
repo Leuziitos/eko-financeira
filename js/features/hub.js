@@ -15,7 +15,6 @@ import { toast } from '../utils/dom.js';
 import { getDiags } from './diagnosticos.js';
 import { getMetas } from './metas.js';
 import { getDividas } from './dividas.js';
-import { getObjetivos } from './objetivos.js';
 import { getSimulacoes } from './simulacoes.js';
 import { getCFLancamentos, cfChaveMes, renderHubControle } from './controle.js';
 import { atualizarHubReserva } from './reserva.js';
@@ -133,11 +132,10 @@ async function gerarAvisoControle() {
 async function renderJornada(diags){
   const ciclo=diags.find(d=>d.tipo==='ciclo');
   const indep=diags.find(d=>d.tipo==='independencia');
-  let metas=[],dividas=[],sims=[],reserva=null,objetivos=[],lancamentos=[];
+  let metas=[],dividas=[],sims=[],reserva=null,lancamentos=[];
   try{metas=await getMetas();}catch(e){}
   try{dividas=await getDividas();}catch(e){}
   try{sims=await getSimulacoes();}catch(e){}
-  try{objetivos=await getObjetivos();}catch(e){}
   try{
     const snap=await getDoc(doc(db,'reserva',store.sessao.email));
     if(snap.exists()) reserva=snap.data();
@@ -154,9 +152,8 @@ async function renderJornada(diags){
     {num:'3',txt:'Organizar suas dívidas',done:dividas.length>0,acao:"abrirDividas()"},
     {num:'4',txt:'Configurar sua reserva de emergência',done:!!reserva,acao:"abrirReserva()"},
     {num:'5',txt:'Criar primeira meta financeira',done:metas.length>0,acao:"abrirMetas()"},
-    {num:'6',txt:'Definir um objetivo de longo prazo',done:objetivos.length>0,acao:"abrirObjetivos()"},
-    {num:'7',txt:'Fazer simulação de aposentadoria',done:sims.some(s=>s.tipo==='aposentadoria'),acao:"abrirSimulacoes()"},
-    {num:'8',txt:'Registrar primeiro lançamento no Controle',done:lancamentos.length>0,acao:"abrirControleFinanceiro()"},
+    {num:'6',txt:'Fazer simulação de aposentadoria',done:sims.some(s=>s.tipo==='aposentadoria'),acao:"abrirSimulacoes()"},
+    {num:'7',txt:'Registrar primeiro lançamento no Controle',done:lancamentos.length>0,acao:"abrirControleFinanceiro()"},
   ];
   const proximo=itens.find(i=>!i.done);
   if(!proximo){

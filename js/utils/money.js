@@ -35,7 +35,6 @@ export function setupMoneyInputs() {
     'ac-inicial','ac-aporte',
     'meta-valor','dep-valor',
     'divida-parcela','divida-ja-pago','pag-valor','pag-amort-valor',
-    'obj-valor','obj-saldo',
   ];
   ids.forEach(id => {
     const el = document.getElementById(id);
@@ -53,7 +52,6 @@ export function setupMoneyInputs() {
       if (id.startsWith('ap-')) { try { calcularAposentadoria(); } catch(e){} }
       if (id.startsWith('ac-')) { try { calcularAcumulacao(); } catch(e){} }
       if (id === 'divida-parcela' || id === 'divida-ja-pago') { try { calcularTotalDivida(); } catch(e){} }
-      if (id === 'obj-valor' || id === 'obj-saldo') { try { calcularObjetivo(); } catch(e){} }
     };
     el.onfocus = function() { if (!this.value) this.placeholder = 'R$ 0,00'; };
   });

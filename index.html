@@ -473,10 +473,6 @@
       <div id="pront-simulacoes-resumo" class="pront-empty">Nenhuma simulação realizada</div>
     </div>
     <div class="pront-section">
-      <div class="pront-label">🏆 Objetivos Financeiros</div>
-      <div id="pront-objetivos-resumo" class="pront-empty">Nenhum objetivo ainda</div>
-    </div>
-    <div class="pront-section">
       <div class="pront-label">🎬 Aulas PEF</div>
       <div id="pront-aulas-resumo" class="pront-empty">Nenhuma aula concluída ainda</div>
     </div>
@@ -663,25 +659,6 @@
   <button class="btn-fab" onclick="abrirCriarDivida()">+</button>
 </div>
 
-<!-- OBJETIVOS — LISTA -->
-<div id="screen-objetivos" class="screen">
-  <div class="topbar">
-    <button class="back-btn" onclick="ir('screen-hub')">← Voltar</button>
-  </div>
-  <div class="content">
-    <div style="margin-bottom:1rem">
-      <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Módulo</div>
-      <div style="font-size:22px;font-weight:800">🏆 Objetivos Financeiros</div>
-    </div>
-    <div style="background:linear-gradient(135deg,var(--eko-green-light),#E1F5EE88);border-radius:14px;border-left:3px solid var(--eko-green);padding:12px 14px;margin-bottom:1.25rem;font-size:13px;color:#085041;font-weight:500">
-      💡 Este módulo é para planejamento de médio e longo prazo. Para depósitos mensais do dia a dia, use 🎯 Metas Financeiras.
-    </div>
-    <div id="objetivos-balde" style="margin-bottom:1rem"></div>
-    <div id="objetivos-lista"></div>
-  </div>
-  <button class="btn-fab" onclick="abrirCriarObjetivo()">+</button>
-</div>
-
 <!-- ════ FASE 3: SIMULAÇÕES ══════════════════════════════ -->
 <div id="screen-simulacoes" class="screen">
   <div class="topbar">
@@ -837,8 +814,6 @@
     </div>
   </div>
 </div>
-
-<!-- ════ FASE 3: PLANILHA ════════════════════════════════ -->
 
 <!-- ════ RESERVA DE EMERGÊNCIA ═══════════════════════════════ -->
 <div id="screen-reserva" class="screen">
@@ -1027,48 +1002,6 @@
     </div>
     <div id="res-uso-msg" class="msg"></div>
     <button onclick="salvarUsoReserva()" class="btn" style="width:100%;background:var(--red-light);color:var(--red);border:1px solid var(--red);font-weight:700">Registrar uso</button>
-  </div>
-</div>
-
-<div id="screen-planilha" class="screen">
-  <div class="topbar">
-    <button class="back-btn" onclick="ir('screen-hub')">← Voltar</button>
-  </div>
-  <div class="content">
-    <div style="margin-bottom:1.25rem">
-      <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Módulo</div>
-      <div style="font-size:22px;font-weight:800">📊 Planilha Excel: Controle Financeiro</div>
-    </div>
-
-    <div class="planilha-hero">
-      <div style="font-size:48px;margin-bottom:.75rem;position:relative;z-index:1">📊</div>
-      <div style="font-size:18px;font-weight:800;margin-bottom:.5rem;position:relative;z-index:1">Planilha Financeira PEF</div>
-      <div style="font-size:13px;color:rgba(255,255,255,.75);line-height:1.6;position:relative;z-index:1">Ferramenta completa de organização financeira desenvolvida pelo programa PEF. Gratuita e pronta para usar.</div>
-    </div>
-
-    <div class="section-title" style="margin-bottom:8px">🎬 Vídeo tutorial</div>
-    <div class="planilha-video-wrap" onclick="window.open('https://www.youtube.com/watch?v=j20fPAnicMY','_blank')">
-      <div class="planilha-video-thumb">▶️</div>
-      <div>
-        <div style="font-size:14px;font-weight:700;color:var(--text)">Como usar a Planilha PEF</div>
-        <div style="font-size:12px;color:var(--text-muted);margin-top:2px">Aprenda a organizar suas finanças do zero</div>
-        <div style="font-size:11px;color:var(--eko-green);font-weight:700;margin-top:3px">▶ Assistir no YouTube</div>
-      </div>
-    </div>
-
-    <div class="section-title" style="margin-bottom:8px;margin-top:1.25rem">⬇️ Download da planilha</div>
-    <a href="https://drive.google.com/uc?export=download&id=1-9FCbEYlzyQoGoyuQxsBMhEqmsgXhZjC" target="_blank" style="text-decoration:none">
-      <button class="planilha-download-btn">
-        <span style="font-size:20px">⬇️</span>
-        <span>Download direto (Android & PC)</span>
-      </button>
-    </a>
-    <a href="https://docs.google.com/spreadsheets/d/1-9FCbEYlzyQoGoyuQxsBMhEqmsgXhZjC/edit?usp=drive_link" target="_blank" style="text-decoration:none">
-      <button class="planilha-download-btn" style="background:linear-gradient(135deg,#1a73e8,#4285f4);margin-bottom:1.25rem">
-        <span style="font-size:20px">📱</span>
-        <span>Abrir pelo Drive (iPhone)</span>
-      </button>
-    </a>
   </div>
 </div>
 
@@ -1492,26 +1425,6 @@
   </div>
 </div>
 
-<!-- SHEET: Novo Objetivo -->
-<div id="overlay-objetivo" class="overlay hidden">
-  <div class="sheet">
-    <div class="sheet-handle"></div>
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem">
-      <div style="font-size:17px;font-weight:800" id="sheet-obj-title">Novo objetivo</div>
-      <button onclick="fecharOverlay('overlay-objetivo')" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-muted);line-height:1;padding:4px">✕</button>
-    </div>
-    <div id="sheet-obj-msg" class="msg"></div>
-    <div class="field"><label>Descrição</label><input type="text" id="obj-nome" placeholder="Ex: Entrada do apartamento"></div>
-    <div class="field"><label>Valor a acumular (R$)</label><input type="number" id="obj-valor" placeholder="Ex: 50000" oninput="calcularObjetivo()"></div>
-    <div class="field"><label>Saldo inicial (R$)</label><input type="number" id="obj-saldo" placeholder="Ex: 5000" oninput="calcularObjetivo()"></div>
-    <div class="field"><label>Prazo em meses</label><input type="number" id="obj-meses" placeholder="Ex: 36" oninput="calcularObjetivo()"></div>
-    <div class="field"><label>Rentabilidade mensal (%)</label><input type="number" id="obj-rent" value="1.00" step="0.01" oninput="calcularObjetivo()"><div class="field-hint">💡 Pré-preenchido com referência Selic 14,50% a.a. (mai/2026) ≈ 1,00% a.m. Você pode alterar.</div></div>
-    <div id="obj-preview" style="display:none;background:var(--surface2);border-radius:12px;padding:12px 14px;margin-bottom:.875rem"></div>
-    <div class="field"><label>Observação (opcional)</label><input type="text" id="obj-obs" placeholder="Ex: Apartamento no bairro X"></div>
-    <button class="btn btn-primary" onclick="salvarObjetivo()" style="margin-bottom:.75rem">Salvar objetivo</button>
-    <button class="btn" onclick="fecharOverlay('overlay-objetivo')">Cancelar</button>
-  </div>
-</div>
 
 <div id="toast" class="toast"></div>
 

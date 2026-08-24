@@ -4,8 +4,10 @@
  * com ajuste de excedente/déficit, streak, projeção e paginação.
  *
  * saveMeta2 contém o runTransaction que sincroniza saldoAcumulado
- * do objetivo vinculado (origemObjetivoId) — acoplamento por
- * DADOS com objetivos.js, sem import circular.
+ * do objetivo vinculado (origemObjetivoId) na coleção 'objetivos'
+ * do Firestore — legado do módulo Objetivos (removido; ver
+ * refactor "remove módulos Planilha e Objetivos"), mantido só
+ * para não quebrar metas já vinculadas a docs antigos.
  * renderProntuario é chamada via ponte window.* até a Fase 5.
  * Corpo movido verbatim; ordem original das faixas preservada.
  * ═══════════════════════════════════════════════════════════ */

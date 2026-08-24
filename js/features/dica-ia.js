@@ -10,7 +10,6 @@ import { store } from '../core/store.js';
 import { esc } from '../utils/format.js';
 import { getMetas } from './metas.js';
 import { getDividas } from './dividas.js';
-import { getObjetivos } from './objetivos.js';
 
 // ════════════════════════════════════════════════
 // FASE 4 — DICA FINANCEIRA IA (Claude API)
@@ -37,10 +36,9 @@ async function renderDicaIA() {
 
   try {
     // Coleta contexto do usuário
-    let metas = [], dividas = [], objetivos = [];
+    let metas = [], dividas = [];
     try { metas = await getMetas(); } catch(e){}
     try { dividas = await getDividas(); } catch(e){}
-    try { objetivos = await getObjetivos(); } catch(e){}
 
     const renda = store.sessao.renda || 0;
     const totalDividas = dividas.reduce((s,d) => s + (d.parcela*(d.parcelasRestantes||0)), 0);
@@ -54,7 +52,6 @@ async function renderDicaIA() {
       metasConc > 0 ? `${metasConc} meta(s) já concluída(s)` : null,
       dividas.length > 0 ? `${dividas.length} dívida(s) ativa(s), total R$ ${totalDividas.toLocaleString('pt-BR', {maximumFractionDigits:0})}` : null,
       dividasAtraso > 0 ? `${dividasAtraso} dívida(s) em atraso` : null,
-      objetivos.length > 0 ? `${objetivos.length} objetivo(s) de longo prazo` : null,
     ].filter(Boolean).join('; ');
 
     const prompt = `Você é um assistente de educação financeira do app Eko Financeira, desenvolvido por Leonardo Braulino (Projeto PEF).

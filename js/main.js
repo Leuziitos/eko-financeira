@@ -19,14 +19,12 @@ import { applyMoneyMask } from './utils/money.js';
 // Módulos de feature — importados também pelos efeitos
 // (registro dos window.* referenciados nos onclick do HTML)
 import { iniciarOnboarding } from './features/onboarding.js';
-import './features/planilha.js';
 import './features/feedback.js';
 import './features/dica-ia.js';
 import './features/aulas.js';
 import './features/controle.js';
 import './features/metas.js';
 import './features/dividas.js';
-import './features/objetivos.js';
 import './features/simulacoes.js';
 import './features/reserva.js';
 import './features/diagnosticos.js';

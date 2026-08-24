@@ -16,7 +16,6 @@ import { getUser } from './auth.js';
 import { getDiags, DIAGS_CONFIG } from './diagnosticos.js';
 import { getMetas, calcAcumulado, statusMeta } from './metas.js';
 import { getDividas } from './dividas.js';
-import { getObjetivos } from './objetivos.js';
 import { getSimulacoes } from './simulacoes.js';
 import { getAulasConcluidas } from './aulas.js';
 import { gerarAvisos } from './hub.js';
@@ -79,7 +78,6 @@ async function renderProntuario() {
   try {
     const metas = await getMetas();
     const dividas = await getDividas();
-    const objetivos = await getObjetivos();
     const totalAcum = metas.reduce((s,m)=>s+calcAcumulado(m),0);
     const metasAtivas = metas.filter(m=>statusMeta(m)!=='concluida').length;
     const metasConc = metas.filter(m=>statusMeta(m)==='concluida').length;
@@ -102,16 +100,6 @@ async function renderProntuario() {
     document.getElementById('pront-dividas-resumo').innerHTML = dividas.length ?
       `<div class="pront-item-left"><div class="pront-item-icon">💳</div><div><div class="pront-item-title">${dividas.length} dívida(s) ativa(s)</div><div class="pront-item-sub">Total: ${fmt(totalDividas)}</div></div></div><span class="badge badge-red">${dividas.filter(d=>d.emAtraso).length} em atraso</span>` :
       'Nenhuma dívida cadastrada';
-    const totalObjetivos = objetivos.reduce((s,o)=>s+(o.pmt||0),0);
-    const renda = store.sessao.renda||0;
-    const pctRenda = renda>0?Math.round((totalObjetivos/renda)*100):0;
-    document.getElementById('pront-objetivos-resumo').className = objetivos.length ? 'pront-item' : 'pront-empty';
-    document.getElementById('pront-objetivos-resumo').innerHTML = objetivos.length ?
-      `<div class="pront-item-left"><div class="pront-item-icon">🏆</div><div>
-        <div class="pront-item-title">${objetivos.length} objetivo(s)</div>
-        <div class="pront-item-sub">Total mensal: <strong>${fmt(totalObjetivos)}</strong>${renda>0?' · '+pctRenda+'% da renda':''}</div>
-      </div></div><span class="badge ${pctRenda>30?'badge-red':pctRenda>0?'badge-amber':'badge-gray'}">${pctRenda>0?pctRenda+'%':'--'}</span>` :
-      'Nenhum objetivo ainda';
   } catch(e) { console.error('fase2 prontuario', e); }
 
   // Fase 3: simulações no prontuário
