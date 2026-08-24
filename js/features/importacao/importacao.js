@@ -21,6 +21,7 @@ import { parseCSV } from './parser-csv.js';
 import { normalizarDescricao } from './normalizer.js';
 import { verificarDuplicatas } from './deduplicator.js';
 import { categorizarTransacoes } from './categorizer.js';
+import { detectarIntegracoes, aplicarIntegracao } from './integrations.js';
 import { getCFLancamentos, getCFCategorias } from '../controle.js';
 
 const ONBOARDING_KEY = 'eko_importacao_onboarding';
@@ -307,6 +308,8 @@ async function abrirRevisao(transacoes) {
     if (progressoEl) progressoEl.innerHTML = `<span class="spinner"></span> Categorizando ${atual} de ${total} transações...`;
   });
 
+  try { processadas = await detectarIntegracoes(processadas); } catch(e) { console.error('detectarIntegracoes', e); }
+
   try { revisaoCategorias = await getCFCategorias(); } catch(e) { revisaoCategorias = { gasto: [], receita: [] }; }
 
   revisaoTransacoes = processadas;
@@ -352,6 +355,15 @@ function renderListaRevisao() {
       const idx = revisaoTransacoes.indexOf(t);
       const badge = badgeStatusRevisao(t);
       const valorFmt = (t.valor < 0 ? '-' : '+') + fmt(Math.abs(t.valor));
+      const sugestao = t.sugestaoIntegracao;
+      const sugestaoHtml = (sugestao && !sugestao.resolvida) ? `
+        <div style="margin-top:6px;background:var(--amber-light);border-radius:10px;padding:8px 10px">
+          <div style="margin-bottom:6px;color:#7A4010;font-weight:600;font-size:12px">${esc(sugestao.mensagem)}</div>
+          <div style="display:flex;gap:6px">
+            <button onclick="responderSugestaoIntegracao(${idx},true)" class="btn btn-sm btn-primary" style="flex:1;padding:.35rem">Sim</button>
+            <button onclick="responderSugestaoIntegracao(${idx},false)" class="btn btn-sm" style="flex:1;padding:.35rem;background:var(--surface);border:1px solid var(--border)">Não</button>
+          </div>
+        </div>` : (t.vinculoModulo ? `<div style="margin-top:4px;font-size:11px;color:var(--eko-green);font-weight:600">🔗 Vinculado</div>` : '');
       return `<div class="pront-item" style="align-items:flex-start;margin-bottom:6px">
         <div style="display:flex;align-items:flex-start;gap:10px;flex:1;min-width:0">
           <input type="checkbox" ${t.selecionado ? 'checked' : ''} onchange="toggleSelecaoRevisao(${idx},this.checked)" style="margin-top:5px;flex-shrink:0">
@@ -364,6 +376,7 @@ function renderListaRevisao() {
               <select onchange="alterarCategoriaRevisao(${idx},this.value)" class="input" style="font-size:11px;padding:3px 6px;width:auto">${opcoesCategoriaRevisao(t)}</select>
               <span class="badge ${badge.cls}">${badge.label}</span>
             </div>
+            ${sugestaoHtml}
           </div>
         </div>
       </div>`;
@@ -389,6 +402,23 @@ window.toggleSelecaoRevisao = function(idx, checked) {
 
 window.alterarCategoriaRevisao = function(idx, categoriaId) {
   if (revisaoTransacoes[idx]) revisaoTransacoes[idx].categoria = categoriaId;
+};
+
+window.responderSugestaoIntegracao = async function(idx, aceitar) {
+  const t = revisaoTransacoes[idx];
+  if (!t || !t.sugestaoIntegracao) return;
+  if (aceitar) {
+    try {
+      const vinculo = await aplicarIntegracao(t.sugestaoIntegracao, Math.abs(t.valor));
+      if (vinculo) { t.vinculoModulo = vinculo; toast('✅ Vínculo aplicado!'); }
+      else toast('❌ Não consegui aplicar o vínculo. Você pode fazer isso depois pela tela normal.');
+    } catch(e) {
+      console.error('responderSugestaoIntegracao', e);
+      toast('❌ Erro ao aplicar o vínculo.');
+    }
+  }
+  t.sugestaoIntegracao.resolvida = true;
+  renderListaRevisao();
 };
 
 window.toggleSelecionarTodosImportacao = function(checkbox) {

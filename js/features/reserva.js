@@ -585,4 +585,4 @@ async function atualizarHubReserva() {
   } catch(e) {}
 }
 
-export { atualizarHubReserva, getReservaConfig };
+export { atualizarHubReserva, getReservaConfig, calcAporteMedioReserva };

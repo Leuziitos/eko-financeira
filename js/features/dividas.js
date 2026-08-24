@@ -232,4 +232,4 @@ window.abrirDividas=async function(){
   try{await renderDividas();}catch(e){console.error(e);}
 };
 
-export { getDividas };
+export { getDividas, saveDivida2 };
