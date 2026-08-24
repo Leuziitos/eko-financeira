@@ -12,6 +12,8 @@ on:
 
 jobs:
   notify:
+    # Notificações push desabilitadas — serão reativadas em plano pago
+    if: false
     runs-on: ubuntu-latest
     steps:
       - name: Determinar tipo de notificação

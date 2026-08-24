@@ -19,7 +19,6 @@ import { showMsg, limparMsg, toast, btnDoClique, liberarBotao } from '../utils/d
 import { renderHub } from './hub.js';
 import { renderProntuario } from './prontuario.js';
 import { renderDiagnosticos } from './diagnosticos.js';
-import { inicializarPush, inicializarMensagensPush } from './push-optin.js';
 
 let _unsubscribeMetas = null; // guarda unsubscribe do onSnapshot
 
@@ -58,8 +57,6 @@ async function carregarApp() {
       });
     } catch(e){ console.error('onSnapshot metas',e); }
     try { await renderHub(); } catch(e) { console.error('renderHub error:', e); }
-  try { await inicializarPush(); } catch(e) {}
-  try { inicializarMensagensPush(); } catch(e) {}
     try { await renderProntuario(); } catch(e) { console.error('renderProntuario error:', e); }
     try { await renderDiagnosticos(); } catch(e) { console.error('renderDiagnosticos error:', e); }
     ir('screen-hub');

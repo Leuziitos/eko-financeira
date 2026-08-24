@@ -35,7 +35,6 @@ const ASSETS = [
   '/js/features/hub.js',
   '/js/features/prontuario.js',
   '/js/features/auth.js',
-  '/js/features/push-optin.js',
   // JS — PWA
   '/js/pwa/install-banner.js',
   '/js/pwa/sw-register.js',
