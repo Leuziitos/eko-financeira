@@ -9,7 +9,7 @@
  * ═══════════════════════════════════════════════════════════ */
 
 import { db, query, collection, where, getDocs, addDoc } from '../core/firebase.js';
-import { store } from '../core/store.js';
+import { store, cache } from '../core/store.js';
 import { ir } from '../core/router.js';
 import { logEko } from '../core/firebase.js';
 import { esc, diasAte } from '../utils/format.js';
@@ -17,12 +17,14 @@ import { renderProntuario } from './prontuario.js';
 import { renderHub } from './hub.js';
 
 async function getDiags(email) {
+  if (cache.diagnosticos) return cache.diagnosticos;
   try {
     const q = query(collection(db,'diagnosticos'), where('email','==',email));
     const snap = await getDocs(q); const r = [];
     snap.forEach(d => r.push({...d.data(), _id:d.id}));
     r.sort((a,b) => (a.criadoEm||'') > (b.criadoEm||'') ? -1 : 1);
-    return r;
+    cache.diagnosticos = r;
+    return cache.diagnosticos;
   } catch(e) { console.error('getDiags error:', e); return []; }
 }
 async function saveDiag(data) {
@@ -40,6 +42,7 @@ async function saveDiag(data) {
     data.tentativas = 0;
   }
   await addDoc(collection(db,'diagnosticos'), data);
+  cache.invalidar('diagnosticos');
 }
 
 // ── DIAGNÓSTICOS ──────────────────────────────────────────────

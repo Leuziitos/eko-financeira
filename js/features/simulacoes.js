@@ -11,7 +11,7 @@
  * ═══════════════════════════════════════════════════════════ */
 
 import { db, collection, getDocs, addDoc, query, where } from '../core/firebase.js';
-import { store } from '../core/store.js';
+import { store, cache } from '../core/store.js';
 import { ir } from '../core/router.js';
 import { logEko } from '../core/firebase.js';
 import { fmt, fmtK } from '../utils/format.js';
@@ -372,6 +372,7 @@ window.salvarSimulacaoAp = async function() {
   const patrimonioAlvo = rendaMensal * 12 / Math.max(0.01, ra);
   const pmt   = calcPMTparaFV(patrimonioAlvo, patrimonioAtual, r, meses);
   await addDoc(collection(db,'simulacoes'), { tipo:'aposentadoria', email:store.sessao.email, idadeAtual, idadeAposent, rendaMensal, patrimonioAtual, rent, infl, aliqIR, patrimonioAlvo, pmtMensal:pmt, criadoEm:new Date().toISOString() });
+  cache.invalidar('simulacoes');
   logEko('simulacao_salva', { tipo: 'aposentadoria' });
   const card = document.getElementById('ap-salvo-card');
   if(card){ card.style.display=''; setTimeout(()=>card.style.display='none', 4000); }
@@ -402,6 +403,7 @@ window.salvarSimulacaoAc = async function() {
   const juros   = Math.max(0, bruto - investido);
   const liquido = bruto - juros*(aliqIR/100);
   await addDoc(collection(db,'simulacoes'), { tipo:'acumulacao', email:store.sessao.email, inicial, aporte, anos, rent, infl, aliqIR, patrimonioFinal:bruto, totalInvestido:investido, patrimonioLiquido:liquido, criadoEm:new Date().toISOString() });
+  cache.invalidar('simulacoes');
   logEko('simulacao_salva', { tipo: 'acumulacao' });
   const card = document.getElementById('ac-salvo-card');
   if(card){ card.style.display=''; setTimeout(()=>card.style.display='none', 4000); }
@@ -417,11 +419,13 @@ window.salvarSimulacaoAcProntuario = async function() {
 };
 
 async function getSimulacoes() {
+  if (cache.simulacoes) return cache.simulacoes;
   try {
     const q = query(collection(db,'simulacoes'), where('email','==',store.sessao.email));
     const snap = await getDocs(q); const r = [];
     snap.forEach(d => r.push({...d.data(), _id:d.id}));
-    return r.sort((a,b) => (a.criadoEm||'') > (b.criadoEm||'') ? -1 : 1);
+    cache.simulacoes = r.sort((a,b) => (a.criadoEm||'') > (b.criadoEm||'') ? -1 : 1);
+    return cache.simulacoes;
   } catch(e) { return []; }
 }
 

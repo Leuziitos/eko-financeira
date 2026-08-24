@@ -12,14 +12,15 @@
  * Corpo movido verbatim; ordem original das faixas preservada.
  * ═══════════════════════════════════════════════════════════ */
 
-import { db, doc, getDoc, setDoc, deleteDoc, collection, getDocs, addDoc, query, where, runTransaction, logEko } from '../core/firebase.js';
-import { store } from '../core/store.js';
+import { db, doc, setDoc, deleteDoc, collection, getDocs, addDoc, query, where, runTransaction, logEko } from '../core/firebase.js';
+import { store, cache } from '../core/store.js';
 import { ir } from '../core/router.js';
 import { fmt, esc } from '../utils/format.js';
 import { parseMoney } from '../utils/money.js';
 import { showMsg, limparMsg, toast, abrirOverlay, fecharOverlay, btnDoClique, liberarBotao } from '../utils/dom.js';
 import { cfSugerirLancamento } from './controle.js';
 import { renderProntuario } from './prontuario.js';
+import { getReservaConfig } from './reserva.js';
 
 // ── Excluir Meta ─────────────────────────────────────────
 window.excluirMetaAtual = async function() {
@@ -30,6 +31,7 @@ window.excluirMetaAtual = async function() {
     metaAtual.excluida = true;
     await saveMeta2(metaAtual);
   }
+  cache.invalidar('metas');
   toast('🗑️ Meta excluída.');
   await renderMetas();
   await renderProntuario();
@@ -79,12 +81,14 @@ function calcProjecao(meta){
 }
 
 async function getMetas(){
-  try{const q=query(collection(db,'metas'),where('email','==',store.sessao.email));const snap=await getDocs(q);const r=[];snap.forEach(d=>r.push({...d.data(),_id:d.id}));return r.filter(m=>!m.excluida).sort((a,b)=>(a.criadoEm||'')>(b.criadoEm||'')?1:-1);}catch(e){return[];}
+  if(cache.metas) return cache.metas;
+  try{const q=query(collection(db,'metas'),where('email','==',store.sessao.email));const snap=await getDocs(q);const r=[];snap.forEach(d=>r.push({...d.data(),_id:d.id}));cache.metas=r.filter(m=>!m.excluida).sort((a,b)=>(a.criadoEm||'')>(b.criadoEm||'')?1:-1);return cache.metas;}catch(e){return[];}
 }
 async function saveMeta2(meta){
   const{_id,...data}=meta;
   if(_id){await setDoc(doc(db,'metas',_id),data);}
   else{data.email=store.sessao.email;data.criadoEm=new Date().toISOString();const ref=await addDoc(collection(db,'metas'),data);meta._id=ref.id;}
+  cache.invalidar('metas');
   // FASE 4 — sincronizar saldo acumulado com objetivo vinculado via transação (evita race condition)
   if(meta.origemObjetivoId){
     try{
@@ -255,10 +259,10 @@ window.abrirMetas=async function(){
   try{await renderMetas();}catch(e){console.error(e);}
   // Verificar reserva e mostrar aviso se incompleta
   try {
-    const snap = await getDoc(doc(db,'reserva',store.sessao.email));
+    const config = await getReservaConfig();
     const avisoEl = document.getElementById('metas-aviso-reserva');
     if(avisoEl){
-      if(!snap.exists() || (snap.data().saldoAtual < snap.data().meta)){
+      if(!config || (config.saldoAtual < config.meta)){
         avisoEl.style.display='';
       } else {
         avisoEl.style.display='none';

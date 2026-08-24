@@ -10,7 +10,7 @@
  * ═══════════════════════════════════════════════════════════ */
 
 import { db, doc, setDoc, deleteDoc, collection, getDocs, addDoc, query, where } from '../core/firebase.js';
-import { store } from '../core/store.js';
+import { store, cache } from '../core/store.js';
 import { ir } from '../core/router.js';
 import { fmt, esc } from '../utils/format.js';
 import { parseMoney } from '../utils/money.js';
@@ -32,6 +32,7 @@ async function verificarDividaQuitada(div) {
       await saveDivida2(div);
       toast('🎉 Dívida quitada! Mantida no histórico.');
     }
+    cache.invalidar('dividas');
     await renderDividas();
     await renderProntuario();
     // FASE 4 — sugerir criar meta com o valor liberado
@@ -87,8 +88,11 @@ window.calcularTotalDivida=function(){
   }else el.style.display='none';
 };
 
-async function getDividas(){try{const q=query(collection(db,'dividas'),where('email','==',store.sessao.email));const snap=await getDocs(q);const r=[];snap.forEach(d=>r.push({...d.data(),_id:d.id}));return r.filter(d=>!d.excluida).sort((a,b)=>((b.juros||0)-(a.juros||0)));}catch(e){return[];}}
-async function saveDivida2(divida){const{_id,...data}=divida;if(_id){await setDoc(doc(db,'dividas',_id),data);}else{data.email=store.sessao.email;data.criadoEm=new Date().toISOString();const ref=await addDoc(collection(db,'dividas'),data);divida._id=ref.id;}}
+async function getDividas(){
+  if(cache.dividas) return cache.dividas;
+  try{const q=query(collection(db,'dividas'),where('email','==',store.sessao.email));const snap=await getDocs(q);const r=[];snap.forEach(d=>r.push({...d.data(),_id:d.id}));cache.dividas=r.filter(d=>!d.excluida).sort((a,b)=>((b.juros||0)-(a.juros||0)));return cache.dividas;}catch(e){return[];}
+}
+async function saveDivida2(divida){const{_id,...data}=divida;if(_id){await setDoc(doc(db,'dividas',_id),data);}else{data.email=store.sessao.email;data.criadoEm=new Date().toISOString();const ref=await addDoc(collection(db,'dividas'),data);divida._id=ref.id;}cache.invalidar('dividas');}
 
 function statusDivida(divida){
   if(divida.emAtraso)return 'atrasada';
@@ -161,6 +165,7 @@ window.salvarDivida=async function(){
 window.excluirDivida=async function(id){
   if(!confirm('Excluir esta dívida?'))return;
   try{await deleteDoc(doc(db,'dividas',id));}catch(e){const dividas=await getDividas();const div=dividas.find(d=>d._id===id);if(div){div.excluida=true;await saveDivida2(div);}}
+  cache.invalidar('dividas');
   await renderDividas();toast('🗑️ Dívida excluída.');await renderProntuario();
 };
 

@@ -8,7 +8,7 @@
  * ═══════════════════════════════════════════════════════════ */
 
 import { db, doc, getDoc, setDoc, deleteDoc, collection, getDocs, query, where, logEko } from '../core/firebase.js';
-import { store } from '../core/store.js';
+import { store, cache } from '../core/store.js';
 import { ir } from '../core/router.js';
 import { fmt, fmtInput, esc } from '../utils/format.js';
 import { parseMoney } from '../utils/money.js';
@@ -31,12 +31,26 @@ const ONDE_GUARDAR_OPCOES = [
   { id: 'poupanca', label: '🔴 Poupança', desc: 'Menos rentável, mas segura' },
 ];
 
+// Lê o doc 'reserva/<email>' com cache por sessão (cache.reserva, em
+// core/store.js) — elimina o fetch duplicado entre abrirReserva,
+// atualizarHubReserva, renderJornada (hub.js) e renderProntuario.
+// Usa `false` como sentinela interna de "já buscado, sem reserva
+// configurada", diferente de `null` (= "ainda não buscado") — sem isso,
+// usuários sem reserva refariam a query toda vez. Quem chama só testa
+// truthiness/optional-chaining, então `false` e `null` são equivalentes
+// para os consumidores.
+async function getReservaConfig() {
+  if (cache.reserva !== null) return cache.reserva;
+  const snap = await getDoc(doc(db, 'reserva', store.sessao.email));
+  cache.reserva = snap.exists() ? snap.data() : false;
+  return cache.reserva;
+}
+
 window.abrirReserva = async function() {
   ir('screen-reserva');
-  const ref = doc(db, 'reserva', store.sessao.email);
-  const snap = await getDoc(ref);
-  if (snap.exists()) {
-    reservaConfig = snap.data();
+  const config = await getReservaConfig();
+  if (config) {
+    reservaConfig = config;
     mostrarPainelReserva();
   } else {
     reservaConfig = null;
@@ -257,6 +271,7 @@ window.salvarConfigReserva = async function() {
     msg.textContent = 'Salvando...'; msg.className = 'msg';
     await setDoc(doc(db, 'reserva', store.sessao.email), config);
     reservaConfig = config;
+    cache.invalidar('reserva');
   } catch(e) {
     msg.textContent = 'Erro ao salvar. Tente novamente.'; msg.className = 'msg error';
     return;
@@ -399,6 +414,7 @@ window.salvarAporteReserva = async function() {
     });
     reservaConfig.saldoAtual = novoSaldo;
     reservaConfig.historico = novoHistorico;
+    cache.invalidar('reserva');
     fecharOverlay('overlay-reserva-aporte');
   } catch(e) { msg.textContent = 'Erro ao salvar.'; msg.className = 'msg error'; return; }
   toast('Aporte registrado! 💰');
@@ -435,6 +451,7 @@ window.salvarUsoReserva = async function() {
     });
     reservaConfig.saldoAtual = novoSaldo;
     reservaConfig.historico = novoHistorico;
+    cache.invalidar('reserva');
     fecharOverlay('overlay-reserva-uso');
   } catch(e) { msg.textContent = 'Erro ao salvar.'; msg.className = 'msg error'; return; }
   toast('Uso registrado. Lembre-se de reconstruir a reserva! 💪');
@@ -524,6 +541,7 @@ window.excluirReserva = async function() {
   try {
     await deleteDoc(doc(db, 'reserva', store.sessao.email));
     reservaConfig = null;
+    cache.invalidar('reserva');
     mostrarOnboardingReserva();
     reservaStep(1);
     atualizarHubReserva();
@@ -556,9 +574,9 @@ async function atualizarHubReserva() {
   const el = document.getElementById('hub-reserva-sub');
   if (!el) return;
   try {
-    const snap = await getDoc(doc(db, 'reserva', store.sessao.email));
-    if (snap.exists()) {
-      const { saldoAtual, meta } = snap.data();
+    const config = await getReservaConfig();
+    if (config) {
+      const { saldoAtual, meta } = config;
       const pct = Math.min(100, Math.round((saldoAtual / meta) * 100));
       el.textContent = pct >= 100 ? '✅ Reserva completa!' : `${pct}% — ${fmt(saldoAtual)} de ${fmt(meta)}`;
     } else {
@@ -567,4 +585,4 @@ async function atualizarHubReserva() {
   } catch(e) {}
 }
 
-export { atualizarHubReserva };
+export { atualizarHubReserva, getReservaConfig };

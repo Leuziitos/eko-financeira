@@ -16,3 +16,20 @@ export const store = {
   // Escrita: auth (login/logout/onAuthStateChanged). Leitura: todas as features.
   sessao: null,
 };
+
+// Cache em memória, por sessão, das queries mais repetidas no boot
+// (metas/dividas/diagnosticos/reserva/simulacoes eram buscadas várias vezes
+// nos mesmos segundos por hub/prontuário/jornada). Getters em metas.js,
+// dividas.js, diagnosticos.js, reserva.js e simulacoes.js checam aqui antes
+// de consultar o Firestore; funções de save/delete desses módulos chamam
+// invalidar() para forçar um refetch na próxima leitura.
+// Zerado inteiro no logout (auth.js) para não vazar dado de uma sessão
+// para a próxima neste mesmo tab.
+export const cache = {
+  metas: null,
+  dividas: null,
+  diagnosticos: null,
+  reserva: null,
+  simulacoes: null,
+  invalidar(colecao) { this[colecao] = null; },
+};

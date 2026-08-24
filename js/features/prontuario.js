@@ -8,7 +8,6 @@
  * Corpo movido verbatim; ordem original das faixas preservada.
  * ═══════════════════════════════════════════════════════════ */
 
-import { db, doc, getDoc } from '../core/firebase.js';
 import { store } from '../core/store.js';
 import { ir } from '../core/router.js';
 import { fmt, esc, diasAte } from '../utils/format.js';
@@ -17,6 +16,7 @@ import { getDiags, DIAGS_CONFIG } from './diagnosticos.js';
 import { getMetas, calcAcumulado, statusMeta } from './metas.js';
 import { getDividas } from './dividas.js';
 import { getSimulacoes } from './simulacoes.js';
+import { getReservaConfig } from './reserva.js';
 import { getAulasConcluidas } from './aulas.js';
 import { gerarAvisos } from './hub.js';
 
@@ -55,11 +55,10 @@ async function renderProntuario() {
 
   // Reserva de Emergência no prontuário
   try {
-    const snapRes = await getDoc(doc(db, 'reserva', store.sessao.email));
+    const r = await getReservaConfig();
     const elRes = document.getElementById('pront-reserva-resumo');
     if (elRes) {
-      if (snapRes.exists()) {
-        const r = snapRes.data();
+      if (r) {
         const pct = Math.min(100, Math.round(((r.saldoAtual||0) / r.meta) * 100));
         const completa = pct >= 100;
         elRes.className = 'pront-item';

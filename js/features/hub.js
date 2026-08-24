@@ -8,7 +8,7 @@
  * Corpo movido verbatim; ordem original das faixas preservada.
  * ═══════════════════════════════════════════════════════════ */
 
-import { db, doc, getDoc, collection, getDocs, query, where } from '../core/firebase.js';
+import { db, collection, getDocs, query, where } from '../core/firebase.js';
 import { store } from '../core/store.js';
 import { fmt, diasAte } from '../utils/format.js';
 import { toast } from '../utils/dom.js';
@@ -17,7 +17,7 @@ import { getMetas } from './metas.js';
 import { getDividas } from './dividas.js';
 import { getSimulacoes } from './simulacoes.js';
 import { getCFLancamentos, cfChaveMes, renderHubControle } from './controle.js';
-import { atualizarHubReserva } from './reserva.js';
+import { atualizarHubReserva, getReservaConfig } from './reserva.js';
 
 // ── HUB ──────────────────────────────────────────────
 async function renderHub() {
@@ -39,19 +39,12 @@ async function renderHub() {
     }
   } catch(e){}
 
-  // FASE 4 — Resumo mensal
-  try { await renderResumoMensal(); } catch(e){ console.error('resumo mensal',e); }
-
-  // Controle Financeiro — resumo no hub
-  try { await renderHubControle(); } catch(e){}
-
-  // Reserva de Emergência — status no hub
-  try { await atualizarHubReserva(); } catch(e){}
-
-  // FASE 4 — Revisão trimestral
+  // FASE 4 — Revisão trimestral (síncrono, reusa diags já buscado)
   try { renderRevisaoTrimestral(diags); } catch(e){ console.error('revisao',e); }
 
-  // avisos
+  // avisos (síncrono, reusa diags) — precisa rodar antes do Promise.all abaixo,
+  // pois gerarAvisoControle() faz APPEND em #hub-avisos, então essa div já
+  // precisa estar com o innerHTML inicial definido
   const avisos = gerarAvisos(diags);
   const avDiv = document.getElementById('hub-avisos');
   if (avisos.length) {
@@ -59,11 +52,19 @@ async function renderHub() {
       avisos.map(a => `<div class="aviso-item ${a.tipo}"><span>${a.icon}</span><div><div style="font-size:13px;font-weight:600">${a.titulo}</div><div style="font-size:12px;color:var(--text-muted)">${a.desc}</div></div></div>`).join('');
   } else avDiv.innerHTML = '';
 
-  // Alerta controle financeiro
-  try { await gerarAvisoControle(); } catch(e){}
-
-  // jornada
-  await renderJornada(diags);
+  // Seções independentes — cada uma lê coleções diferentes e escreve em
+  // elementos diferentes do DOM, então rodam em paralelo em vez de em série.
+  // .catch() individual preserva o isolamento de falha que cada try/catch
+  // tinha antes (uma seção falhando não derruba as outras); renderJornada
+  // fica sem .catch() de propósito — já não tinha try/catch próprio e sua
+  // rejeição deve propagar para o try/catch de carregarApp(), como antes.
+  await Promise.all([
+    renderResumoMensal().catch(e => console.error('resumo mensal', e)),
+    renderHubControle().catch(e => {}),
+    atualizarHubReserva().catch(e => {}),
+    renderJornada(diags),
+    gerarAvisoControle().catch(e => {}),
+  ]);
 }
 
 function calcScore(diags) {
@@ -132,10 +133,7 @@ async function renderJornada(diags){
   try{metas=await getMetas();}catch(e){}
   try{dividas=await getDividas();}catch(e){}
   try{sims=await getSimulacoes();}catch(e){}
-  try{
-    const snap=await getDoc(doc(db,'reserva',store.sessao.email));
-    if(snap.exists()) reserva=snap.data();
-  }catch(e){}
+  try{ reserva=await getReservaConfig(); }catch(e){}
   try{
     const q=query(collection(db,'controle'),where('email','==',store.sessao.email));
     const snap=await getDocs(q);

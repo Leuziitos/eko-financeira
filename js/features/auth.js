@@ -5,14 +5,15 @@
  * Firestore → cria conta no Auth → remove o hash; bloco movido
  * intacto — NÃO ALTERAR), cadastro, logout, reset de senha,
  * perfil (hook onEnter registrado aqui) e carregarApp (boot
- * pós-autenticação: renderiza hub/prontuário/diagnósticos,
- * inicializa push e o listener em tempo real de metas).
+ * pós-autenticação: renderiza o hub e o listener em tempo real
+ * de metas — prontuário e diagnósticos renderizam sob demanda
+ * via onEnter, não bloqueiam mais o boot).
  * Corpo movido verbatim; ordem original das faixas preservada.
  * ═══════════════════════════════════════════════════════════ */
 
 import { SESS_KEY } from '../config.js';
 import { db, auth, logEko, doc, getDoc, setDoc, collection, query, where, onSnapshot, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, sendPasswordResetEmail } from '../core/firebase.js';
-import { store } from '../core/store.js';
+import { store, cache } from '../core/store.js';
 import { ir, onEnter } from '../core/router.js';
 import { parseMoney, setupMoneyInputs } from '../utils/money.js';
 import { showMsg, limparMsg, toast, btnDoClique, liberarBotao } from '../utils/dom.js';
@@ -31,6 +32,10 @@ async function setUser(email, data) { await setDoc(doc(db,'users',email), data);
 
 // ── AUTH ──────────────────────────────────────────────
 async function carregarApp() {
+  // Zera o cache por sessão (core/store.js) antes de qualquer leitura —
+  // cobre tanto login normal quanto a troca de usuário via onAuthStateChanged
+  // disparado por outra aba (mesmo browser, sessão Firebase compartilhada).
+  Object.keys(cache).forEach(k => { if (k !== 'invalidar') cache.invalidar(k); });
   try {
     const user = await getUser(store.sessao.email);
     if (!user) { localStorage.removeItem(SESS_KEY); ir('screen-login'); return; }
@@ -57,9 +62,10 @@ async function carregarApp() {
       });
     } catch(e){ console.error('onSnapshot metas',e); }
     try { await renderHub(); } catch(e) { console.error('renderHub error:', e); }
-    try { await renderProntuario(); } catch(e) { console.error('renderProntuario error:', e); }
-    try { await renderDiagnosticos(); } catch(e) { console.error('renderDiagnosticos error:', e); }
     ir('screen-hub');
+    // Prontuário e Diagnósticos não bloqueiam mais o boot — renderizam sob
+    // demanda via onEnter (registrado abaixo), só quando o usuário navega
+    // até essas telas.
   } catch(e) {
     console.error('carregarApp error:', e);
     ir('screen-hub');
@@ -161,6 +167,7 @@ window.logout = async function() {
   if (_unsubscribeMetas) { _unsubscribeMetas(); _unsubscribeMetas = null; }
   try { await signOut(auth); } catch(e) {}
   store.sessao = null;
+  Object.keys(cache).forEach(k => { if (k !== 'invalidar') cache.invalidar(k); });
   localStorage.removeItem(SESS_KEY);
   document.getElementById('login-email').value = '';
   document.getElementById('login-senha').value = '';
@@ -214,5 +221,11 @@ async function carregarPerfil() {
 }
 // Carregar perfil quando entrar na tela (hook do router — substitui o antigo monkey-patch de window.ir)
 onEnter('screen-perfil', carregarPerfil);
+// Prontuário e Diagnósticos — mesmo padrão: renderizam ao entrar na tela,
+// não mais no boot (ver carregarApp). Cobre as navegações diretas (botões
+// "← Voltar"/"Ver outros diagnósticos" etc. que chamam ir() sem passar por
+// abrirDiagnosticos()/render explícito).
+onEnter('screen-prontuario', renderProntuario);
+onEnter('screen-diagnosticos', renderDiagnosticos);
 
 export { carregarApp, getUser };
