@@ -140,30 +140,9 @@ window.abrirControleFinanceiro = async function() {
 };
 
 async function renderControleFinanceiro() {
-  cfTipoAtual = 'gasto';
-  cfCatSelecionada = null;
-  cfCatsExpandido = false;
   cfMesVis = new Date().getMonth();
   cfAnoVis = new Date().getFullYear();
-  selecionarDataLancamento('hoje');
-  await renderCategoriasBotoes();
-  // Boas-vindas se não tiver lançamentos ainda + saldo do topo
-  // (reusa os lançamentos já buscados — sem query extra)
-  try {
-    const lancs = await getCFLancamentos();
-    const bv = document.getElementById('cf-boas-vindas');
-    if (bv) bv.style.display = lancs.length === 0 ? 'block' : 'none';
-    const now = new Date();
-    const chaveAtual = cfChaveMes(now.getFullYear(), now.getMonth());
-    const doMesAtual = lancs.filter(l => l.chaveMes === chaveAtual);
-    renderSaldoTopo(
-      doMesAtual.filter(l => l.tipo === 'receita').reduce((s,l) => s + l.valor, 0),
-      doMesAtual.filter(l => l.tipo === 'gasto').reduce((s,l) => s + l.valor, 0)
-    );
-  } catch(e){}
-  // Limpa valor
-  const vEl = document.getElementById('cf-valor');
-  if(vEl) { vEl.value = ''; vEl.oninput = function(){ applyMoneyMask(this); }; }
+  await renderDashboardControle();
 }
 
 window.selecionarTipoLancamento = async function(tipo) {
@@ -301,152 +280,155 @@ window.salvarLancamento = async function() {
   } finally { liberarBotao(btn); }
 };
 
-// ── Saldo do topo (Entradas / Saídas / Saldo do mês visível) ─
-function renderSaldoTopo(totalRec, totalGast) {
-  const e = document.getElementById('cf-topo-entradas');
-  const s = document.getElementById('cf-topo-saidas');
-  const sd = document.getElementById('cf-topo-saldo');
-  if (!e || !s || !sd) return;
-  const saldo = totalRec - totalGast;
-  e.textContent = fmt(totalRec);
-  s.textContent = fmt(totalGast);
-  sd.textContent = fmt(saldo);
-  sd.style.color = saldo >= 0 ? 'var(--eko-green)' : 'var(--red)';
-}
-
-// ── Carteira ─────────────────────────────────────────────────
+// ── Dashboard (resumo do mês, categorias, recentes, importações) ─
 window.navegarMesControle = async function(dir) {
   cfMesVis += dir;
   if (cfMesVis < 0) { cfMesVis = 11; cfAnoVis--; }
   if (cfMesVis > 11) { cfMesVis = 0; cfAnoVis++; }
-  await renderCarteiraControle();
+  await renderDashboardControle();
 };
 
-async function renderCarteiraControle() {
+async function renderDashboardControle() {
   const lancs = await getCFLancamentos();
   const cats  = await getCFCategorias();
   const chave = cfChaveMes(cfAnoVis, cfMesVis);
-
-  // Labels
-  const mesEl = document.getElementById('cf-mes-label');
-  const anoEl = document.getElementById('cf-ano-label');
-  const anoResEl = document.getElementById('cf-ano-resumo');
-  if(mesEl) mesEl.textContent = new Date(cfAnoVis, cfMesVis, 1).toLocaleDateString('pt-BR',{month:'long'}).replace(/^\w/,c=>c.toUpperCase());
-  if(anoEl) anoEl.textContent = cfAnoVis;
-  if(anoResEl) anoResEl.textContent = cfAnoVis;
-
-  // Lançamentos do mês
   const doMes = lancs.filter(l => l.chaveMes === chave);
+
+  const mesEl = document.getElementById('cf-mes-label');
+  if (mesEl) mesEl.textContent = cfNomeMes(cfMesVis, cfAnoVis).replace(/^\w/, c => c.toUpperCase());
+
   const totalRec  = doMes.filter(l=>l.tipo==='receita').reduce((s,l)=>s+l.valor,0);
   const totalGast = doMes.filter(l=>l.tipo==='gasto').reduce((s,l)=>s+l.valor,0);
   const saldo = totalRec - totalGast;
+  const elEnt = document.getElementById('cf-total-entradas');
+  const elSai = document.getElementById('cf-total-saidas');
+  const elSal = document.getElementById('cf-saldo-mes');
+  if (elEnt) elEnt.textContent = fmt(totalRec);
+  if (elSai) elSai.textContent = fmt(totalGast);
+  if (elSal) { elSal.textContent = fmt(saldo); elSal.className = saldo >= 0 ? 'verde' : 'vermelho'; }
 
-  // Saldo do topo acompanha o mês visível (dados já calculados — sem query extra)
-  renderSaldoTopo(totalRec, totalGast);
+  renderCategoriasMes(doMes, cats, totalRec, totalGast);
+  await renderLancamentosRecentes(doMes, cats);
+  renderImportacoesSection();
+}
 
-  // Saldo acumulado total — soma de TODOS os lançamentos do usuário,
-  // independente do mês navegado (usa lancs inteiro, não doMes; sem query extra)
-  const totalRecAcumulado  = lancs.filter(l=>l.tipo==='receita').reduce((s,l)=>s+l.valor,0);
-  const totalGastAcumulado = lancs.filter(l=>l.tipo==='gasto').reduce((s,l)=>s+l.valor,0);
-  const saldoAcumulado = totalRecAcumulado - totalGastAcumulado;
-  const elSaldoAcum = document.getElementById('cf-saldo-acumulado-valor');
-  if (elSaldoAcum) {
-    elSaldoAcum.textContent = fmt(saldoAcumulado);
-    elSaldoAcum.style.color = saldoAcumulado >= 0 ? 'var(--eko-green)' : 'var(--red)';
+function renderCategoriasMes(doMes, cats, totalRec, totalGast) {
+  const el = document.getElementById('cf-categorias-mes');
+  if (!el) return;
+  if (!doMes.length) {
+    el.innerHTML = `<div class="empty-state">📭 Nenhum lançamento em ${cfNomeMes(cfMesVis,cfAnoVis)}</div>`;
+    return;
   }
+  const todasCats = [...(cats.gasto||[]), ...(cats.receita||[])];
+  const porCat = {};
+  doMes.forEach(l => { porCat[l.categoria] = (porCat[l.categoria]||0) + l.valor; });
 
-  // Resumo do mês
-  const resumoEl = document.getElementById('cf-resumo-mes');
-  if(resumoEl) resumoEl.innerHTML = `
-    <div class="stat-card" style="text-align:center;padding:.75rem .5rem">
-      <div class="slabel">Entradas</div>
-      <div style="font-size:13px;font-weight:800;color:var(--eko-green)">${fmt(totalRec)}</div>
-    </div>
-    <div class="stat-card" style="text-align:center;padding:.75rem .5rem">
-      <div class="slabel">Gastos</div>
-      <div style="font-size:13px;font-weight:800;color:var(--red)">${fmt(totalGast)}</div>
-    </div>
-    <div class="stat-card" style="text-align:center;padding:.75rem .5rem">
-      <div class="slabel">Saldo</div>
-      <div style="font-size:13px;font-weight:800;color:${saldo>=0?'var(--eko-green)':'var(--red)'}">${fmt(saldo)}</div>
+  const itens = Object.entries(porCat).sort((a,b)=>b[1]-a[1]).map(([id,val]) => {
+    const cat = todasCats.find(c=>c.id===id);
+    const nome = cat ? cat.nome : id;
+    const isReceita = (cats.receita||[]).some(c=>c.id===id);
+    const base = isReceita ? totalRec : totalGast;
+    const pct = base > 0 ? Math.round((val/base)*100) : 0;
+    return `<div data-catid="${id}" class="cf-cat-item" style="padding:.625rem 0;border-bottom:1px solid var(--border);cursor:pointer">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;pointer-events:none">
+        <div style="font-size:13px;font-weight:600">${esc(nome)}</div>
+        <div style="font-size:13px;font-weight:800;color:${isReceita?'var(--eko-green)':'var(--red)'}">${isReceita?'+':'-'}${fmt(val)} · ${pct}%</div>
+      </div>
+      <div class="prog-bg" style="height:6px;pointer-events:none">
+        <div class="prog-fill" style="width:${pct}%;background:${isReceita?'linear-gradient(90deg,var(--eko-green),#5DCAA5)':'linear-gradient(90deg,var(--red),#D65A5A)'}"></div>
+      </div>
     </div>`;
+  }).join('');
+  el.innerHTML = `<div class="card" id="cf-cat-container" style="padding:1rem 1.125rem">${itens}</div>`;
 
-  // Por categoria
-  const catEl = document.getElementById('cf-categorias-mes');
-  if(catEl) {
-    const todasCats = [...(cats.gasto||[]), ...(cats.receita||[])];
-    const porCat = {};
-    doMes.forEach(l => {
-      porCat[l.categoria] = (porCat[l.categoria]||0) + l.valor;
+  const container = document.getElementById('cf-cat-container');
+  if (container) {
+    container.addEventListener('click', function(e) {
+      const item = e.target.closest('.cf-cat-item');
+      if (item) abrirLancamentosCat(item.dataset.catid);
     });
-    if(Object.keys(porCat).length === 0) {
-      catEl.innerHTML = `<div class="card" style="text-align:center;padding:2rem;color:var(--text-muted)"><div style="font-size:32px;margin-bottom:.5rem">📭</div><div style="font-size:14px">Nenhum lançamento em ${cfNomeMes(cfMesVis,cfAnoVis)}</div></div>`;
-    } else {
-      const itens = Object.entries(porCat).sort((a,b)=>b[1]-a[1]).map(([id,val])=>{
-        const cat = todasCats.find(c=>c.id===id);
-        const nome = cat ? cat.nome : id;
-        const isReceita = (cats.receita||[]).some(c=>c.id===id);
-        return `<div data-catid="${id}" class="cf-cat-item" style="display:flex;align-items:center;justify-content:space-between;padding:.625rem 0;border-bottom:1px solid var(--border);cursor:pointer">
-          <div style="font-size:14px;font-weight:600;pointer-events:none">${esc(nome)}</div>
-          <div style="display:flex;align-items:center;gap:8px;pointer-events:none">
-            <div style="font-size:14px;font-weight:800;color:${isReceita?'var(--eko-green)':'var(--red)'}">${isReceita?'+':'-'}${fmt(val)}</div>
-            <div style="font-size:11px;color:var(--text-muted)">›</div>
-          </div>
-        </div>`;
-      }).join('');
-      catEl.innerHTML = `<div class="card" id="cf-cat-container"><div style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.25rem">Por categoria <span style="font-weight:400;text-transform:none;letter-spacing:0">· toque para ver lançamentos</span></div>${itens}</div>`;
-
-      // Event delegation — um único listener no container
-      const container = document.getElementById('cf-cat-container');
-      if(container) {
-        container.addEventListener('click', function(e) {
-          const item = e.target.closest('.cf-cat-item');
-          if(item) abrirLancamentosCat(item.dataset.catid);
-        });
-      }
-    }
   }
-
-  // Resumo anual
-  renderResumoAnualControle(lancs);
 }
 
-function renderResumoAnualControle(lancs) {
-  const el = document.getElementById('cf-resumo-anual');
-  if(!el) return;
-  const doAno = lancs.filter(l=>l.ano===cfAnoVis);
-  if(!doAno.length) { el.innerHTML='<div style="font-size:13px;color:var(--text-muted)">Nenhum lançamento em '+cfAnoVis+'</div>'; return; }
-  const meses = Array.from({length:12},(_,i)=>i);
-  const linhas = meses.map(m=>{
-    const chave = cfChaveMes(cfAnoVis,m);
-    const doMes = doAno.filter(l=>l.chaveMes===chave);
-    if(!doMes.length) return null;
-    const rec  = doMes.filter(l=>l.tipo==='receita').reduce((s,l)=>s+l.valor,0);
-    const gast = doMes.filter(l=>l.tipo==='gasto').reduce((s,l)=>s+l.valor,0);
-    const saldo = rec-gast;
-    const nomeMes = new Date(cfAnoVis,m,1).toLocaleDateString('pt-BR',{month:'short'}).replace('.','').replace(/^\w/,c=>c.toUpperCase());
-    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:.5rem 0;border-bottom:1px solid var(--border);font-size:12px">
-      <div style="font-weight:700;min-width:28px">${nomeMes}</div>
-      <div style="color:var(--eko-green);text-align:right;flex:1">${fmt(rec)}</div>
-      <div style="color:var(--red);text-align:right;flex:1">${fmt(gast)}</div>
-      <div style="font-weight:800;text-align:right;flex:1;color:${saldo>=0?'var(--eko-green)':'var(--red)'}">${fmt(saldo)}</div>
+async function renderLancamentosRecentes(doMes, cats) {
+  const el = document.getElementById('cf-lancamentos-recentes');
+  if (!el) return;
+  if (!doMes.length) {
+    el.innerHTML = '<div class="empty-state">Nenhum lançamento neste mês ainda</div>';
+    return;
+  }
+  const todasCats = [...(cats.gasto||[]), ...(cats.receita||[])];
+  const recentes = [...doMes].sort((a,b) => new Date(b.data||b.criadoEm) - new Date(a.data||a.criadoEm)).slice(0,5);
+  const itens = recentes.map(l => {
+    const data = new Date(l.data || l.criadoEm).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
+    const isReceita = l.tipo === 'receita';
+    const cat = todasCats.find(c => c.id === l.categoria);
+    return `<div class="cf-recente-item" data-lancid="${l._id}" style="display:flex;align-items:center;justify-content:space-between;padding:.625rem 0;border-bottom:1px solid var(--border);cursor:pointer">
+      <div style="pointer-events:none">
+        <div style="font-size:13px;font-weight:600">${esc(cat ? cat.nome : l.categoria)}</div>
+        <div style="font-size:11px;color:var(--text-muted)">${data}</div>
+      </div>
+      <div style="font-size:13px;font-weight:800;color:${isReceita?'var(--eko-green)':'var(--red)'};pointer-events:none">${isReceita?'+':'-'}${fmt(l.valor)}</div>
     </div>`;
-  }).filter(Boolean);
-  const totalRec  = doAno.filter(l=>l.tipo==='receita').reduce((s,l)=>s+l.valor,0);
-  const totalGast = doAno.filter(l=>l.tipo==='gasto').reduce((s,l)=>s+l.valor,0);
-  const saldoTotal = totalRec-totalGast;
-  el.innerHTML = `
-    <div style="display:flex;justify-content:space-between;font-size:10px;font-weight:700;color:var(--text-muted);padding-bottom:.375rem;border-bottom:1px solid var(--border);margin-bottom:.125rem">
-      <span style="min-width:28px">MÊS</span><span style="color:var(--eko-green);text-align:right;flex:1">ENT.</span><span style="color:var(--red);text-align:right;flex:1">GASTO</span><span style="text-align:right;flex:1">SALDO</span>
-    </div>
-    ${linhas.join('')}
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:.625rem 0;font-size:12px;font-weight:800;margin-top:.25rem;border-top:1px solid var(--border)">
-      <div style="min-width:28px">Total</div>
-      <div style="color:var(--eko-green);text-align:right;flex:1">${fmt(totalRec)}</div>
-      <div style="color:var(--red);text-align:right;flex:1">${fmt(totalGast)}</div>
-      <div style="text-align:right;flex:1;color:${saldoTotal>=0?'var(--eko-green)':'var(--red)'}">${fmt(saldoTotal)}</div>
-    </div>`;
+  }).join('');
+  el.innerHTML = `<div class="card" id="cf-recentes-container" style="padding:1rem 1.125rem">
+    ${itens}
+    <button onclick="abrirTodosLancamentosCF()" class="link-btn" style="margin-top:.75rem;display:block;text-align:center;width:100%">Ver todos →</button>
+  </div>`;
+
+  const container = document.getElementById('cf-recentes-container');
+  if (container) {
+    container.addEventListener('click', function(e) {
+      const item = e.target.closest('.cf-recente-item');
+      if (!item) return;
+      const lanc = recentes.find(l => l._id === item.dataset.lancid);
+      if (lanc) abrirSheetLancamento(lanc);
+    });
+  }
 }
+
+// ── Importações (histórico local — leitura do localStorage) ──
+const CF_IMPORTACOES_KEY = 'eko_importacoes';
+
+function getImportacoesLocal() {
+  try { return JSON.parse(localStorage.getItem(CF_IMPORTACOES_KEY)) || []; } catch(e) { return []; }
+}
+
+window.toggleImportacoes = function() {
+  const lista = document.getElementById('cf-importacoes-lista');
+  const chevron = document.getElementById('cf-importacoes-chevron');
+  if (!lista) return;
+  const aberto = lista.style.display !== 'none';
+  lista.style.display = aberto ? 'none' : 'block';
+  if (chevron) chevron.style.transform = aberto ? 'rotate(0deg)' : 'rotate(180deg)';
+};
+
+function renderImportacoesSection() {
+  const el = document.getElementById('cf-importacoes-lista');
+  if (!el) return;
+  const historico = getImportacoesLocal().slice().sort((a,b) => new Date(b.importado_em) - new Date(a.importado_em));
+  if (!historico.length) {
+    el.innerHTML = '<div style="font-size:12px;color:var(--text-muted);padding:.5rem 0">Nenhuma importação realizada ainda.</div>';
+    return;
+  }
+  el.innerHTML = historico.map(imp => {
+    const data = imp.importado_em ? new Date(imp.importado_em).toLocaleDateString('pt-BR') : '';
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:.625rem 0;border-bottom:1px solid var(--border)">
+      <div>
+        <div style="font-size:13px;font-weight:700">${esc(imp.fonte || 'Extrato')}</div>
+        <div style="font-size:11px;color:var(--text-muted)">${imp.aprovadas ?? 0} lançamento(s) · ${data}</div>
+      </div>
+      <button onclick="desfazerImportacaoCF('${imp.id}')" style="background:none;border:none;color:var(--red);font-size:12px;font-weight:700;cursor:pointer">Desfazer</button>
+    </div>`;
+  }).join('');
+}
+
+// A reversão real depende do módulo de importação, que não está carregado
+// nesta reestruturação (ver js/main.js) — fica pronta para religar quando
+// o módulo for reintegrado.
+window.desfazerImportacaoCF = function(id) {
+  toast('↩️ Desfazer estará disponível quando a importação for reintegrada.');
+};
 
 // ── Gerenciar categorias ──────────────────────────────────────
 window.abrirGerenciarCategorias = async function() {
@@ -514,7 +496,7 @@ window.adicionarCategoria = async function() {
   toast('✅ Categoria adicionada em ' + (tipo==='gasto'?'Gastos':'Entradas') + '!');
 };
 
-// ── Lançamentos por categoria (excluir) ──────────────────────
+// ── Lançamentos: lista por categoria e lista completa do mês ─
 window.abrirLancamentosCat = async function(catId) {
   const lancs = await getCFLancamentos();
   const cats  = await getCFCategorias();
@@ -522,7 +504,8 @@ window.abrirLancamentosCat = async function(catId) {
   const todasCats = [...(cats.gasto||[]), ...(cats.receita||[])];
   const cat = todasCats.find(c=>c.id===catId);
   const isReceita = (cats.receita||[]).some(c=>c.id===catId);
-  const doMesCat = lancs.filter(l=>l.chaveMes===chave && l.categoria===catId);
+  const doMesCat = lancs.filter(l=>l.chaveMes===chave && l.categoria===catId)
+    .sort((a,b) => new Date(b.data||b.criadoEm) - new Date(a.data||a.criadoEm));
   const total = doMesCat.reduce((s,l)=>s+l.valor,0);
 
   const tituloEl = document.getElementById('cf-lanc-titulo');
@@ -530,46 +513,68 @@ window.abrirLancamentosCat = async function(catId) {
   if(tituloEl) tituloEl.textContent = cat ? cat.nome : catId;
   if(subEl) subEl.textContent = `Total: ${isReceita?'+':'-'}${fmt(total)} · ${cfNomeMes(cfMesVis,cfAnoVis)}`;
 
-  renderLancamentosCat(doMesCat, isReceita);
+  renderListaLancamentos(doMesCat, todasCats);
   abrirOverlay('overlay-cf-lancamentos');
 };
 
-// Handler estável do container de lançamentos por categoria — guardado aqui
-// para poder ser removido antes de cada re-render, evitando acumular um
-// listener a cada abertura do overlay (o elemento é reaproveitado, só o
-// innerHTML muda).
-let _lancCatClickHandler = null;
+window.abrirTodosLancamentosCF = async function() {
+  const lancs = await getCFLancamentos();
+  const cats  = await getCFCategorias();
+  const chave = cfChaveMes(cfAnoVis, cfMesVis);
+  const todasCats = [...(cats.gasto||[]), ...(cats.receita||[])];
+  const doMes = lancs.filter(l=>l.chaveMes===chave)
+    .sort((a,b) => new Date(b.data||b.criadoEm) - new Date(a.data||a.criadoEm));
 
-function renderLancamentosCat(lancs, isReceita) {
+  const tituloEl = document.getElementById('cf-lanc-titulo');
+  const subEl    = document.getElementById('cf-lanc-subtitulo');
+  if(tituloEl) tituloEl.textContent = 'Todos os lançamentos';
+  if(subEl) subEl.textContent = cfNomeMes(cfMesVis,cfAnoVis).replace(/^\w/,c=>c.toUpperCase());
+
+  renderListaLancamentos(doMes, todasCats);
+  abrirOverlay('overlay-cf-lancamentos');
+};
+
+// Handler estável do container de lançamentos — guardado aqui para poder
+// ser removido antes de cada re-render, evitando acumular um listener a
+// cada abertura do overlay (o elemento é reaproveitado, só o innerHTML muda).
+let _lancListaClickHandler = null;
+
+function renderListaLancamentos(lancs, todasCats) {
   const el = document.getElementById('cf-lanc-lista');
   if(!el) return;
   if(!lancs.length) {
-    el.innerHTML = '<div style="text-align:center;padding:1.5rem;color:var(--text-muted);font-size:14px">Nenhum lançamento nesta categoria.</div>';
+    el.innerHTML = '<div style="text-align:center;padding:1.5rem;color:var(--text-muted);font-size:14px">Nenhum lançamento.</div>';
     return;
   }
-  el.innerHTML = lancs.map((l,i) => {
-    const data = new Date(l.criadoEm).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
-    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:.75rem 0;border-bottom:1px solid var(--border)">
-      <div>
+  el.innerHTML = lancs.map(l => {
+    const data = new Date(l.data||l.criadoEm).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
+    const isReceita = l.tipo === 'receita';
+    const cat = todasCats.find(c=>c.id===l.categoria);
+    return `<div class="cf-lanc-item" data-lancid="${l._id}" style="display:flex;align-items:center;justify-content:space-between;padding:.75rem 0;border-bottom:1px solid var(--border);cursor:pointer">
+      <div style="pointer-events:none">
         <div style="font-size:14px;font-weight:700;color:${isReceita?'var(--eko-green)':'var(--red)'}">${isReceita?'+':'-'}${fmt(l.valor)}</div>
-        <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${data}</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${esc(cat ? cat.nome : l.categoria)} · ${data}</div>
       </div>
-      <button data-lancid="${l._id}"
+      <button data-del="${l._id}"
         style="background:var(--red-light);border:none;color:var(--red);border-radius:8px;padding:.4rem .75rem;font-size:13px;cursor:pointer;font-weight:700">
-        🗑️ Excluir
+        🗑️
       </button>
     </div>`;
   }).join('');
 
   // Event delegation no container da lista — remove o listener da renderização
   // anterior antes de anexar um novo, para não acumular handlers
-  if (_lancCatClickHandler) el.removeEventListener('click', _lancCatClickHandler);
-  _lancCatClickHandler = async function(e) {
-    const btn = e.target.closest('button[data-lancid]');
-    if(!btn) return;
-    await excluirLancamentoCF(btn.dataset.lancid);
+  if (_lancListaClickHandler) el.removeEventListener('click', _lancListaClickHandler);
+  _lancListaClickHandler = async function(e) {
+    const delBtn = e.target.closest('button[data-del]');
+    if (delBtn) { await excluirLancamentoCF(delBtn.dataset.del); return; }
+    const item = e.target.closest('.cf-lanc-item');
+    if (item) {
+      const lanc = lancs.find(l => l._id === item.dataset.lancid);
+      if (lanc) { fecharOverlay('overlay-cf-lancamentos'); abrirSheetLancamento(lanc); }
+    }
   };
-  el.addEventListener('click', _lancCatClickHandler);
+  el.addEventListener('click', _lancListaClickHandler);
 }
 
 window.excluirLancamentoCF = async function(id) {
@@ -588,7 +593,7 @@ window.excluirLancamentoCF = async function(id) {
   cache.invalidar('controle');
   toast('🗑️ Lançamento excluído!');
   fecharOverlay('overlay-cf-lancamentos');
-  await renderCarteiraControle();
+  await renderDashboardControle();
   await renderHubControle();
 };
 async function renderHubControle() {
@@ -600,9 +605,6 @@ async function renderHubControle() {
     const totalRec  = doMes.filter(l=>l.tipo==='receita').reduce((s,l)=>s+l.valor,0);
     const totalGast = doMes.filter(l=>l.tipo==='gasto').reduce((s,l)=>s+l.valor,0);
     const saldo = totalRec-totalGast;
-    // Mantém o saldo do topo em sincronia após saves — só quando o mês
-    // visível é o atual, para não sobrescrever a navegação do Histórico
-    if (cfMesVis === now.getMonth() && cfAnoVis === now.getFullYear()) renderSaldoTopo(totalRec, totalGast);
     const sub = document.getElementById('hub-controle-sub');
     if(!sub) return;
     if(!doMes.length) {
