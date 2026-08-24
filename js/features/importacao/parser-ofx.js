@@ -94,13 +94,37 @@ export function extrairOrgOFX(texto) {
   return m ? m[1].trim() : '';
 }
 
-// Decodifica o ArrayBuffer do arquivo: tenta UTF-8 (modo estrito — lança
-// erro em sequência de bytes inválida) e, se falhar, cai para ISO-8859-1
-// (Latin-1), encoding comum em extratos OFX de bancos brasileiros mais
-// antigos. Uso: o fluxo de seleção de arquivo (importacao.js) lê o File
-// como ArrayBuffer, chama esta função para obter a string, e só então
-// passa o resultado para parseOFX(texto).
+// O cabeçalho OFX (linhas OFXHEADER/DATA/ENCODING/CHARSET antes do <OFX>) é
+// sempre ASCII puro — decodificar um trecho inicial como latin1 (mapeamento
+// 1:1 byte↔código, nunca lança erro, seguro só pra ler ASCII) é suficiente
+// pra ler o CHARSET declarado sem precisar adivinhar o encoding do arquivo
+// inteiro primeiro.
+function lerCharsetDeclarado(arrayBuffer) {
+  const tamanho = Math.min(arrayBuffer.byteLength, 512);
+  const cabecalho = new TextDecoder('iso-8859-1').decode(arrayBuffer.slice(0, tamanho));
+  const m = cabecalho.match(/CHARSET\s*:\s*(\S+)/i);
+  return m ? m[1].trim() : '';
+}
+
+// Decodifica o ArrayBuffer do arquivo. Primeiro lê o CHARSET declarado no
+// cabeçalho OFX: se for 1252 (Windows-1252 — comum em extratos de bancos
+// brasileiros, incluindo o Nubank), decodifica direto como windows-1252, em
+// vez de depender de heurística. Sem CHARSET:1252 declarado, cai pro
+// comportamento herdado: tenta UTF-8 (modo estrito — lança erro em
+// sequência de bytes inválida) e, se falhar, usa ISO-8859-1 — que pelo
+// WHATWG Encoding Standard já é tratado como alias de Windows-1252 pelo
+// TextDecoder (não é o ISO-8859-1 "puro"), então cobre o mesmo caso na
+// prática, só que só entra em ação quando o UTF-8 estrito falha.
+// Uso: o fluxo de seleção de arquivo (importacao.js) lê o File como
+// ArrayBuffer, chama esta função para obter a string, e só então passa o
+// resultado para parseOFX(texto).
 export function decodificarArquivoOFX(arrayBuffer) {
+  const charset = lerCharsetDeclarado(arrayBuffer);
+  if (charset === '1252') {
+    try { return new TextDecoder('windows-1252').decode(arrayBuffer); }
+    catch(e) { /* encoding não suportado — segue pro fallback abaixo */ }
+  }
+
   try {
     return new TextDecoder('utf-8', { fatal: true }).decode(arrayBuffer);
   } catch (e) {
