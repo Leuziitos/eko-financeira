@@ -15,10 +15,14 @@
 
 import { ir } from '../../core/router.js';
 import { fmt, esc } from '../../utils/format.js';
-import { toast } from '../../utils/dom.js';
+import { toast, abrirOverlay, fecharOverlay } from '../../utils/dom.js';
+import { parseOFX, decodificarArquivoOFX, extrairOrgOFX } from './parser-ofx.js';
+import { parseCSV } from './parser-csv.js';
 
 const ONBOARDING_KEY = 'eko_importacao_onboarding';
 const HISTORICO_KEY = 'eko_importacoes';
+const FONTES_KEY = 'eko_importacao_fontes';
+const LIMITE_TRANSACOES_AVISO = 500;
 
 // ── ONBOARDING / NAVEGAÇÃO ───────────────────────────────────
 window.abrirImportacao = function() {
@@ -120,4 +124,152 @@ window.navegarMesImportacao = function(dir) {
   if (importacaoMesVis < 0) { importacaoMesVis = 11; importacaoAnoVis--; }
   if (importacaoMesVis > 11) { importacaoMesVis = 0; importacaoAnoVis++; }
   renderDashboardImportacao();
+};
+
+// ── RECONHECIMENTO E NOMEAÇÃO DE FONTE ────────────────────────
+// Formato de cada entrada de 'eko_importacao_fontes' (localStorage, array
+// JSON): { nome, assinatura, tipo: 'ofx'|'csv' }. 'assinatura' é o
+// cabeçalho normalizado do CSV (ex.: "date,category,title,amount") ou,
+// para OFX (que não tem cabeçalho de colunas próprio), "ofx" + a tag <ORG>
+// quando presente no arquivo — ver extrairOrgOFX() em parser-ofx.js.
+// Limitação conhecida desta Parte 1: um OFX sem <ORG> cai sempre na mesma
+// assinatura genérica "ofx", então só é possível memorizar uma fonte OFX
+// "sem nome de banco identificável" por vez.
+function getFontesSalvas() {
+  try { return JSON.parse(localStorage.getItem(FONTES_KEY)) || []; } catch(e) { return []; }
+}
+
+function normalizarAssinatura(cabecalho) {
+  return (cabecalho || '').trim().toLowerCase();
+}
+
+// Compara a assinatura do arquivo (cabecalho) com as fontes já salvas.
+// 'colunas' fica reservado para uma comparação mais refinada (coluna a
+// coluna) numa parte futura — nesta Parte 1 a assinatura já normalizada
+// (cabecalho) é suficiente para o match.
+function detectarFonte(cabecalho, colunas) {
+  const assinatura = normalizarAssinatura(cabecalho);
+  const match = getFontesSalvas().find(f => f.assinatura === assinatura);
+  return match ? match.nome : null;
+}
+
+function salvarFonte(cabecalho, nome, tipoArquivo) {
+  const fontes = getFontesSalvas();
+  const assinatura = normalizarAssinatura(cabecalho);
+  const existente = fontes.find(f => f.assinatura === assinatura);
+  if (existente) existente.nome = nome;
+  else fontes.push({ nome, assinatura, tipo: tipoArquivo });
+  localStorage.setItem(FONTES_KEY, JSON.stringify(fontes));
+}
+
+// ── FLUXO DE SELEÇÃO DE ARQUIVO ───────────────────────────────
+// Estado da importação em andamento, enquanto o usuário passa pelas fases
+// do overlay de confirmação (fonte conhecida/nova, depois período).
+let importacaoEstado = null;
+
+window.handleArquivoImportacao = async function(input) {
+  const arquivo = input.files && input.files[0];
+  input.value = ''; // permite selecionar o mesmo arquivo de novo depois
+  if (!arquivo) return;
+
+  const ehOFX = /\.ofx$/i.test(arquivo.name || '');
+  const ehCSV = /\.csv$/i.test(arquivo.name || '');
+  if (!ehOFX && !ehCSV) { toast('❌ Formato não suportado. Envie um arquivo .ofx ou .csv.'); return; }
+
+  let buffer;
+  try { buffer = await arquivo.arrayBuffer(); }
+  catch(e) { toast('❌ Não consegui ler o arquivo.'); return; }
+
+  const texto = decodificarArquivoOFX(buffer); // mesma detecção de encoding serve p/ CSV
+
+  let transacoes, cabecalho, tipoArquivo;
+  if (ehOFX) {
+    if (!/<OFX>/i.test(texto)) { toast('❌ Arquivo não parece ser um OFX válido.'); return; }
+    transacoes = parseOFX(texto);
+    tipoArquivo = 'ofx';
+    const org = extrairOrgOFX(texto);
+    cabecalho = 'ofx' + (org ? ':' + org : '');
+  } else {
+    transacoes = parseCSV(texto);
+    tipoArquivo = 'csv';
+    cabecalho = (texto.split(/\r\n|\r|\n/)[0] || '');
+  }
+
+  if (!transacoes.length) { toast('❌ Não consegui reconhecer nenhuma transação nesse arquivo.'); return; }
+
+  if (transacoes.length > LIMITE_TRANSACOES_AVISO) {
+    const continuar = confirm(`Seu extrato tem ${transacoes.length} transações. Para melhor performance, importe períodos menores (ex: por mês).\n\nContinuar mesmo assim?`);
+    if (!continuar) return;
+  }
+
+  importacaoEstado = { transacoes, cabecalho, tipoArquivo, fonteNome: null, periodoInicio: null, periodoFim: null };
+
+  const fonteConhecida = detectarFonte(cabecalho);
+  if (fonteConhecida) abrirConfirmacaoFonteConhecida(fonteConhecida);
+  else abrirConfirmacaoFonteNova();
+};
+
+function mostrarFaseConfirmacao(fase) {
+  ['fonte-conhecida', 'fonte-nova', 'periodo'].forEach(f => {
+    const el = document.getElementById('imp-conf-fase-' + f);
+    if (el) el.style.display = f === fase ? '' : 'none';
+  });
+}
+
+function abrirConfirmacaoFonteConhecida(nome) {
+  importacaoEstado.fonteNome = nome;
+  document.getElementById('imp-conf-fonte-conhecida-nome').textContent = nome;
+  mostrarFaseConfirmacao('fonte-conhecida');
+  abrirOverlay('overlay-importacao-confirmacao');
+}
+
+function abrirConfirmacaoFonteNova() {
+  document.getElementById('imp-conf-fonte-nome-input').value = '';
+  mostrarFaseConfirmacao('fonte-nova');
+  abrirOverlay('overlay-importacao-confirmacao');
+}
+
+window.confirmarFonteConhecidaSim = function() {
+  avancarParaConfirmacaoPeriodo();
+};
+
+window.confirmarFonteConhecidaNao = function() {
+  document.getElementById('imp-conf-fonte-nome-input').value = '';
+  mostrarFaseConfirmacao('fonte-nova');
+};
+
+window.confirmarFonteNova = function() {
+  const nome = document.getElementById('imp-conf-fonte-nome-input').value.trim();
+  if (!nome) { toast('Digite um nome para essa fonte.'); return; }
+  importacaoEstado.fonteNome = nome;
+  salvarFonte(importacaoEstado.cabecalho, nome, importacaoEstado.tipoArquivo);
+  avancarParaConfirmacaoPeriodo();
+};
+
+function fmtDataBR(iso) {
+  if (!iso) return '';
+  return new Date(iso + 'T12:00:00').toLocaleDateString('pt-BR');
+}
+
+function avancarParaConfirmacaoPeriodo() {
+  const datas = importacaoEstado.transacoes.map(t => t.data).sort();
+  importacaoEstado.periodoInicio = datas[0];
+  importacaoEstado.periodoFim = datas[datas.length - 1];
+  document.getElementById('imp-conf-periodo-texto').textContent =
+    `Encontrei ${importacaoEstado.transacoes.length} transações de ${fmtDataBR(importacaoEstado.periodoInicio)} a ${fmtDataBR(importacaoEstado.periodoFim)}. Importar?`;
+  mostrarFaseConfirmacao('periodo');
+}
+
+// A gravação de fato (deduplicação, categorização e criação dos
+// lançamentos no Controle Financeiro) é a Parte 2 deste módulo — ver
+// deduplicator.js, categorizer.js e integrations.js.
+window.confirmarImportarPeriodo = function() {
+  fecharOverlay('overlay-importacao-confirmacao');
+  toast('🚧 A importação de fato (deduplicação, categorização e gravação) chega na Parte 2 deste módulo.');
+  importacaoEstado = null;
+};
+
+window.cancelarImportacao = function() {
+  fecharOverlay('overlay-importacao-confirmacao');
+  importacaoEstado = null;
 };

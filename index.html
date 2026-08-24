@@ -1199,7 +1199,7 @@
       <button onclick="document.getElementById('importacao-file').click()" class="btn btn-primary" style="width:100%;margin-bottom:1.25rem">📥 Importar novo extrato</button>
 
       <!-- Input file oculto -->
-      <input type="file" id="importacao-file" accept=".ofx,.csv" style="display:none">
+      <input type="file" id="importacao-file" accept=".ofx,.csv" onchange="handleArquivoImportacao(this)" style="display:none">
 
       <!-- Histórico de importações -->
       <div id="importacao-historico" style="margin-bottom:1.25rem"></div>
@@ -1229,6 +1229,37 @@
         <div id="importacao-categorias"></div>
       </div>
 
+    </div>
+  </div>
+</div>
+
+<!-- OVERLAY: Confirmação de importação (fonte e período) -->
+<div id="overlay-importacao-confirmacao" class="overlay hidden">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+      <div style="font-size:17px;font-weight:800">📥 Confirmar importação</div>
+      <button onclick="cancelarImportacao()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-muted);line-height:1;padding:4px">✕</button>
+    </div>
+
+    <!-- Fase: fonte conhecida -->
+    <div id="imp-conf-fase-fonte-conhecida">
+      <div style="font-size:14px;color:var(--text);line-height:1.6;margin-bottom:1.25rem">Este arquivo parece ser do <strong id="imp-conf-fonte-conhecida-nome"></strong>. Correto?</div>
+      <button onclick="confirmarFonteConhecidaSim()" class="btn btn-primary" style="width:100%;margin-bottom:.5rem">Sim</button>
+      <button onclick="confirmarFonteConhecidaNao()" class="btn" style="width:100%">Não, é outro</button>
+    </div>
+
+    <!-- Fase: fonte nova -->
+    <div id="imp-conf-fase-fonte-nova" style="display:none">
+      <div class="field"><label>Como quer chamar essa fonte?</label><input type="text" id="imp-conf-fonte-nome-input" placeholder="Ex: Nubank Crédito"></div>
+      <button onclick="confirmarFonteNova()" class="btn btn-primary" style="width:100%">Confirmar</button>
+    </div>
+
+    <!-- Fase: período -->
+    <div id="imp-conf-fase-periodo" style="display:none">
+      <div style="font-size:14px;color:var(--text);line-height:1.6;margin-bottom:1.25rem" id="imp-conf-periodo-texto"></div>
+      <button onclick="confirmarImportarPeriodo()" class="btn btn-primary" style="width:100%;margin-bottom:.5rem">Importar</button>
+      <button onclick="cancelarImportacao()" class="btn" style="width:100%">Cancelar</button>
     </div>
   </div>
 </div>

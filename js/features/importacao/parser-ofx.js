@@ -85,6 +85,15 @@ export function parseOFX(texto) {
   return transacoes;
 }
 
+// Extrai a tag <ORG> (identificador da instituição financeira, campo padrão
+// do cabeçalho OFX/SONRS) quando presente — usado por detectarFonte() em
+// importacao.js para diferenciar bancos em arquivos OFX, que ao contrário
+// do CSV não têm cabeçalho de colunas próprio.
+export function extrairOrgOFX(texto) {
+  const m = texto.match(/<ORG>\s*([^<\r\n]*)/i);
+  return m ? m[1].trim() : '';
+}
+
 // Decodifica o ArrayBuffer do arquivo: tenta UTF-8 (modo estrito — lança
 // erro em sequência de bytes inválida) e, se falhar, cai para ISO-8859-1
 // (Latin-1), encoding comum em extratos OFX de bancos brasileiros mais
