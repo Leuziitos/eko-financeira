@@ -7,7 +7,7 @@
  * ═══════════════════════════════════════════════════════════ */
 
 import { db, doc, getDoc, setDoc, deleteDoc, collection, getDocs, addDoc, query, where, logEko } from '../core/firebase.js';
-import { store } from '../core/store.js';
+import { store, cache } from '../core/store.js';
 import { ir } from '../core/router.js';
 import { fmt, esc } from '../utils/format.js';
 import { parseMoney, applyMoneyMask } from '../utils/money.js';
@@ -82,12 +82,14 @@ async function saveCFCategorias(cats) {
 }
 
 async function getCFLancamentos() {
+  if (cache.controle) return cache.controle;
   try {
     const q = query(collection(db,'controle'), where('email','==',store.sessao.email));
     const snap = await getDocs(q);
     const r = [];
     snap.forEach(d => r.push({...d.data(), _id:d.id}));
-    return r.filter(l => !l.excluido);
+    cache.controle = r.filter(l => !l.excluido);
+    return cache.controle;
   } catch(e) { return []; }
 }
 
@@ -102,6 +104,7 @@ async function saveCFLancamento(lanc) {
       const ref = await addDoc(collection(db,'controle'), data);
       lanc._id = ref.id;
     }
+    cache.invalidar('controle');
   } catch(e) {
     console.error('saveCFLancamento:', e);
     throw e; // repropaga para o chamador mostrar erro ao usuário
@@ -785,6 +788,7 @@ window.excluirLancamentoCF = async function(id) {
       return;
     }
   }
+  cache.invalidar('controle');
   toast('🗑️ Lançamento excluído!');
   fecharOverlay('overlay-cf-lancamentos');
   await renderCarteiraControle();
