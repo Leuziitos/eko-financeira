@@ -4,3 +4,10 @@
  * onboarding, aviso de privacidade, histórico de importações e
  * dashboard. Usa os mesmos design tokens de base.css.
  * ═══════════════════════════════════════════════════════════ */
+
+/* Aviso de privacidade — card do onboarding */
+.importacao-privacidade-box{background:var(--eko-green-light);border:1.5px solid var(--eko-green);border-radius:12px;padding:1rem;color:var(--eko-green-dark)}
+[data-theme="dark"] .importacao-privacidade-box{background:linear-gradient(135deg,#0A2A20,#0D3325);border-color:var(--eko-green-dark);color:var(--eko-green)}
+
+/* Aviso de privacidade — tarja fixa no topo do conteúdo principal */
+.importacao-privacidade-tarja{display:flex;align-items:center;gap:8px;background:var(--surface2);border-radius:10px;padding:.625rem .875rem;margin-bottom:1.25rem;font-size:12px;color:var(--text-muted);font-weight:500}

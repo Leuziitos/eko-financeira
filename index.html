@@ -20,6 +20,7 @@
 <link rel="stylesheet" href="/assets/css/base.css">
 <link rel="stylesheet" href="/assets/css/components.css">
 <link rel="stylesheet" href="/assets/css/features.css">
+<link rel="stylesheet" href="/assets/css/importacao.css">
 </head>
 <body>
 <button class="theme-toggle" onclick="toggleTheme()" id="theme-btn">🌙</button>
@@ -1145,6 +1146,78 @@
       <button onclick="fecharOverlay('overlay-cf-lancamentos')" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-muted);line-height:1;padding:4px">✕</button>
     </div>
     <div id="cf-lanc-lista"></div>
+  </div>
+</div>
+
+<!-- ════ IMPORTAÇÃO DE EXTRATO ═══════════════════════════════ -->
+<div id="screen-importacao" class="screen">
+  <div class="topbar">
+    <button class="back-btn" onclick="ir('screen-hub')">← Voltar</button>
+  </div>
+  <div class="content">
+    <div style="margin-bottom:1.25rem">
+      <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Módulo</div>
+      <div style="font-size:22px;font-weight:800">📥 Importação de Extrato</div>
+      <div style="font-size:13px;color:var(--text-muted);margin-top:4px">Importe seus extratos bancários e mantenha seu controle atualizado</div>
+    </div>
+
+    <!-- Onboarding (visível só na primeira vez) -->
+    <div id="importacao-onboarding">
+      <div class="card" style="text-align:center;padding:1.5rem">
+        <div style="font-size:48px;margin-bottom:1rem">📥</div>
+        <div style="font-size:18px;font-weight:800;margin-bottom:.75rem">Importe seu extrato</div>
+        <div style="font-size:14px;color:var(--text-muted);line-height:1.7;margin-bottom:1.25rem">Importe seus extratos bancários e mantenha seu controle atualizado.</div>
+        <div class="importacao-privacidade-box" style="text-align:left">
+          <div style="font-size:13px;font-weight:700;line-height:1.6">🔒 Seus arquivos bancários são processados apenas no seu dispositivo. Nenhum dado bancário é enviado para nossos servidores.</div>
+        </div>
+        <button onclick="concluirOnboarding()" class="btn btn-primary" style="width:100%;margin-top:1.25rem">Entendi, quero importar →</button>
+      </div>
+    </div>
+
+    <!-- Conteúdo principal (oculto até onboarding ser concluído) -->
+    <div id="importacao-conteudo" style="display:none">
+
+      <!-- Ícone fixo de privacidade -->
+      <div class="importacao-privacidade-tarja">
+        <span style="font-size:16px">🔒</span>
+        <span>Processamento local — seus dados bancários nunca saem do seu dispositivo</span>
+      </div>
+
+      <!-- Botão principal -->
+      <button onclick="document.getElementById('importacao-file').click()" class="btn btn-primary" style="width:100%;margin-bottom:1.25rem">📥 Importar novo extrato</button>
+
+      <!-- Input file oculto -->
+      <input type="file" id="importacao-file" accept=".ofx,.csv" style="display:none">
+
+      <!-- Histórico de importações -->
+      <div id="importacao-historico" style="margin-bottom:1.25rem"></div>
+
+      <!-- Dashboard -->
+      <div id="importacao-dashboard">
+        <div class="section-title" style="margin-bottom:8px">📊 Visão do mês</div>
+        <!-- Navegação mensal -->
+        <div class="card" style="padding:1rem;margin-bottom:.75rem">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.875rem">
+            <button onclick="navegarMesImportacao(-1)" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--eko-green);padding:4px 8px">‹</button>
+            <div style="text-align:center">
+              <div id="importacao-mes-label" style="font-size:16px;font-weight:800"></div>
+              <div id="importacao-ano-label" style="font-size:12px;color:var(--text-muted)"></div>
+            </div>
+            <button onclick="navegarMesImportacao(1)" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--eko-green);padding:4px 8px">›</button>
+          </div>
+          <!-- 3 números -->
+          <div style="display:grid;grid-template-columns:1fr 1fr 1.2fr;gap:8px;align-items:center">
+            <div style="text-align:center"><div class="slabel">Entradas</div><div id="importacao-entradas" style="font-size:14px;font-weight:800;color:var(--eko-green)">—</div></div>
+            <div style="text-align:center"><div class="slabel">Saídas</div><div id="importacao-saidas" style="font-size:14px;font-weight:800;color:var(--red)">—</div></div>
+            <div style="text-align:center"><div class="slabel">Saldo</div><div id="importacao-saldo" style="font-size:20px;font-weight:800">—</div></div>
+          </div>
+        </div>
+
+        <!-- Breakdown por categoria -->
+        <div id="importacao-categorias"></div>
+      </div>
+
+    </div>
   </div>
 </div>
 
