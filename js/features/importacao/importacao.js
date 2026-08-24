@@ -93,39 +93,97 @@ function renderHistoricoImportacoes() {
   el.innerHTML = `<div class="section-title" style="margin-bottom:8px">📥 Importações realizadas</div>${itens}`;
 }
 
-// ── DASHBOARD (esqueleto — cálculo real vem na Parte 2) ──────
+// ── DASHBOARD ──────────────────────────────────────────────────
 let importacaoMesVis = new Date().getMonth();
 let importacaoAnoVis = new Date().getFullYear();
+const CATS_VISIVEIS_DASHBOARD = 5;
 
 function inicializarDashboardImportacao() {
   importacaoMesVis = new Date().getMonth();
   importacaoAnoVis = new Date().getFullYear();
-  renderDashboardImportacao();
+  renderDashboard(importacaoMesVis, importacaoAnoVis);
 }
 
-function renderDashboardImportacao() {
+// Lê os lançamentos do Controle Financeiro que vieram de importação
+// (campo importacaoId) no mês/ano dado, calcula entradas/saídas/saldo e o
+// breakdown por categoria com percentual. getCFLancamentos() já usa
+// cache.controle — navegar entre meses (◄ ►) não dispara query nova, só
+// refiltra o array já carregado.
+async function renderDashboard(mes, ano) {
   const mesEl = document.getElementById('importacao-mes-label');
   const anoEl = document.getElementById('importacao-ano-label');
-  if (mesEl) mesEl.textContent = new Date(importacaoAnoVis, importacaoMesVis, 1).toLocaleDateString('pt-BR', {month:'long'}).replace(/^\w/, c => c.toUpperCase());
-  if (anoEl) anoEl.textContent = importacaoAnoVis;
+  if (mesEl) mesEl.textContent = new Date(ano, mes, 1).toLocaleDateString('pt-BR', { month: 'long' }).replace(/^\w/, c => c.toUpperCase());
+  if (anoEl) anoEl.textContent = ano;
+
+  let lancamentos = [];
+  try { lancamentos = await getCFLancamentos(); } catch(e) {}
+
+  const chave = cfChaveMes(ano, mes);
+  const doMes = lancamentos.filter(l => l.chaveMes === chave && l.importacaoId);
+
+  const entradas = doMes.filter(l => l.tipo === 'receita').reduce((s, l) => s + (l.valor || 0), 0);
+  const saidas = doMes.filter(l => l.tipo === 'gasto').reduce((s, l) => s + (l.valor || 0), 0);
+  const saldo = entradas - saidas;
 
   const entradasEl = document.getElementById('importacao-entradas');
   const saidasEl = document.getElementById('importacao-saidas');
   const saldoEl = document.getElementById('importacao-saldo');
-  if (entradasEl) entradasEl.textContent = fmt(0);
-  if (saidasEl) saidasEl.textContent = fmt(0);
-  if (saldoEl) { saldoEl.textContent = fmt(0); saldoEl.style.color = 'var(--eko-green)'; }
+  if (entradasEl) entradasEl.textContent = fmt(entradas);
+  if (saidasEl) saidasEl.textContent = fmt(saidas);
+  if (saldoEl) { saldoEl.textContent = fmt(saldo); saldoEl.style.color = saldo >= 0 ? 'var(--eko-green)' : 'var(--red)'; }
 
-  // Breakdown por categoria — vazio até a Parte 2 (cálculo real das transações importadas)
   const catsEl = document.getElementById('importacao-categorias');
-  if (catsEl) catsEl.innerHTML = '';
+  if (!catsEl) return;
+
+  const porCategoria = {};
+  doMes.filter(l => l.tipo === 'gasto').forEach(l => { porCategoria[l.categoria] = (porCategoria[l.categoria] || 0) + l.valor; });
+  const totalGastos = Object.values(porCategoria).reduce((s, v) => s + v, 0);
+
+  if (!totalGastos) { catsEl.innerHTML = ''; return; }
+
+  let categorias = { gasto: [], receita: [] };
+  try { categorias = await getCFCategorias(); } catch(e) {}
+  const todasCats = [...(categorias.gasto || []), ...(categorias.receita || [])];
+
+  const ordenado = Object.entries(porCategoria).sort((a, b) => b[1] - a[1]);
+  const linhaCategoria = ([id, val]) => {
+    const cat = todasCats.find(c => c.id === id);
+    const nome = cat ? cat.nome : id;
+    const pct = Math.round((val / totalGastos) * 100);
+    const blocos = Math.min(5, Math.round(pct / 20));
+    const barra = '█'.repeat(blocos) + '░'.repeat(5 - blocos);
+    return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;font-size:12px">
+      <div style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(nome)}</div>
+      <div style="font-weight:700;white-space:nowrap">${fmt(val)}</div>
+      <div style="font-family:monospace;letter-spacing:1px;color:var(--eko-green);white-space:nowrap">${barra}</div>
+      <div style="width:34px;text-align:right;color:var(--text-muted)">${pct}%</div>
+    </div>`;
+  };
+
+  const visiveis = ordenado.slice(0, CATS_VISIVEIS_DASHBOARD);
+  const resto = ordenado.slice(CATS_VISIVEIS_DASHBOARD);
+
+  let html = `<div class="section-title" style="margin:1rem 0 8px">Por categoria</div>` + visiveis.map(linhaCategoria).join('');
+  if (resto.length) {
+    html += `<button onclick="expandirCategoriasImportacao()" id="importacao-ver-todas-btn" class="btn btn-sm" style="width:100%;margin-top:6px;background:var(--surface);border:1px solid var(--border)">+ Ver todas (${resto.length})</button>
+      <div id="importacao-categorias-resto" style="display:none">${resto.map(linhaCategoria).join('')}</div>`;
+  }
+  catsEl.innerHTML = html;
 }
+window.renderDashboard = renderDashboard;
+
+window.expandirCategoriasImportacao = function() {
+  const resto = document.getElementById('importacao-categorias-resto');
+  const btn = document.getElementById('importacao-ver-todas-btn');
+  if (resto) resto.style.display = '';
+  if (btn) btn.style.display = 'none';
+};
 
 window.navegarMesImportacao = function(dir) {
   importacaoMesVis += dir;
   if (importacaoMesVis < 0) { importacaoMesVis = 11; importacaoAnoVis--; }
   if (importacaoMesVis > 11) { importacaoMesVis = 0; importacaoAnoVis++; }
-  renderDashboardImportacao();
+  renderDashboard(importacaoMesVis, importacaoAnoVis);
 };
 
 // ── RECONHECIMENTO E NOMEAÇÃO DE FONTE ────────────────────────
@@ -465,7 +523,7 @@ window.confirmarRevisaoImportacao = async function() {
     revisaoTransacoes = [];
     importacaoEstado = null;
     renderHistoricoImportacoes();
-    renderDashboardImportacao();
+    renderDashboard(importacaoMesVis, importacaoAnoVis);
   } catch(e) {
     console.error('confirmarRevisaoImportacao', e);
     if (msgEl) { msgEl.className = 'msg error'; msgEl.textContent = 'Erro ao salvar. Tente novamente.'; }
@@ -538,7 +596,7 @@ window.confirmarDesfazerImportacao = async function(importacaoId) {
     const removidos = await desfazerImportacao(importacaoId);
     toast(`🗑️ Importação desfeita. ${removidos} lançamento(s) removido(s).`);
     renderHistoricoImportacoes();
-    renderDashboardImportacao();
+    renderDashboard(importacaoMesVis, importacaoAnoVis);
   } catch(e) {
     console.error('confirmarDesfazerImportacao', e);
     toast('❌ Erro ao desfazer a importação.');
