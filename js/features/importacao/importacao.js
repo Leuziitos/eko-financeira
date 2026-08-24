@@ -26,7 +26,7 @@ import { normalizarDescricao } from './normalizer.js';
 import { verificarDuplicatas, gerarHash } from './deduplicator.js';
 import { categorizarTransacoes, salvarCatAprendida } from './categorizer.js';
 import { detectarIntegracoes, aplicarIntegracao, reverterIntegracao } from './integrations.js';
-import { getCFLancamentos, getCFCategorias, cfChaveMes } from '../controle.js';
+import { getCFLancamentos, getCFCategorias, saveCFCategorias, cfChaveMes } from '../controle.js';
 
 const ONBOARDING_KEY = 'eko_importacao_onboarding';
 const HISTORICO_KEY = 'eko_importacoes';
@@ -337,6 +337,13 @@ let revisaoTransacoes = [];
 let revisaoFiltro = 'todos';
 let revisaoCategorias = { gasto: [], receita: [] };
 
+// Mini-form inline de "+ Nova categoria" — só uma transação por vez tem o
+// form aberto (idx na lista completa, não na filtrada).
+const CATEGORIA_NOVA_SENTINELA = '__nova__';
+const EMOJIS_CATEGORIA_NOVA = ['🏠', '🍔', '🚗', '💊', '📚', '🎮', '🛍️', '✈️', '💡', '🏦'];
+let novaCategoriaAbertaIdx = null;
+let novaCategoriaEmojiSelecionado = EMOJIS_CATEGORIA_NOVA[0];
+
 // Normaliza descrições, verifica duplicatas contra o Controle Financeiro
 // (sem query extra — getCFLancamentos() já usa cache.controle) e categoriza
 // em camadas (cache aprendido → extrato → IA, com barra de progresso),
@@ -395,7 +402,29 @@ function badgeStatusRevisao(t) {
 
 function opcoesCategoriaRevisao(t) {
   const lista = t.tipo === 'receita' ? (revisaoCategorias.receita || []) : (revisaoCategorias.gasto || []);
-  return lista.map(c => `<option value="${c.id}" ${c.id === t.categoria ? 'selected' : ''}>${esc(c.nome)}</option>`).join('');
+  const opcoes = lista.map(c => `<option value="${c.id}" ${c.id === t.categoria ? 'selected' : ''}>${esc(c.nome)}</option>`).join('');
+  return opcoes + `<option value="${CATEGORIA_NOVA_SENTINELA}">+ Nova categoria</option>`;
+}
+
+// Mini-form inline de criação de categoria, renderizado só na linha cuja
+// idx bate com novaCategoriaAbertaIdx.
+function novaCategoriaFormHtml(idx) {
+  const emojisHtml = EMOJIS_CATEGORIA_NOVA.map(e => {
+    const selecionado = e === novaCategoriaEmojiSelecionado;
+    const estilo = selecionado
+      ? 'font-size:16px;padding:4px 7px;border-radius:8px;border:2px solid var(--eko-green);background:var(--eko-green-light);cursor:pointer'
+      : 'font-size:16px;padding:4px 7px;border-radius:8px;border:2px solid var(--border);background:var(--surface);cursor:pointer';
+    return `<button type="button" onclick="selecionarEmojiNovaCategoria(this,'${e}')" style="${estilo}">${e}</button>`;
+  }).join('');
+  return `<div style="margin-top:6px;background:var(--surface2);border-radius:10px;padding:8px 10px">
+    <div class="field" style="margin-bottom:.5rem"><label style="font-size:11px">Nome da categoria</label><input type="text" id="importacao-nova-cat-nome" placeholder="Ex: Pet" style="font-size:12px;padding:.4rem .6rem"></div>
+    <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:.5rem">${emojisHtml}</div>
+    <div id="importacao-nova-cat-msg" class="msg"></div>
+    <div style="display:flex;gap:6px">
+      <button onclick="confirmarNovaCategoriaRevisao(${idx})" class="btn btn-sm btn-primary" style="flex:1;padding:.4rem">Criar</button>
+      <button onclick="cancelarNovaCategoriaRevisao()" class="btn btn-sm" style="flex:1;padding:.4rem;background:var(--surface);border:1px solid var(--border)">Cancelar</button>
+    </div>
+  </div>`;
 }
 
 function renderListaRevisao() {
@@ -431,6 +460,7 @@ function renderListaRevisao() {
               <select onchange="alterarCategoriaRevisao(${idx},this.value)" class="input" style="font-size:11px;padding:3px 6px;width:auto">${opcoesCategoriaRevisao(t)}</select>
               <span class="badge ${badge.cls}">${badge.label}</span>
             </div>
+            ${novaCategoriaAbertaIdx === idx ? novaCategoriaFormHtml(idx) : ''}
             ${sugestaoHtml}
           </div>
         </div>
@@ -456,7 +486,67 @@ window.toggleSelecaoRevisao = function(idx, checked) {
 };
 
 window.alterarCategoriaRevisao = function(idx, categoriaId) {
+  if (categoriaId === CATEGORIA_NOVA_SENTINELA) {
+    novaCategoriaAbertaIdx = idx;
+    novaCategoriaEmojiSelecionado = EMOJIS_CATEGORIA_NOVA[0];
+    renderListaRevisao(); // o <select> volta a mostrar a categoria anterior; o mini-form abre abaixo dele
+    return;
+  }
   if (revisaoTransacoes[idx]) revisaoTransacoes[idx].categoria = categoriaId;
+};
+
+window.selecionarEmojiNovaCategoria = function(btn, emoji) {
+  novaCategoriaEmojiSelecionado = emoji;
+  btn.parentElement.querySelectorAll('button').forEach(b => {
+    b.style.border = '2px solid var(--border)'; b.style.background = 'var(--surface)';
+  });
+  btn.style.border = '2px solid var(--eko-green)'; btn.style.background = 'var(--eko-green-light)';
+};
+
+window.cancelarNovaCategoriaRevisao = function() {
+  novaCategoriaAbertaIdx = null;
+  renderListaRevisao();
+};
+
+// Salva a categoria permanentemente (mesmo saveCFCategorias() do fluxo
+// "Gerenciar categorias" do Controle Financeiro), seleciona ela na
+// transação que abriu o form e fecha o mini-form. getCFCategorias() não
+// tem camada de cache própria hoje (só lê o doc do usuário direto) —
+// não há nada de 'cache de categorias' pra invalidar; revisaoCategorias
+// (o objeto local já carregado nesta revisão) é atualizado na hora, então
+// as outras transações já veem a categoria nova no dropdown delas também.
+window.confirmarNovaCategoriaRevisao = async function(idx) {
+  const nomeInput = document.getElementById('importacao-nova-cat-nome');
+  const msgEl = document.getElementById('importacao-nova-cat-msg');
+  const nome = (nomeInput?.value || '').trim();
+  if (!nome) { if (msgEl) { msgEl.className = 'msg error'; msgEl.textContent = 'Digite um nome para a categoria.'; } return; }
+
+  const t = revisaoTransacoes[idx];
+  if (!t) return;
+  const tipoLista = t.tipo === 'receita' ? 'receita' : 'gasto';
+  revisaoCategorias[tipoLista] = revisaoCategorias[tipoLista] || [];
+
+  const duplicada = revisaoCategorias[tipoLista].some(c => {
+    const nomeSemEmoji = c.nome.replace(/^\S+\s*/, '').trim();
+    return nomeSemEmoji.toLowerCase() === nome.toLowerCase();
+  });
+  if (duplicada) { if (msgEl) { msgEl.className = 'msg error'; msgEl.textContent = 'Já existe uma categoria com esse nome.'; } return; }
+
+  const id = 'custom-' + Date.now();
+  revisaoCategorias[tipoLista].push({ id, nome: `${novaCategoriaEmojiSelecionado} ${nome}`, visivel: true, padrao: false });
+
+  try {
+    await saveCFCategorias(revisaoCategorias);
+  } catch(e) {
+    console.error('confirmarNovaCategoriaRevisao', e);
+    if (msgEl) { msgEl.className = 'msg error'; msgEl.textContent = 'Erro ao salvar categoria.'; }
+    return;
+  }
+
+  t.categoria = id;
+  novaCategoriaAbertaIdx = null;
+  toast('✅ Categoria criada!');
+  renderListaRevisao();
 };
 
 window.responderSugestaoIntegracao = async function(idx, aceitar) {

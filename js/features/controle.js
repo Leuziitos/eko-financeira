@@ -832,4 +832,4 @@ async function cfSugerirLancamento(tipo, valor, categoriaId, categoriaNome) {
   await renderHubControle();
 }
 
-export { getCFLancamentos, getCFCategorias, cfChaveMes, renderHubControle, cfSugerirLancamento };
+export { getCFLancamentos, getCFCategorias, saveCFCategorias, cfChaveMes, renderHubControle, cfSugerirLancamento };
