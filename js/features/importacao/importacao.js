@@ -7,22 +7,26 @@
  * Processamento 100% local — nenhum dado bancário é enviado ao
  * servidor ou ao Firestore.
  *
- * Formato de cada entrada de 'eko_importacoes' (localStorage,
- * array JSON) — escrito pelos grupos seguintes deste módulo:
- *   { fonte, periodoInicio (YYYY-MM-DD), periodoFim (YYYY-MM-DD),
- *     aprovadas (nº de transações), data (ISO — quando foi importado) }
+ * Formato de cada entrada de 'eko_importacoes' (localStorage, array JSON),
+ * gravado por confirmarImportacao():
+ *   { id (uuid, == importacaoId dos lançamentos), fonte,
+ *     periodo_inicio (YYYY-MM-DD), periodo_fim (YYYY-MM-DD),
+ *     total_transacoes (achadas no arquivo), aprovadas (selecionadas pelo
+ *     usuário e gravadas), importado_em (ISO) }
  * ═══════════════════════════════════════════════════════════ */
 
+import { db, doc, collection, query, where, getDocs, writeBatch } from '../../core/firebase.js';
+import { store, cache } from '../../core/store.js';
 import { ir } from '../../core/router.js';
 import { fmt, esc } from '../../utils/format.js';
 import { toast, abrirOverlay, fecharOverlay } from '../../utils/dom.js';
 import { parseOFX, decodificarArquivoOFX, extrairOrgOFX } from './parser-ofx.js';
 import { parseCSV } from './parser-csv.js';
 import { normalizarDescricao } from './normalizer.js';
-import { verificarDuplicatas } from './deduplicator.js';
-import { categorizarTransacoes } from './categorizer.js';
-import { detectarIntegracoes, aplicarIntegracao } from './integrations.js';
-import { getCFLancamentos, getCFCategorias } from '../controle.js';
+import { verificarDuplicatas, gerarHash } from './deduplicator.js';
+import { categorizarTransacoes, salvarCatAprendida } from './categorizer.js';
+import { detectarIntegracoes, aplicarIntegracao, reverterIntegracao } from './integrations.js';
+import { getCFLancamentos, getCFCategorias, cfChaveMes } from '../controle.js';
 
 const ONBOARDING_KEY = 'eko_importacao_onboarding';
 const HISTORICO_KEY = 'eko_importacoes';
@@ -70,10 +74,10 @@ function renderHistoricoImportacoes() {
     return;
   }
 
-  const itens = historico.map((imp, i) => {
-    const dataFmt = imp.data ? new Date(imp.data).toLocaleDateString('pt-BR') : '';
-    const inicioFmt = imp.periodoInicio ? new Date(imp.periodoInicio + 'T12:00:00').toLocaleDateString('pt-BR') : '';
-    const fimFmt = imp.periodoFim ? new Date(imp.periodoFim + 'T12:00:00').toLocaleDateString('pt-BR') : '';
+  const itens = historico.map((imp) => {
+    const dataFmt = imp.importado_em ? new Date(imp.importado_em).toLocaleDateString('pt-BR') : '';
+    const inicioFmt = imp.periodo_inicio ? new Date(imp.periodo_inicio + 'T12:00:00').toLocaleDateString('pt-BR') : '';
+    const fimFmt = imp.periodo_fim ? new Date(imp.periodo_fim + 'T12:00:00').toLocaleDateString('pt-BR') : '';
     return `<div class="pront-item" style="margin-bottom:6px">
       <div class="pront-item-left">
         <div class="pront-item-icon">📥</div>
@@ -82,19 +86,12 @@ function renderHistoricoImportacoes() {
           <div class="pront-item-sub">${inicioFmt} a ${fimFmt} · ${imp.aprovadas || 0} transações · ${dataFmt}</div>
         </div>
       </div>
-      <button onclick="desfazerImportacaoPlaceholder()" class="btn btn-sm" style="background:var(--surface);border:1px solid var(--border);color:var(--text-muted)">Desfazer</button>
+      <button onclick="confirmarDesfazerImportacao('${imp.id}')" class="btn btn-sm" style="background:var(--surface);border:1px solid var(--border);color:var(--text-muted)">Desfazer</button>
     </div>`;
   }).join('');
 
   el.innerHTML = `<div class="section-title" style="margin-bottom:8px">📥 Importações realizadas</div>${itens}`;
 }
-
-// Desfazer uma importação exige reverter os lançamentos criados no Controle
-// Financeiro — fora do escopo desta Parte 1 (ver integrations.js). Por ora
-// só avisa o usuário.
-window.desfazerImportacaoPlaceholder = function() {
-  toast('🚧 Desfazer chega na próxima parte deste módulo.');
-};
 
 // ── DASHBOARD (esqueleto — cálculo real vem na Parte 2) ──────
 let importacaoMesVis = new Date().getMonth();
@@ -448,14 +445,33 @@ window.filtrarRevisaoImportacao = function(filtro) {
   renderListaRevisao();
 };
 
-// A gravação de fato (writeBatch no Controle Financeiro, histórico e
-// aprendizado de categorias) é o próximo grupo desta Parte 2 — ver
-// integrations.js e confirmarImportacao() em importacao.js.
-window.confirmarRevisaoImportacao = function() {
-  fecharOverlay('overlay-importacao-revisao');
-  toast('🚧 A gravação de fato chega no próximo grupo deste módulo.');
-  revisaoTransacoes = [];
-  importacaoEstado = null;
+window.confirmarRevisaoImportacao = async function() {
+  const selecionadas = revisaoTransacoes.filter(t => t.selecionado);
+  if (!selecionadas.length) { toast('Selecione ao menos uma transação.'); return; }
+
+  const msgEl = document.getElementById('importacao-revisao-msg');
+  const btnEl = document.getElementById('importacao-btn-confirmar');
+  if (msgEl) { msgEl.className = 'msg'; msgEl.textContent = 'Salvando...'; }
+  if (btnEl) btnEl.disabled = true;
+
+  try {
+    await confirmarImportacao(selecionadas, importacaoEstado?.fonteNome || 'Desconhecida', {
+      inicio: importacaoEstado?.periodoInicio,
+      fim: importacaoEstado?.periodoFim,
+      total: importacaoEstado?.transacoes?.length || selecionadas.length,
+    });
+    fecharOverlay('overlay-importacao-revisao');
+    toast(`✅ ${selecionadas.length} transação(ões) importada(s)!`);
+    revisaoTransacoes = [];
+    importacaoEstado = null;
+    renderHistoricoImportacoes();
+    renderDashboardImportacao();
+  } catch(e) {
+    console.error('confirmarRevisaoImportacao', e);
+    if (msgEl) { msgEl.className = 'msg error'; msgEl.textContent = 'Erro ao salvar. Tente novamente.'; }
+  } finally {
+    if (btnEl) btnEl.disabled = false;
+  }
 };
 
 window.cancelarRevisaoImportacao = function() {
@@ -463,3 +479,95 @@ window.cancelarRevisaoImportacao = function() {
   revisaoTransacoes = [];
   importacaoEstado = null;
 };
+
+// ── GRAVAÇÃO ────────────────────────────────────────────────────
+// Grava atomicamente (writeBatch) todos os lançamentos aprovados no
+// Controle Financeiro, salva a entrada no histórico local e atualiza o
+// aprendizado de categorias — só para as transações que o usuário de fato
+// confirmou (nunca aprende com algo que ele possa ter rejeitado).
+async function confirmarImportacao(transacoesSelecionadas, fonte, periodo) {
+  const importacaoId = crypto.randomUUID();
+  const batch = writeBatch(db);
+
+  transacoesSelecionadas.forEach(t => {
+    const dataObj = new Date(t.data + 'T12:00:00');
+    const lancamento = {
+      tipo: t.tipo,
+      valor: Math.abs(t.valor),
+      categoria: t.categoria,
+      mes: dataObj.getMonth(),
+      ano: dataObj.getFullYear(),
+      chaveMes: cfChaveMes(dataObj.getFullYear(), dataObj.getMonth()),
+      data: dataObj.toISOString(),
+      email: store.sessao.email,
+      criadoEm: new Date().toISOString(),
+      importacaoId,
+      hash: t.hash || gerarHash(t),
+    };
+    if (t.vinculoModulo) lancamento.vinculoModulo = t.vinculoModulo;
+    batch.set(doc(collection(db, 'controle')), lancamento);
+  });
+
+  await batch.commit();
+
+  const historico = getHistoricoImportacoes();
+  historico.unshift({
+    id: importacaoId,
+    fonte,
+    periodo_inicio: periodo?.inicio || null,
+    periodo_fim: periodo?.fim || null,
+    total_transacoes: periodo?.total ?? transacoesSelecionadas.length,
+    aprovadas: transacoesSelecionadas.length,
+    importado_em: new Date().toISOString(),
+  });
+  localStorage.setItem(HISTORICO_KEY, JSON.stringify(historico));
+
+  transacoesSelecionadas.forEach(t => {
+    if (t.categoria) salvarCatAprendida(t.descricaoNormalizada, t.categoria);
+  });
+
+  cache.invalidar('controle');
+
+  return importacaoId;
+}
+
+// ── REVERSÃO ────────────────────────────────────────────────────
+window.confirmarDesfazerImportacao = async function(importacaoId) {
+  if (!confirm('Desfazer esta importação? Isso remove todos os lançamentos criados por ela do Controle Financeiro (e reverte pagamentos de dívida/meta/reserva vinculados, se houver).')) return;
+  try {
+    const removidos = await desfazerImportacao(importacaoId);
+    toast(`🗑️ Importação desfeita. ${removidos} lançamento(s) removido(s).`);
+    renderHistoricoImportacoes();
+    renderDashboardImportacao();
+  } catch(e) {
+    console.error('confirmarDesfazerImportacao', e);
+    toast('❌ Erro ao desfazer a importação.');
+  }
+};
+
+// Busca todos os lançamentos com esse importacaoId, desfaz os vínculos com
+// Dívidas/Metas/Reserva de cada um (campo vinculoModulo) e remove tudo em
+// lote — depois tira a entrada correspondente do histórico local.
+async function desfazerImportacao(importacaoId) {
+  const q = query(collection(db, 'controle'), where('email', '==', store.sessao.email), where('importacaoId', '==', importacaoId));
+  const snap = await getDocs(q);
+  const lancamentos = [];
+  snap.forEach(d => lancamentos.push({ ...d.data(), _id: d.id }));
+
+  for (const l of lancamentos) {
+    if (l.vinculoModulo) {
+      try { await reverterIntegracao(l.vinculoModulo); } catch(e) { console.error('reverterIntegracao', e); }
+    }
+  }
+
+  const batch = writeBatch(db);
+  lancamentos.forEach(l => batch.delete(doc(db, 'controle', l._id)));
+  await batch.commit();
+
+  const historico = getHistoricoImportacoes().filter(h => h.id !== importacaoId);
+  localStorage.setItem(HISTORICO_KEY, JSON.stringify(historico));
+
+  cache.invalidar('controle');
+
+  return lancamentos.length;
+}
