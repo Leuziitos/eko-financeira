@@ -2,7 +2,7 @@
  * Eko Financeira — features/controle.js
  * Controle Financeiro: lançamentos (coleção 'controle'),
  * carteira mensal/anual, categorias customizáveis (persistidas
- * no doc do usuário) e Recuperação Rápida (lote retroativo).
+ * no doc do usuário).
  * Corpo movido verbatim do monólito.
  * ═══════════════════════════════════════════════════════════ */
 
@@ -134,7 +134,6 @@ async function renderControleFinanceiro() {
   cfMesVis = new Date().getMonth();
   cfAnoVis = new Date().getFullYear();
   selecionarDataLancamento('hoje');
-  await mostrarTabControle('registrar');
   await renderCategoriasBotoes();
   // Boas-vindas se não tiver lançamentos ainda + saldo do topo
   // (reusa os lançamentos já buscados — sem query extra)
@@ -154,21 +153,6 @@ async function renderControleFinanceiro() {
   const vEl = document.getElementById('cf-valor');
   if(vEl) { vEl.value = ''; vEl.oninput = function(){ applyMoneyMask(this); }; }
 }
-
-window.mostrarTabControle = async function(tab) {
-  document.getElementById('controle-tab-registrar').style.display = tab==='registrar' ? 'block' : 'none';
-  document.getElementById('controle-tab-carteira').style.display  = tab==='carteira'  ? 'block' : 'none';
-  const btnR = document.getElementById('tab-registrar');
-  const btnC = document.getElementById('tab-carteira');
-  if(tab==='registrar') {
-    btnR.className='btn btn-primary'; btnR.style.cssText='flex:1;font-size:13px;padding:.6rem';
-    btnC.className='btn'; btnC.style.cssText='flex:1;font-size:13px;padding:.6rem;background:var(--surface);border:1px solid var(--border);color:var(--text)';
-  } else {
-    btnC.className='btn btn-primary'; btnC.style.cssText='flex:1;font-size:13px;padding:.6rem';
-    btnR.className='btn'; btnR.style.cssText='flex:1;font-size:13px;padding:.6rem;background:var(--surface);border:1px solid var(--border);color:var(--text)';
-    await renderCarteiraControle();
-  }
-};
 
 window.selecionarTipoLancamento = async function(tipo) {
   cfTipoAtual = tipo;
@@ -266,205 +250,6 @@ function getDataLancamento() {
   const val = document.getElementById('cf-data-custom')?.value;
   if (val) return new Date(val + 'T12:00:00');
   return new Date();
-}
-
-// ════ RECUPERAÇÃO RÁPIDA ════════════════════════════════════
-let recTipoAtual = 'gasto';
-let recCatSelecionada = null;
-let recLancamentos = []; // lista de lançamentos para salvar em batch
-let recDataSelecionada = null; // data ISO string
-
-window.abrirRecuperacaoRapida = function() {
-  recLancamentos = [];
-  recCatSelecionada = null;
-  recTipoAtual = 'gasto';
-  document.getElementById('rec-valor').value = '';
-  document.getElementById('rec-msg').textContent = '';
-  document.getElementById('rec-msg').className = 'msg';
-  document.getElementById('rec-lista-wrap').style.display = 'none';
-  document.getElementById('rec-lista').innerHTML = '';
-
-  // Gerar botões dos últimos 7 dias
-  const grid = document.getElementById('rec-dias-grid');
-  grid.innerHTML = '';
-  const hoje = new Date();
-  const dias = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date(hoje);
-    d.setDate(d.getDate() - i);
-    const iso = d.toISOString().slice(0,10);
-    const label = i === 0 ? 'Hoje' : i === 1 ? 'Ontem' : dias[d.getDay()] + ' ' + d.getDate() + '/' + (d.getMonth()+1);
-    const btn = document.createElement('button');
-    btn.dataset.iso = iso;
-    btn.textContent = label;
-    btn.style.cssText = 'padding:.4rem .6rem;border-radius:8px;border:2px solid var(--border);background:var(--surface);color:var(--text-muted);font-weight:700;font-size:11px;cursor:pointer;transition:all .2s;white-space:nowrap';
-    btn.onclick = () => {
-      grid.querySelectorAll('button').forEach(b => {
-        b.style.borderColor = 'var(--border)'; b.style.background = 'var(--surface)'; b.style.color = 'var(--text-muted)';
-      });
-      btn.style.borderColor = 'var(--eko-green)';
-      btn.style.background = 'var(--eko-green-light)';
-      btn.style.color = 'var(--eko-green-dark)';
-      recDataSelecionada = iso;
-      document.getElementById('rec-data-custom').style.display = 'none';
-    };
-    if (i === 0) {
-      btn.style.borderColor = 'var(--eko-green)';
-      btn.style.background = 'var(--eko-green-light)';
-      btn.style.color = 'var(--eko-green-dark)';
-      recDataSelecionada = iso;
-    }
-    grid.appendChild(btn);
-  }
-  // Botão "Outra data"
-  const btnOutra = document.createElement('button');
-  btnOutra.textContent = '📅 Outra';
-  btnOutra.style.cssText = 'padding:.4rem .6rem;border-radius:8px;border:2px solid var(--border);background:var(--surface);color:var(--text-muted);font-weight:700;font-size:11px;cursor:pointer';
-  btnOutra.onclick = () => {
-    document.getElementById('rec-data-custom').style.display = '';
-  };
-  grid.appendChild(btnOutra);
-
-  // Categorias
-  renderCategoriasGrid('rec-categorias-grid', cat => {
-    recCatSelecionada = cat;
-  }).catch(()=>{});
-  selecionarTipoRec('gasto');
-  abrirOverlay('overlay-recuperacao');
-};
-
-window.selecionarTipoRec = function(tipo) {
-  recTipoAtual = tipo;
-  ['gasto','receita'].forEach(t => {
-    const btn = document.getElementById('rec-tipo-' + t);
-    if (!btn) return;
-    const sel = t === tipo;
-    if (t === 'gasto') {
-      btn.style.borderColor = sel ? 'var(--red)' : 'var(--border)';
-      btn.style.background = sel ? 'var(--red-light)' : 'var(--surface)';
-      btn.style.color = sel ? 'var(--red)' : 'var(--text-muted)';
-    } else {
-      btn.style.borderColor = sel ? 'var(--eko-green)' : 'var(--border)';
-      btn.style.background = sel ? 'var(--eko-green-light)' : 'var(--surface)';
-      btn.style.color = sel ? 'var(--eko-green-dark)' : 'var(--text-muted)';
-    }
-  });
-  // Recarregar categorias por tipo
-  renderCategoriasGrid('rec-categorias-grid', cat => { recCatSelecionada = cat; }, tipo);
-  recCatSelecionada = null;
-};
-
-window.adicionarLancamentoRec = function() {
-  const msg = document.getElementById('rec-msg');
-  const valor = parseMoney(document.getElementById('rec-valor').value);
-  if (!valor || valor <= 0) { msg.textContent = 'Informe o valor.'; msg.className = 'msg error'; return; }
-  if (!recCatSelecionada) { msg.textContent = 'Selecione uma categoria.'; msg.className = 'msg error'; return; }
-
-  const dataCustom = document.getElementById('rec-data-custom').value;
-  const dataFinal = dataCustom || recDataSelecionada || new Date().toISOString().slice(0,10);
-  const d = new Date(dataFinal + 'T12:00:00');
-
-  // Grava sempre o id (string) — nunca o objeto categoria inteiro
-  const recCatId = typeof recCatSelecionada === 'object' ? recCatSelecionada.id : recCatSelecionada;
-  recLancamentos.push({
-    tipo: recTipoAtual,
-    valor,
-    categoria: String(recCatId),
-    mes: d.getMonth(),
-    ano: d.getFullYear(),
-    chaveMes: cfChaveMes(d.getFullYear(), d.getMonth()),
-    data: d.toISOString(),
-  });
-
-  // Atualizar lista visual
-  const lista = document.getElementById('rec-lista');
-  const wrap = document.getElementById('rec-lista-wrap');
-  wrap.style.display = '';
-  lista.innerHTML = recLancamentos.map((l, i) => `
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:.5rem 0;border-bottom:1px solid var(--border)">
-      <div>
-        <div style="font-size:13px;font-weight:700;color:${l.tipo==='gasto'?'var(--red)':'var(--eko-green)'}">${l.tipo==='gasto'?'💸':'💵'} ${fmt(l.valor)}</div>
-        <div style="font-size:11px;color:var(--text-muted)">${esc(typeof l.categoria === 'object' ? l.categoria.nome : l.categoria)} · ${new Date(l.data).toLocaleDateString('pt-BR')}</div>
-      </div>
-      <button onclick="removerLancamentoRec(${i})" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px">✕</button>
-    </div>`).join('');
-
-  // Limpar campos
-  document.getElementById('rec-valor').value = '';
-  msg.textContent = `✓ ${recLancamentos.length} lançamento(s) na fila`;
-  msg.className = 'msg success';
-};
-
-window.removerLancamentoRec = function(idx) {
-  recLancamentos.splice(idx, 1);
-  window.adicionarLancamentoRec && null; // trigger re-render
-  const lista = document.getElementById('rec-lista');
-  const wrap = document.getElementById('rec-lista-wrap');
-  if (!recLancamentos.length) { wrap.style.display = 'none'; return; }
-  lista.innerHTML = recLancamentos.map((l, i) => `
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:.5rem 0;border-bottom:1px solid var(--border)">
-      <div>
-        <div style="font-size:13px;font-weight:700;color:${l.tipo==='gasto'?'var(--red)':'var(--eko-green)'}">${l.tipo==='gasto'?'💸':'💵'} ${fmt(l.valor)}</div>
-        <div style="font-size:11px;color:var(--text-muted)">${esc(typeof l.categoria === 'object' ? l.categoria.nome : l.categoria)} · ${new Date(l.data).toLocaleDateString('pt-BR')}</div>
-      </div>
-      <button onclick="removerLancamentoRec(${i})" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px">✕</button>
-    </div>`).join('');
-};
-
-window.salvarTodosRec = async function() {
-  const msg = document.getElementById('rec-msg');
-  if (!recLancamentos.length) { msg.textContent = 'Adicione pelo menos um lançamento.'; msg.className = 'msg error'; return; }
-  msg.textContent = 'Salvando...'; msg.className = 'msg';
-  try {
-    for (const lanc of recLancamentos) {
-      await saveCFLancamento(lanc);
-    }
-    fecharOverlay('overlay-recuperacao');
-    toast(`✅ ${recLancamentos.length} lançamento(s) salvos!`);
-    recLancamentos = [];
-    await renderHubControle();
-  } catch(e) {
-    msg.textContent = 'Erro ao salvar. Tente novamente.'; msg.className = 'msg error';
-  }
-};
-
-async function renderCategoriasGrid(gridId, onSelect, tipoFiltro) {
-  const grid = document.getElementById(gridId);
-  if (!grid) return;
-  const tipo = tipoFiltro || recTipoAtual || 'gasto';
-  let lista = [];
-  try {
-    const cats = await getCFCategorias();
-    lista = (cats[tipo] || []).filter(c => c.visivel);
-  } catch(e) {}
-  grid.innerHTML = '';
-  if (!lista.length) {
-    grid.innerHTML = '<div style="font-size:12px;color:var(--text-muted);padding:.5rem">Nenhuma categoria disponível.</div>';
-    return;
-  }
-  // Pré-selecionar "Outras" ou primeira da lista
-  const padrao = lista.find(c => c.nome === 'Outras' || c.nome === 'Outro') || lista[0];
-  lista.forEach(cat => {
-    const isPadrao = padrao && cat.id === padrao.id;
-    const btn = document.createElement('button');
-    btn.style.cssText = `padding:.5rem .25rem;border-radius:10px;border:2px solid ${isPadrao ? 'var(--eko-green)' : 'var(--border)'};background:${isPadrao ? 'var(--eko-green-light)' : 'var(--surface)'};cursor:pointer;font-size:11px;font-weight:700;transition:all .2s;line-height:1.4;color:var(--text)`;
-    btn.textContent = cat.nome;
-    btn.onclick = () => {
-      grid.querySelectorAll('button').forEach(b => {
-        b.style.border = '2px solid var(--border)';
-        b.style.background = 'var(--surface)';
-      });
-      btn.style.border = tipo==='gasto' ? '2px solid var(--red)' : '2px solid var(--eko-green)';
-      btn.style.background = tipo==='gasto' ? 'var(--red-light)' : 'var(--eko-green-light)';
-      onSelect(cat);
-    };
-    if (isPadrao) {
-      btn.style.border = tipo==='gasto' ? '2px solid var(--red)' : '2px solid var(--eko-green)';
-      btn.style.background = tipo==='gasto' ? 'var(--red-light)' : 'var(--eko-green-light)';
-      onSelect(padrao);
-    }
-    grid.appendChild(btn);
-  });
 }
 
 window.salvarLancamento = async function() {

@@ -29,7 +29,6 @@ import './features/reserva.js';
 import './features/diagnosticos.js';
 import './features/hub.js';
 import './features/prontuario.js';
-import './features/importacao/importacao.js';
 import { carregarApp } from './features/auth.js';
 // PWA — banner de instalação e registro do Service Worker
 import './pwa/install-banner.js';

@@ -34,22 +34,6 @@ const FONTES_KEY = 'eko_importacao_fontes';
 const LIMITE_TRANSACOES_AVISO = 500;
 
 // ── ONBOARDING / NAVEGAÇÃO ───────────────────────────────────
-window.abrirImportacao = function() {
-  ir('screen-importacao');
-  const onboardingFeito = localStorage.getItem(ONBOARDING_KEY);
-  if (onboardingFeito) {
-    mostrarConteudoImportacao();
-  } else {
-    document.getElementById('importacao-onboarding').style.display = '';
-    document.getElementById('importacao-conteudo').style.display = 'none';
-  }
-};
-
-window.concluirOnboarding = function() {
-  localStorage.setItem(ONBOARDING_KEY, '1');
-  mostrarConteudoImportacao();
-};
-
 function mostrarConteudoImportacao() {
   document.getElementById('importacao-onboarding').style.display = 'none';
   document.getElementById('importacao-conteudo').style.display = '';
