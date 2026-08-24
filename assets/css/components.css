@@ -163,6 +163,8 @@
 /* toast */
 .toast{position:fixed;bottom:5.5rem;left:50%;transform:translateX(-50%) translateY(0);background:linear-gradient(135deg,#0F1923,#1C2B3A);color:#fff;font-size:13px;font-weight:600;padding:12px 22px;border-radius:99px;z-index:300;opacity:0;transition:all .3s;pointer-events:none;white-space:nowrap;max-width:88vw;text-align:center;box-shadow:0 8px 24px rgba(0,0,0,.25)}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(-4px)}
+.toast.sucesso{background:linear-gradient(135deg,var(--eko-green-dark),var(--eko-green))}
+.toast.erro{background:linear-gradient(135deg,#7A2323,var(--red))}
 
 /* loading */
 .loading{text-align:center;font-size:14px;color:var(--text-muted);padding:4rem 1rem;font-weight:500}

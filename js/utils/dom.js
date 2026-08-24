@@ -11,7 +11,12 @@ export function showMsg(id, tipo, txt) { const el = document.getElementById(id);
 
 export function limparMsg(id) { const el = document.getElementById(id); el.className = 'msg'; el.textContent = ''; }
 
-export function toast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 3200); }
+export function toast(msg, tipo) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (tipo ? ' ' + tipo : '');
+  setTimeout(() => t.classList.remove('show'), 3200);
+}
 
 export function fecharOverlay(id){document.getElementById(id).classList.add('hidden');}
 window.fecharOverlay = fecharOverlay;

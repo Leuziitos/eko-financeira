@@ -313,7 +313,7 @@ window.salvarLancamento = async function() {
     return;
   }
   logEko('cf_lancamento', {tipo: cfTipoAtual, categoria: cfCatSelecionada, edicao: !!editando});
-  toast(editando ? '✅ Lançamento atualizado!' : (cfTipoAtual==='gasto' ? '💸 Gasto registrado!' : '💵 Entrada registrada!'));
+  toast('✅ Lançamento registrado', 'sucesso');
   fecharSheetLancamento();
   await renderDashboardControle();
   await renderHubControle();
@@ -661,7 +661,7 @@ window.excluirLancamentoCF = async function(id) {
     }
   }
   cache.invalidar('controle');
-  toast('🗑️ Lançamento excluído!');
+  toast('🗑️ Lançamento removido', 'sucesso');
   fecharOverlay('overlay-cf-lancamentos');
   await renderDashboardControle();
   await renderHubControle();
