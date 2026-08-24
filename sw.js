@@ -25,7 +25,6 @@ const ASSETS = [
   // JS — features
   '/js/features/onboarding.js',
   '/js/features/aulas.js',
-  '/js/features/dica-ia.js',
   '/js/features/feedback.js',
   '/js/features/controle.js',
   '/js/features/metas.js',

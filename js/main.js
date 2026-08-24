@@ -20,7 +20,6 @@ import { applyMoneyMask } from './utils/money.js';
 // (registro dos window.* referenciados nos onclick do HTML)
 import { iniciarOnboarding } from './features/onboarding.js';
 import './features/feedback.js';
-import './features/dica-ia.js';
 import './features/aulas.js';
 import './features/controle.js';
 import './features/metas.js';

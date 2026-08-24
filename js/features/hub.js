@@ -18,7 +18,6 @@ import { getDividas } from './dividas.js';
 import { getSimulacoes } from './simulacoes.js';
 import { getCFLancamentos, cfChaveMes, renderHubControle } from './controle.js';
 import { atualizarHubReserva } from './reserva.js';
-import { renderDicaIA } from './dica-ia.js';
 
 // ── HUB ──────────────────────────────────────────────
 async function renderHub() {
@@ -48,9 +47,6 @@ async function renderHub() {
 
   // Reserva de Emergência — status no hub
   try { await atualizarHubReserva(); } catch(e){}
-
-  // FASE 4 — Dica financeira IA
-  try { await renderDicaIA(); } catch(e){ console.error('dica ia',e); }
 
   // FASE 4 — Revisão trimestral
   try { renderRevisaoTrimestral(diags); } catch(e){ console.error('revisao',e); }
