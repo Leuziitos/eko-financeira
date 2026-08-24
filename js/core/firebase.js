@@ -24,7 +24,7 @@ export function logEko(evento, params = {}) {
 
 // ── Reexports do SDK usados pela aplicação ──────────────────
 export {
-  doc, getDoc, setDoc, deleteDoc, collection, getDocs, addDoc,
+  doc, getDoc, setDoc, updateDoc, deleteDoc, collection, getDocs, addDoc,
   query, where, orderBy, runTransaction, onSnapshot, writeBatch,
 } from 'https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js';
 

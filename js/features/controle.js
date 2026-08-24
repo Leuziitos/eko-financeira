@@ -6,11 +6,11 @@
  * Corpo movido verbatim do monólito.
  * ═══════════════════════════════════════════════════════════ */
 
-import { db, doc, getDoc, setDoc, deleteDoc, collection, getDocs, addDoc, query, where, logEko } from '../core/firebase.js';
+import { db, doc, getDoc, setDoc, updateDoc, deleteDoc, collection, getDocs, addDoc, query, where, logEko } from '../core/firebase.js';
 import { store, cache } from '../core/store.js';
 import { ir } from '../core/router.js';
 import { fmt, esc } from '../utils/format.js';
-import { parseMoney, applyMoneyMask } from '../utils/money.js';
+import { parseMoney } from '../utils/money.js';
 import { showMsg, limparMsg, toast, abrirOverlay, fecharOverlay, btnDoClique, liberarBotao } from '../utils/dom.js';
 
 // ════════════════════════════════════════════════
@@ -97,7 +97,7 @@ async function saveCFLancamento(lanc) {
   try {
     const {_id, ...data} = lanc;
     if (_id) {
-      await setDoc(doc(db,'controle',_id), data);
+      await updateDoc(doc(db,'controle',_id), data);
     } else {
       data.email = store.sessao.email;
       data.criadoEm = new Date().toISOString();
@@ -132,9 +132,6 @@ window.abrirSheetImportacao = function() {
 };
 
 window.abrirControleFinanceiro = async function() {
-  // Navega primeiro e mostra loading — as queries chegam depois (padrão abrirReserva)
-  const grid = document.getElementById('cf-categorias-grid');
-  if (grid) grid.innerHTML = '<div class="loading" style="grid-column:1/-1;padding:1rem"><span class="spinner"></span>Carregando...</div>';
   ir('screen-controle');
   await renderControleFinanceiro();
 };
@@ -145,12 +142,10 @@ async function renderControleFinanceiro() {
   await renderDashboardControle();
 }
 
-window.selecionarTipoLancamento = async function(tipo) {
-  cfTipoAtual = tipo;
-  cfCatSelecionada = null;
-  cfCatsExpandido = false;
-  const btnG = document.getElementById('tipo-btn-gasto');
-  const btnR = document.getElementById('tipo-btn-receita');
+function atualizarTipoBotoes(tipo) {
+  const btnG = document.getElementById('cf-tipo-gasto');
+  const btnR = document.getElementById('cf-tipo-entrada');
+  if(!btnG || !btnR) return;
   if(tipo==='gasto') {
     btnG.style.cssText='flex:1;padding:.625rem;border-radius:10px;border:2px solid var(--red);background:var(--red-light);color:var(--red);font-weight:700;font-size:13px;cursor:pointer;transition:all .2s';
     btnR.style.cssText='flex:1;padding:.625rem;border-radius:10px;border:2px solid var(--border);background:var(--surface);color:var(--text-muted);font-weight:700;font-size:13px;cursor:pointer;transition:all .2s';
@@ -158,6 +153,13 @@ window.selecionarTipoLancamento = async function(tipo) {
     btnR.style.cssText='flex:1;padding:.625rem;border-radius:10px;border:2px solid var(--eko-green);background:var(--eko-green-light);color:var(--eko-green-dark);font-weight:700;font-size:13px;cursor:pointer;transition:all .2s';
     btnG.style.cssText='flex:1;padding:.625rem;border-radius:10px;border:2px solid var(--border);background:var(--surface);color:var(--text-muted);font-weight:700;font-size:13px;cursor:pointer;transition:all .2s';
   }
+}
+
+window.selecionarTipoLancamento = async function(tipo) {
+  cfTipoAtual = tipo;
+  cfCatSelecionada = null;
+  cfCatsExpandido = false;
+  atualizarTipoBotoes(tipo);
   await renderCategoriasBotoes();
 };
 
@@ -168,15 +170,35 @@ async function renderCategoriasBotoes() {
   const lista = (cats[cfTipoAtual] || []).filter(c => c.visivel);
   const grid = document.getElementById('cf-categorias-grid');
   if (!grid) return;
-  const visiveis = cfCatsExpandido ? lista : lista.slice(0, 5);
+
+  let visiveis;
+  if (cfCatsExpandido) {
+    visiveis = lista;
+  } else {
+    // As 5 mais usadas (por frequência nos lançamentos já feitos do mesmo tipo)
+    const lancs = await getCFLancamentos();
+    const usoCount = {};
+    lancs.filter(l => l.tipo === cfTipoAtual).forEach(l => { usoCount[l.categoria] = (usoCount[l.categoria]||0) + 1; });
+    visiveis = [...lista].sort((a,b) => (usoCount[b.id]||0) - (usoCount[a.id]||0)).slice(0, 5);
+    // Garante que a categoria já selecionada (modo edição) apareça mesmo se não estiver entre as mais usadas
+    if (cfCatSelecionada && !visiveis.some(c => c.id === cfCatSelecionada)) {
+      const sel = lista.find(c => c.id === cfCatSelecionada);
+      if (sel) visiveis = [sel, ...visiveis.slice(0, 4)];
+    }
+  }
+
+  const corBorda = cfTipoAtual==='gasto' ? 'var(--red)' : 'var(--eko-green)';
+  const corFundo = cfTipoAtual==='gasto' ? 'var(--red-light)' : 'var(--eko-green-light)';
+  const corTexto = cfTipoAtual==='gasto' ? 'var(--red)' : 'var(--eko-green-dark)';
   grid.innerHTML = visiveis.map(c => {
     const safeId = c.id.replace(/'/g,"\\'");
+    const sel = c.id === cfCatSelecionada;
     return `<button onclick="selecionarCategoriaCF('${safeId}')" id="cfcat-${c.id}"
-      style="padding:.5rem .25rem;border-radius:10px;border:2px solid var(--border);background:var(--surface);font-size:11px;font-weight:700;cursor:pointer;transition:all .2s;line-height:1.4;color:var(--text)">
+      style="padding:.5rem .25rem;border-radius:10px;border:2px solid ${sel?corBorda:'var(--border)'};background:${sel?corFundo:'var(--surface)'};font-size:11px;font-weight:700;cursor:pointer;transition:all .2s;line-height:1.4;color:${sel?corTexto:'var(--text)'}">
       ${c.nome}
     </button>`;
   }).join('');
-  if (!cfCatsExpandido && lista.length > 5) {
+  if (!cfCatsExpandido && lista.length > visiveis.length) {
     grid.innerHTML += `<button onclick="expandirCategoriasCF()"
       style="padding:.5rem .25rem;border-radius:10px;border:2px dashed var(--border-strong);background:var(--surface2);font-size:11px;font-weight:700;cursor:pointer;transition:all .2s;line-height:1.4;color:var(--eko-green)">
       + Ver todas (${lista.length})
@@ -205,43 +227,66 @@ window.selecionarCategoriaCF = function(id) {
 };
 
 
-// ════ CONTROLE FINANCEIRO — DATA RETROATIVA ════════════════
-let cfDataSelecionada = 'hoje'; // 'hoje' | 'ontem' | 'outro'
+// ════ SHEET DE LANÇAMENTO — DATA ════════════════════════════
+let cfDataSelecionada = new Date(); // data do lançamento sendo criado/editado
 
-window.selecionarDataLancamento = function(opcao) {
-  cfDataSelecionada = opcao;
-  ['hoje','ontem','outro'].forEach(op => {
-    const btn = document.getElementById('cf-data-' + op);
-    if (!btn) return;
-    const sel = op === opcao;
-    btn.style.borderColor = sel ? 'var(--eko-green)' : 'var(--border)';
-    btn.style.background = sel ? 'var(--eko-green-light)' : 'var(--surface)';
-    btn.style.color = sel ? 'var(--eko-green-dark)' : 'var(--text-muted)';
-  });
+function atualizarDataTexto() {
+  const el = document.getElementById('cf-data-texto');
+  if (!el) return;
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  const ontem = new Date(hoje); ontem.setDate(ontem.getDate() - 1);
+  const d = new Date(cfDataSelecionada); d.setHours(0,0,0,0);
+  if (d.getTime() === hoje.getTime()) el.textContent = 'Hoje';
+  else if (d.getTime() === ontem.getTime()) el.textContent = 'Ontem';
+  else el.textContent = cfDataSelecionada.toLocaleDateString('pt-BR');
+}
+
+window.abrirDatePicker = function() {
   const custom = document.getElementById('cf-data-custom');
-  if (custom) custom.style.display = opcao === 'outro' ? '' : 'none';
-  if (opcao === 'outro' && custom) {
-    // Abre o calendário nativo imediatamente ao selecionar "Outra data"
-    // (mantém a correção do bug do seletor — sem isso o campo só ficava
-    // visível, exigindo um segundo toque para o calendário abrir).
-    if (typeof custom.showPicker === 'function') {
-      try { custom.showPicker(); } catch(e) { custom.focus(); }
-    } else {
-      custom.focus();
-    }
+  if (!custom) return;
+  custom.value = cfDataSelecionada.toISOString().slice(0,10);
+  if (typeof custom.showPicker === 'function') {
+    try { custom.showPicker(); } catch(e) { custom.focus(); }
+  } else {
+    custom.focus();
   }
 };
 
-function getDataLancamento() {
-  if (cfDataSelecionada === 'hoje') return new Date();
-  if (cfDataSelecionada === 'ontem') {
-    const d = new Date(); d.setDate(d.getDate() - 1); return d;
-  }
-  // outro
+window.onDataCustomChange = function() {
   const val = document.getElementById('cf-data-custom')?.value;
-  if (val) return new Date(val + 'T12:00:00');
-  return new Date();
-}
+  if (!val) return;
+  cfDataSelecionada = new Date(val + 'T12:00:00');
+  atualizarDataTexto();
+};
+
+// ════ SHEET DE LANÇAMENTO — abrir/fechar/salvar ═════════════
+let cfLancamentoEditando = null; // lançamento em edição — null = criando novo
+
+window.abrirSheetLancamento = async function(lancamento = null) {
+  cfLancamentoEditando = lancamento;
+  cfTipoAtual = lancamento ? lancamento.tipo : 'gasto';
+  cfCatSelecionada = lancamento ? lancamento.categoria : null;
+  cfCatsExpandido = false;
+  cfDataSelecionada = lancamento ? new Date(lancamento.data || lancamento.criadoEm) : new Date();
+
+  limparMsg('cf-msg');
+  const tituloEl = document.getElementById('cf-sheet-titulo');
+  if (tituloEl) tituloEl.textContent = lancamento ? 'Editar lançamento' : 'Novo lançamento';
+  const valorEl = document.getElementById('cf-valor');
+  if (valorEl) valorEl.value = lancamento ? lancamento.valor : '';
+
+  atualizarTipoBotoes(cfTipoAtual);
+  atualizarDataTexto();
+  await renderCategoriasBotoes();
+
+  abrirOverlay('sheet-lancamento');
+  if (valorEl) setTimeout(() => valorEl.focus(), 200); // aguarda a animação do sheet subir
+};
+
+window.fecharSheetLancamento = function() {
+  fecharOverlay('sheet-lancamento');
+  cfLancamentoEditando = null;
+};
 
 window.salvarLancamento = async function() {
   const btn = btnDoClique(); if (btn) btn.disabled = true;
@@ -250,35 +295,60 @@ window.salvarLancamento = async function() {
   const valor = parseMoney(document.getElementById('cf-valor').value);
   if (!valor || valor <= 0) { showMsg('cf-msg','error','Informe o valor.'); return; }
   if (!cfCatSelecionada) { showMsg('cf-msg','error','Selecione uma categoria.'); return; }
-  const dataLanc = getDataLancamento();
+  const editando = cfLancamentoEditando;
   const lanc = {
     tipo: cfTipoAtual,
     valor,
     categoria: cfCatSelecionada,
-    mes: dataLanc.getMonth(),
-    ano: dataLanc.getFullYear(),
-    chaveMes: cfChaveMes(dataLanc.getFullYear(), dataLanc.getMonth()),
-    data: dataLanc.toISOString(),
+    mes: cfDataSelecionada.getMonth(),
+    ano: cfDataSelecionada.getFullYear(),
+    chaveMes: cfChaveMes(cfDataSelecionada.getFullYear(), cfDataSelecionada.getMonth()),
+    data: cfDataSelecionada.toISOString(),
   };
+  if (editando) lanc._id = editando._id;
   try {
     await saveCFLancamento(lanc);
   } catch(e) {
     showMsg('cf-msg','error','Erro ao salvar. Verifique sua conexão.');
     return;
   }
-  logEko('cf_lancamento', {tipo: cfTipoAtual, categoria: cfCatSelecionada});
-  toast(cfTipoAtual==='gasto' ? '💸 Gasto registrado!' : '💵 Entrada registrada!');
-  document.getElementById('cf-valor').value = '';
-  cfCatSelecionada = null;
-  cfCatsExpandido = false; // expansão reseta ao salvar
-  await renderCategoriasBotoes();
-  const bv = document.getElementById('cf-boas-vindas');
-  if(bv) bv.style.display = 'none';
-  // Resetar data para hoje
-  selecionarDataLancamento('hoje');
+  logEko('cf_lancamento', {tipo: cfTipoAtual, categoria: cfCatSelecionada, edicao: !!editando});
+  toast(editando ? '✅ Lançamento atualizado!' : (cfTipoAtual==='gasto' ? '💸 Gasto registrado!' : '💵 Entrada registrada!'));
+  fecharSheetLancamento();
+  await renderDashboardControle();
   await renderHubControle();
   } finally { liberarBotao(btn); }
 };
+
+// Gesto de arrastar para fechar — arrasta o handle mais de 100px para
+// baixo fecha o sheet; abaixo disso, volta pra posição original.
+(function initGestoFecharSheetLancamento() {
+  const wrap = document.getElementById('sheet-lancamento');
+  const handle = wrap && wrap.querySelector('.sheet-handle');
+  const sheet  = wrap && wrap.querySelector('.sheet');
+  if (!handle || !sheet) return;
+  let startY = null;
+
+  handle.addEventListener('touchstart', e => {
+    startY = e.touches[0].clientY;
+    sheet.style.transition = 'none';
+  }, {passive:true});
+
+  handle.addEventListener('touchmove', e => {
+    if (startY === null) return;
+    const delta = e.touches[0].clientY - startY;
+    if (delta > 0) sheet.style.transform = `translateY(${delta}px)`;
+  }, {passive:true});
+
+  handle.addEventListener('touchend', e => {
+    if (startY === null) return;
+    const delta = e.changedTouches[0].clientY - startY;
+    sheet.style.transition = 'transform .2s';
+    sheet.style.transform = '';
+    if (delta > 100) fecharSheetLancamento();
+    startY = null;
+  }, {passive:true});
+})();
 
 // ── Dashboard (resumo do mês, categorias, recentes, importações) ─
 window.navegarMesControle = async function(dir) {
