@@ -18,6 +18,10 @@ import { fmt, esc } from '../../utils/format.js';
 import { toast, abrirOverlay, fecharOverlay } from '../../utils/dom.js';
 import { parseOFX, decodificarArquivoOFX, extrairOrgOFX } from './parser-ofx.js';
 import { parseCSV } from './parser-csv.js';
+import { normalizarDescricao } from './normalizer.js';
+import { verificarDuplicatas } from './deduplicator.js';
+import { categorizarTransacoes } from './categorizer.js';
+import { getCFLancamentos, getCFCategorias } from '../controle.js';
 
 const ONBOARDING_KEY = 'eko_importacao_onboarding';
 const HISTORICO_KEY = 'eko_importacoes';
@@ -260,16 +264,172 @@ function avancarParaConfirmacaoPeriodo() {
   mostrarFaseConfirmacao('periodo');
 }
 
-// A gravação de fato (deduplicação, categorização e criação dos
-// lançamentos no Controle Financeiro) é a Parte 2 deste módulo — ver
-// deduplicator.js, categorizer.js e integrations.js.
 window.confirmarImportarPeriodo = function() {
   fecharOverlay('overlay-importacao-confirmacao');
-  toast('🚧 A importação de fato (deduplicação, categorização e gravação) chega na Parte 2 deste módulo.');
-  importacaoEstado = null;
+  abrirRevisao(importacaoEstado.transacoes);
 };
 
 window.cancelarImportacao = function() {
   fecharOverlay('overlay-importacao-confirmacao');
+  importacaoEstado = null;
+};
+
+// ── TELA DE REVISÃO ────────────────────────────────────────────
+// Estado da revisão em andamento — populado por abrirRevisao(), lido e
+// mutado pelos handlers de checkbox/dropdown/filtro abaixo.
+let revisaoTransacoes = [];
+let revisaoFiltro = 'todos';
+let revisaoCategorias = { gasto: [], receita: [] };
+
+// Normaliza descrições, verifica duplicatas contra o Controle Financeiro
+// (sem query extra — getCFLancamentos() já usa cache.controle) e categoriza
+// em camadas (cache aprendido → extrato → IA, com barra de progresso),
+// depois renderiza a lista de revisão.
+async function abrirRevisao(transacoes) {
+  abrirOverlay('overlay-importacao-revisao');
+
+  const subtitulo = document.getElementById('importacao-revisao-subtitulo');
+  if (subtitulo) subtitulo.textContent = `${importacaoEstado?.fonteNome || ''} · ${fmtDataBR(importacaoEstado?.periodoInicio)} a ${fmtDataBR(importacaoEstado?.periodoFim)}`;
+
+  const progressoEl = document.getElementById('importacao-progresso');
+  const corpoEl = document.getElementById('importacao-revisao-corpo');
+  if (corpoEl) corpoEl.style.display = 'none';
+  if (progressoEl) { progressoEl.style.display = ''; progressoEl.innerHTML = '<span class="spinner"></span> Preparando revisão...'; }
+
+  let processadas = transacoes.map(t => ({ ...t, descricaoNormalizada: normalizarDescricao(t.descricao) }));
+
+  let lancamentosExistentes = [];
+  try { lancamentosExistentes = await getCFLancamentos(); } catch(e) {}
+  processadas = verificarDuplicatas(processadas, lancamentosExistentes);
+  processadas = processadas.map(t => ({ ...t, selecionado: t.status !== 'duplicata_exata' }));
+
+  processadas = await categorizarTransacoes(processadas, (atual, total) => {
+    if (progressoEl) progressoEl.innerHTML = `<span class="spinner"></span> Categorizando ${atual} de ${total} transações...`;
+  });
+
+  try { revisaoCategorias = await getCFCategorias(); } catch(e) { revisaoCategorias = { gasto: [], receita: [] }; }
+
+  revisaoTransacoes = processadas;
+  revisaoFiltro = 'todos';
+
+  if (progressoEl) progressoEl.style.display = 'none';
+  if (corpoEl) corpoEl.style.display = '';
+  const selTodos = document.getElementById('importacao-sel-todos');
+  const selSoNovos = document.getElementById('importacao-sel-so-novos');
+  if (selTodos) selTodos.checked = false;
+  if (selSoNovos) selSoNovos.checked = false;
+  filtrarRevisaoImportacao('todos');
+}
+window.abrirRevisao = abrirRevisao;
+
+function transacoesFiltradasRevisao() {
+  if (revisaoFiltro === 'novos') return revisaoTransacoes.filter(t => t.status === 'novo');
+  if (revisaoFiltro === 'duplicatas') return revisaoTransacoes.filter(t => t.status === 'duplicata_exata' || t.status === 'conflito');
+  return revisaoTransacoes;
+}
+
+function badgeStatusRevisao(t) {
+  if (t.status === 'duplicata_exata') return { label: '⚠️ Duplicata', cls: 'badge-amber' };
+  if (t.status === 'conflito') return { label: '⚠️ Conflito', cls: 'badge-amber' };
+  if (t.revisar) return { label: '⚠️ Verificar', cls: 'badge-amber' };
+  return { label: '✅ Novo', cls: 'badge-green' };
+}
+
+function opcoesCategoriaRevisao(t) {
+  const lista = t.tipo === 'receita' ? (revisaoCategorias.receita || []) : (revisaoCategorias.gasto || []);
+  return lista.map(c => `<option value="${c.id}" ${c.id === t.categoria ? 'selected' : ''}>${esc(c.nome)}</option>`).join('');
+}
+
+function renderListaRevisao() {
+  const lista = document.getElementById('importacao-revisao-lista');
+  if (!lista) return;
+  const itens = transacoesFiltradasRevisao();
+
+  if (!itens.length) {
+    lista.innerHTML = '<div style="text-align:center;padding:1.5rem;color:var(--text-muted);font-size:13px">Nenhuma transação neste filtro.</div>';
+  } else {
+    lista.innerHTML = itens.map(t => {
+      const idx = revisaoTransacoes.indexOf(t);
+      const badge = badgeStatusRevisao(t);
+      const valorFmt = (t.valor < 0 ? '-' : '+') + fmt(Math.abs(t.valor));
+      return `<div class="pront-item" style="align-items:flex-start;margin-bottom:6px">
+        <div style="display:flex;align-items:flex-start;gap:10px;flex:1;min-width:0">
+          <input type="checkbox" ${t.selecionado ? 'checked' : ''} onchange="toggleSelecaoRevisao(${idx},this.checked)" style="margin-top:5px;flex-shrink:0">
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;justify-content:space-between;gap:8px">
+              <span style="font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${fmtDataBR(t.data)} · ${esc(t.descricaoNormalizada)}</span>
+              <span style="font-size:13px;font-weight:800;white-space:nowrap;color:${t.valor < 0 ? 'var(--red)' : 'var(--eko-green)'}">${valorFmt}</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;margin-top:5px;flex-wrap:wrap">
+              <select onchange="alterarCategoriaRevisao(${idx},this.value)" class="input" style="font-size:11px;padding:3px 6px;width:auto">${opcoesCategoriaRevisao(t)}</select>
+              <span class="badge ${badge.cls}">${badge.label}</span>
+            </div>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  atualizarContadorRevisao();
+}
+
+function atualizarContadorRevisao() {
+  const total = revisaoTransacoes.length;
+  const selecionadas = revisaoTransacoes.filter(t => t.selecionado).length;
+  const contadorEl = document.getElementById('importacao-revisao-contador');
+  if (contadorEl) contadorEl.textContent = `${selecionadas} de ${total} transações selecionadas`;
+  const btnEl = document.getElementById('importacao-btn-confirmar');
+  if (btnEl) btnEl.textContent = `Confirmar ${selecionadas} selecionada${selecionadas === 1 ? '' : 's'}`;
+}
+
+window.toggleSelecaoRevisao = function(idx, checked) {
+  if (revisaoTransacoes[idx]) revisaoTransacoes[idx].selecionado = checked;
+  atualizarContadorRevisao();
+};
+
+window.alterarCategoriaRevisao = function(idx, categoriaId) {
+  if (revisaoTransacoes[idx]) revisaoTransacoes[idx].categoria = categoriaId;
+};
+
+window.toggleSelecionarTodosImportacao = function(checkbox) {
+  revisaoTransacoes.forEach(t => { t.selecionado = checkbox.checked; });
+  const soNovos = document.getElementById('importacao-sel-so-novos');
+  if (soNovos) soNovos.checked = false;
+  renderListaRevisao();
+};
+
+window.toggleSoNovosImportacao = function(checkbox) {
+  if (checkbox.checked) {
+    revisaoTransacoes.forEach(t => { t.selecionado = t.status === 'novo'; });
+    const todos = document.getElementById('importacao-sel-todos');
+    if (todos) todos.checked = false;
+  }
+  renderListaRevisao();
+};
+
+window.filtrarRevisaoImportacao = function(filtro) {
+  revisaoFiltro = filtro;
+  ['todos', 'novos', 'duplicatas'].forEach(f => {
+    const btn = document.getElementById('importacao-filtro-' + f);
+    if (!btn) return;
+    if (f === filtro) { btn.className = 'btn btn-sm btn-primary'; btn.style.cssText = 'flex:1'; }
+    else { btn.className = 'btn btn-sm'; btn.style.cssText = 'flex:1;background:var(--surface);border:1px solid var(--border);color:var(--text)'; }
+  });
+  renderListaRevisao();
+};
+
+// A gravação de fato (writeBatch no Controle Financeiro, histórico e
+// aprendizado de categorias) é o próximo grupo desta Parte 2 — ver
+// integrations.js e confirmarImportacao() em importacao.js.
+window.confirmarRevisaoImportacao = function() {
+  fecharOverlay('overlay-importacao-revisao');
+  toast('🚧 A gravação de fato chega no próximo grupo deste módulo.');
+  revisaoTransacoes = [];
+  importacaoEstado = null;
+};
+
+window.cancelarRevisaoImportacao = function() {
+  fecharOverlay('overlay-importacao-revisao');
+  revisaoTransacoes = [];
   importacaoEstado = null;
 };
