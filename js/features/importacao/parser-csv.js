@@ -18,11 +18,31 @@ function precisaRevisar(descricao) {
   if (/TED\s+RECEBID/.test(d)) return true;
   if (/TRANSFER[ÊE]NCIA\s+RECEBID/.test(d)) return true;
   if (/\d+\s*\/\s*\d+/.test(d)) return true; // padrão de parcelamento, ex.: "1/12"
+  if (/^IOF\b/.test(d)) return true; // IOF vinculado a uma compra — revisar antes de aprovar
   return false;
 }
 
 function deveIgnorar(descricao) {
   return DESCRICOES_IGNORADAS.some(re => re.test(descricao || ''));
+}
+
+// Linhas "Pagamento recebido"/"Pagamento efetuado" na fatura de cartão do
+// Nubank são crédito (reduzem a fatura) — mesmo vindo com valor bruto
+// positivo igual as compras, não devem ser invertidas pro sinal negativo.
+function ehPagamentoFaturaNubank(descricao) {
+  return /pagamento\s+recebido/i.test(descricao || '') || /pagamento\s+efetuado/i.test(descricao || '');
+}
+
+// Linha de IOF vinculada à compra anterior (ex.: título "IOF Netlify",
+// "IOF - Netlify", "IOF de Netlify") — não é filtrada (mesma decisão já
+// tomada pra IOF na Parte 1: não descartar), mas ganha descrição limpa
+// "IOF - <estabelecimento>" pra ficar clara na revisão, além do flag
+// revisar (ver precisaRevisar).
+function normalizarDescricaoIOF(descricao) {
+  const m = (descricao || '').match(/^IOF\b[\s\-:]*\s*(?:de\s+)?(.*)$/i);
+  if (!m) return null;
+  const estabelecimento = (m[1] || '').trim();
+  return estabelecimento ? `IOF - ${estabelecimento}` : 'IOF';
 }
 
 // ── CSV parsing (delimitador , ou ; · respeita campos entre aspas) ───────
@@ -56,12 +76,28 @@ function parseLinhaCSV(linha, delimitador) {
 function detectarMapeamento(headerCols) {
   const normalizados = headerCols.map(c => c.trim().toLowerCase());
 
-  // Nubank (fatura de cartão): date,category,title,amount
+  // Nubank (fatura de cartão) — formato antigo, com coluna category.
+  // Sem exceção de "pagamento recebido/efetuado" aqui — comportamento
+  // preservado exatamente como veio da Parte 1.
   if (normalizados.join(',') === 'date,category,title,amount') {
     return {
       banco: 'Nubank',
       idxData: 0, idxCategoria: 1, idxDescricao: 2, idxValor: 3,
       inverterSinal: true, // export do Nubank: amount positivo = compra (gasto); ver Parte 1
+      excecaoPagamento: false,
+    };
+  }
+
+  // Nubank (fatura de cartão) — formato novo, sem coluna category. Aqui sim
+  // "Pagamento recebido"/"Pagamento efetuado" ficam de fora da inversão de
+  // sinal (ver ehPagamentoFaturaNubank) — comportamento confirmado só pra
+  // este formato.
+  if (normalizados.join(',') === 'date,title,amount') {
+    return {
+      banco: 'Nubank',
+      idxData: 0, idxCategoria: -1, idxDescricao: 1, idxValor: 2,
+      inverterSinal: true,
+      excecaoPagamento: true,
     };
   }
 
@@ -112,11 +148,14 @@ export function parseCSV(texto) {
   const transacoes = [];
   for (let i = 1; i < linhas.length; i++) {
     const cols = parseLinhaCSV(linhas[i], delimitador);
-    const descricao = cols[mapa.idxDescricao] || '';
+    let descricao = cols[mapa.idxDescricao] || '';
     if (deveIgnorar(descricao)) continue;
 
+    const descricaoIOF = normalizarDescricaoIOF(descricao);
+    if (descricaoIOF) descricao = descricaoIOF;
+
     let valor = normalizarValorCSV(cols[mapa.idxValor]);
-    if (mapa.inverterSinal) valor = -valor;
+    if (mapa.inverterSinal && !(mapa.excecaoPagamento && ehPagamentoFaturaNubank(descricao))) valor = -valor;
     const data = normalizarDataCSV(cols[mapa.idxData]);
     if (!data) continue; // linha sem data válida — não é uma transação utilizável
 
