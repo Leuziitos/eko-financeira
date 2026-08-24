@@ -959,21 +959,92 @@
 <div id="screen-controle" class="screen">
   <div class="topbar">
     <button class="back-btn" onclick="ir('screen-hub')">← Voltar</button>
+    <div style="font-size:15px;font-weight:700">💰 Controle Financeiro</div>
+    <button onclick="abrirBuscaCF()" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--text-muted);line-height:1;padding:4px">🔍</button>
   </div>
   <div class="content">
-    <div style="margin-bottom:1.25rem">
-      <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Módulo</div>
-      <div style="font-size:22px;font-weight:800">💰 Controle Financeiro</div>
-      <div style="font-size:13px;color:var(--text-muted);margin-top:4px">Registre entradas e gastos, veja seu histórico</div>
+
+    <!-- Navegação mensal -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.875rem">
+      <button onclick="navegarMesControle(-1)" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--eko-green);padding:4px 8px">‹</button>
+      <div id="cf-mes-label" style="font-size:16px;font-weight:800;text-align:center"></div>
+      <button onclick="navegarMesControle(1)" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--eko-green);padding:4px 8px">›</button>
     </div>
-    <!-- Saldo do mês — visível em ambas as abas -->
-    <div class="card" id="cf-saldo-topo" style="padding:1rem;margin-bottom:1rem">
+
+    <!-- Resumo do mês -->
+    <div class="card" style="padding:1rem;margin-bottom:1rem">
       <div style="display:grid;grid-template-columns:1fr 1fr 1.2fr;gap:8px;align-items:center">
-        <div style="text-align:center"><div class="slabel">Entradas</div><div id="cf-topo-entradas" style="font-size:14px;font-weight:800;color:var(--eko-green)">—</div></div>
-        <div style="text-align:center"><div class="slabel">Saídas</div><div id="cf-topo-saidas" style="font-size:14px;font-weight:800;color:var(--red)">—</div></div>
-        <div style="text-align:center"><div class="slabel">Saldo</div><div id="cf-topo-saldo" style="font-size:20px;font-weight:800">—</div></div>
+        <div style="text-align:center"><div class="slabel">Entradas</div><div id="cf-total-entradas" class="verde" style="font-size:14px;font-weight:800">—</div></div>
+        <div style="text-align:center"><div class="slabel">Saídas</div><div id="cf-total-saidas" class="vermelho" style="font-size:14px;font-weight:800">—</div></div>
+        <div style="text-align:center"><div class="slabel">Saldo</div><div id="cf-saldo-mes" style="font-size:20px;font-weight:800">—</div></div>
       </div>
     </div>
+
+    <!-- Por categoria -->
+    <div class="section-title">Por categoria</div>
+    <div id="cf-categorias-mes" style="margin-bottom:1.25rem"></div>
+
+    <!-- Últimos lançamentos -->
+    <div class="section-title">Últimos lançamentos</div>
+    <div id="cf-lancamentos-recentes" style="margin-bottom:1.25rem"></div>
+
+    <!-- Importações realizadas (colapsável) -->
+    <div class="card" style="padding:0;overflow:hidden;margin-bottom:1.25rem">
+      <div onclick="toggleImportacoes()" style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.125rem;cursor:pointer">
+        <div style="font-size:13px;font-weight:800">📥 Importações realizadas</div>
+        <div id="cf-importacoes-chevron" style="font-size:12px;color:var(--text-muted);transition:transform .2s">▾</div>
+      </div>
+      <div id="cf-importacoes-lista" style="display:none;padding:0 1.125rem 1.125rem"></div>
+    </div>
+
+    <!-- Importar extrato -->
+    <button onclick="abrirSheetImportacao()" class="btn" style="width:100%">📥 Importar extrato</button>
+
+  </div>
+
+  <!-- Botão flutuante de novo lançamento -->
+  <button class="btn-primario-flutuante" onclick="abrirSheetLancamento()" title="Novo lançamento">＋</button>
+</div>
+
+<!-- SHEET: Novo lançamento -->
+<div id="sheet-lancamento" class="sheet-overlay hidden">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+      <div id="cf-sheet-titulo" style="font-size:17px;font-weight:800">Novo lançamento</div>
+      <button onclick="fecharSheetLancamento()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-muted);line-height:1;padding:4px">✕</button>
+    </div>
+
+    <!-- Toggle Gasto / Entrada -->
+    <div style="display:flex;gap:8px;margin-bottom:1.25rem">
+      <button id="cf-tipo-gasto" onclick="selecionarTipoLancamento('gasto')" style="flex:1;padding:.625rem;border-radius:10px;border:2px solid var(--red);background:var(--red-light);color:var(--red);font-weight:700;font-size:13px;cursor:pointer">💸 Gasto</button>
+      <button id="cf-tipo-entrada" onclick="selecionarTipoLancamento('receita')" style="flex:1;padding:.625rem;border-radius:10px;border:2px solid var(--border);background:var(--surface);color:var(--text-muted);font-weight:700;font-size:13px;cursor:pointer">💵 Entrada</button>
+    </div>
+
+    <!-- Valor -->
+    <div class="field">
+      <label>Valor</label>
+      <input id="cf-valor" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0,00" class="input" style="font-size:22px;font-weight:800;text-align:center;padding:1rem">
+    </div>
+
+    <!-- Data -->
+    <div class="field">
+      <label>Data</label>
+      <div id="cf-data-display" onclick="abrirDatePicker()" style="padding:12px 14px;border:1.5px solid var(--border);border-radius:12px;background:var(--surface2);cursor:pointer;font-size:14px;font-weight:600">
+        <span id="cf-data-texto">Hoje</span>
+      </div>
+      <input id="cf-data-custom" type="date" onchange="onDataCustomChange()" style="display:none">
+    </div>
+
+    <!-- Categoria -->
+    <div class="field">
+      <label>Categoria</label>
+      <div id="cf-categorias-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px"></div>
+    </div>
+
+    <div id="cf-msg" class="msg"></div>
+    <button id="cf-salvar-btn" onclick="salvarLancamento()" class="btn btn-primary" style="width:100%;margin-bottom:.5rem">Salvar</button>
+    <button onclick="fecharSheetLancamento()" class="btn" style="width:100%">Cancelar</button>
   </div>
 </div>
 

@@ -119,6 +119,18 @@ function cfNomeMes(mes, ano) {
   return new Date(ano, mes, 1).toLocaleDateString('pt-BR', {month:'long', year:'numeric'});
 }
 
+// Busca de lançamentos e importação de extrato — fora do escopo desta
+// reestruturação (busca ainda não existe; importação será reintegrada
+// na Parte 2, ver js/main.js). Placeholders para os botões não ficarem
+// sem handler.
+window.abrirBuscaCF = function() {
+  toast('🔍 Busca em breve!');
+};
+
+window.abrirSheetImportacao = function() {
+  toast('📥 Importação em breve!');
+};
+
 window.abrirControleFinanceiro = async function() {
   // Navega primeiro e mostra loading — as queries chegam depois (padrão abrirReserva)
   const grid = document.getElementById('cf-categorias-grid');
