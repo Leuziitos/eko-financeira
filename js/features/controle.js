@@ -734,6 +734,12 @@ window.abrirLancamentosCat = async function(catId) {
   abrirOverlay('overlay-cf-lancamentos');
 };
 
+// Handler estável do container de lançamentos por categoria — guardado aqui
+// para poder ser removido antes de cada re-render, evitando acumular um
+// listener a cada abertura do overlay (o elemento é reaproveitado, só o
+// innerHTML muda).
+let _lancCatClickHandler = null;
+
 function renderLancamentosCat(lancs, isReceita) {
   const el = document.getElementById('cf-lanc-lista');
   if(!el) return;
@@ -755,12 +761,15 @@ function renderLancamentosCat(lancs, isReceita) {
     </div>`;
   }).join('');
 
-  // Event delegation no container da lista
-  el.addEventListener('click', async function(e) {
+  // Event delegation no container da lista — remove o listener da renderização
+  // anterior antes de anexar um novo, para não acumular handlers
+  if (_lancCatClickHandler) el.removeEventListener('click', _lancCatClickHandler);
+  _lancCatClickHandler = async function(e) {
     const btn = e.target.closest('button[data-lancid]');
     if(!btn) return;
     await excluirLancamentoCF(btn.dataset.lancid);
-  });
+  };
+  el.addEventListener('click', _lancCatClickHandler);
 }
 
 window.excluirLancamentoCF = async function(id) {
