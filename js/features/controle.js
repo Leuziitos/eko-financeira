@@ -214,8 +214,24 @@ window.abrirControleFinanceiro = async function() {
 async function renderControleFinanceiro() {
   cfMesVis = new Date().getMonth();
   cfAnoVis = new Date().getFullYear();
+  renderOnboardingControle();
   await renderDashboardControle();
 }
+
+// ════ ONBOARDING DO CONTROLE ═════════════════════════════════
+const CF_ONBOARDING_KEY = 'eko_controle_onboarding';
+
+function renderOnboardingControle() {
+  const card = document.getElementById('cf-onboarding-card');
+  if (!card) return;
+  card.style.display = localStorage.getItem(CF_ONBOARDING_KEY) ? 'none' : 'block';
+}
+
+window.fecharOnboardingControle = function() {
+  localStorage.setItem(CF_ONBOARDING_KEY, 'true');
+  const card = document.getElementById('cf-onboarding-card');
+  if (card) card.style.display = 'none';
+};
 
 function atualizarTipoBotoes(tipo) {
   const btnG = document.getElementById('cf-tipo-gasto');

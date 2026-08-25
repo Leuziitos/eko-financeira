@@ -964,6 +964,14 @@
   </div>
   <div class="content">
 
+    <!-- Onboarding — só na primeira vez (localStorage eko_controle_onboarding) -->
+    <div id="cf-onboarding-card" class="dica-card" style="display:none;margin-bottom:1rem;padding:1.25rem">
+      <div class="dica-card-texto" style="font-size:16px;font-weight:800;margin-bottom:.5rem">💰 Bem-vindo ao Controle Financeiro</div>
+      <div class="dica-card-texto">Registre seus gastos e receitas para entender para onde vai seu dinheiro.</div>
+      <div class="dica-card-texto" style="margin-top:.75rem">➕ Use o botão verde para registrar manualmente<br>📥 Ou importe seu extrato bancário</div>
+      <button onclick="fecharOnboardingControle()" class="btn btn-primary" style="width:100%;margin-top:1rem">Entendi →</button>
+    </div>
+
     <!-- Navegação mensal -->
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.875rem">
       <button onclick="navegarMesControle(-1)" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--eko-green);padding:4px 8px">‹</button>
