@@ -1079,7 +1079,7 @@
       <div style="font-size:12px;color:var(--text-muted)">⚠️ Nubank exporta apenas CSV</div>
     </div>
 
-    <button onclick="document.getElementById('importacao-file').click()" class="btn btn-primary" style="width:100%;margin-bottom:1rem">📎 Selecionar arquivo</button>
+    <button id="importacao-btn-selecionar-arquivo" onclick="document.getElementById('importacao-file').click()" class="btn btn-primary" style="width:100%;margin-bottom:1rem">📎 Selecionar arquivo</button>
     <input type="file" id="importacao-file" accept=".ofx,.csv" onchange="handleArquivoImportacao(this)" style="display:none">
 
     <details class="card" style="margin-bottom:0">
@@ -1092,6 +1092,7 @@
           <button id="importacao-guia-btn-santander" onclick="mostrarGuiaBanco('santander')" class="btn btn-sm" style="background:var(--surface);border:1px solid var(--border);color:var(--text)">Santander</button>
           <button id="importacao-guia-btn-inter" onclick="mostrarGuiaBanco('inter')" class="btn btn-sm" style="background:var(--surface);border:1px solid var(--border);color:var(--text)">Inter</button>
           <button id="importacao-guia-btn-c6" onclick="mostrarGuiaBanco('c6')" class="btn btn-sm" style="background:var(--surface);border:1px solid var(--border);color:var(--text)">C6</button>
+          <button id="importacao-guia-btn-pagbank" onclick="mostrarGuiaBanco('pagbank')" class="btn btn-sm" style="background:var(--surface);border:1px solid var(--border);color:var(--text)">PagBank</button>
           <button id="importacao-guia-btn-outro" onclick="mostrarGuiaBanco('outro')" class="btn btn-sm" style="background:var(--surface);border:1px solid var(--border);color:var(--text);grid-column:span 3">Outro banco</button>
         </div>
         <div id="importacao-guia-conteudo">

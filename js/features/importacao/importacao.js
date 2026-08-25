@@ -33,9 +33,15 @@ const HISTORICO_KEY = 'eko_importacoes';
 const FONTES_KEY = 'eko_importacao_fontes';
 const LIMITE_TRANSACOES_AVISO = 500;
 
+// EDITAR AQUI: usuário do Instagram exibido quando não conseguimos
+// processar o extrato de um banco (não mapeado ou arquivo mal formatado).
+const INSTAGRAM_SUPORTE = '@seu_usuario';
+const MSG_ERRO_IMPORTACAO_AMIGAVEL = `❌ Não consegui importar esse arquivo. Manda um print ou o arquivo pro Instagram ${INSTAGRAM_SUPORTE} que a gente adiciona suporte a esse banco.`;
+
 // ── SHEET DE IMPORTAÇÃO (entrada a partir do Controle Financeiro) ─
 window.abrirSheetImportacao = function() {
   abrirOverlay('sheet-importacao');
+  atualizarBotaoUploadImportacao(null); // reabre sempre com upload liberado, independente do banco visto da última vez
 };
 
 // ── ONBOARDING / NAVEGAÇÃO ───────────────────────────────────
@@ -233,19 +239,28 @@ window.handleArquivoImportacao = async function(input) {
   const texto = decodificarArquivoOFX(buffer); // mesma detecção de encoding serve p/ CSV
 
   let transacoes, cabecalho, tipoArquivo;
-  if (ehOFX) {
-    if (!/<OFX>/i.test(texto)) { toast('❌ Arquivo não parece ser um OFX válido.'); return; }
-    transacoes = parseOFX(texto);
-    tipoArquivo = 'ofx';
-    const org = extrairOrgOFX(texto);
-    cabecalho = 'ofx' + (org ? ':' + org : '');
-  } else {
-    transacoes = parseCSV(texto);
-    tipoArquivo = 'csv';
-    cabecalho = (texto.split(/\r\n|\r|\n/)[0] || '');
+  try {
+    if (ehOFX) {
+      if (!/<OFX>/i.test(texto)) { toast(MSG_ERRO_IMPORTACAO_AMIGAVEL); return; }
+      transacoes = parseOFX(texto);
+      tipoArquivo = 'ofx';
+      const org = extrairOrgOFX(texto);
+      cabecalho = 'ofx' + (org ? ':' + org : '');
+    } else {
+      transacoes = parseCSV(texto);
+      tipoArquivo = 'csv';
+      cabecalho = (texto.split(/\r\n|\r|\n/)[0] || '');
+    }
+  } catch(e) {
+    // Qualquer falha inesperada do parser (formato de banco não previsto,
+    // arquivo corrompido etc.) cai numa mensagem amigável — nunca um erro
+    // técnico cru na tela.
+    console.error('handleArquivoImportacao: parser', e);
+    toast(MSG_ERRO_IMPORTACAO_AMIGAVEL);
+    return;
   }
 
-  if (!transacoes.length) { toast('❌ Não consegui reconhecer nenhuma transação nesse arquivo.'); return; }
+  if (!transacoes.length) { toast(MSG_ERRO_IMPORTACAO_AMIGAVEL); return; }
 
   if (transacoes.length > LIMITE_TRANSACOES_AVISO) {
     const continuar = confirm(`Seu extrato tem ${transacoes.length} transações. Para melhor performance, importe períodos menores (ex: por mês).\n\nContinuar mesmo assim?`);
@@ -727,8 +742,23 @@ const GUIA_EXPORTACAO_NUBANK = [
   'Escolha o período e toque em "Exportar CSV"',
   'Salve o arquivo e importe aqui',
 ];
-const NOMES_BANCOS_GUIA = { nubank: 'Nubank', itau: 'Itaú', bradesco: 'Bradesco', santander: 'Santander', inter: 'Banco Inter', c6: 'C6 Bank', outro: 'Outro banco' };
+const NOMES_BANCOS_GUIA = { nubank: 'Nubank', itau: 'Itaú', bradesco: 'Bradesco', santander: 'Santander', inter: 'Banco Inter', c6: 'C6 Bank', pagbank: 'PagBank', outro: 'Outro banco' };
 const MENSAGEM_GUIA_GENERICA = 'Ainda não temos o passo a passo específico deste banco. Procure por "exportar extrato" nas configurações do app do seu banco — geralmente em Extrato, Configurações ou Central de ajuda — e baixe no formato OFX ou CSV pra importar aqui.';
+
+// Bancos com limitação conhecida de exportação — ver mostrarGuiaBanco().
+// 'bloqueado': true desabilita o botão "Selecionar arquivo" enquanto esse
+// banco estiver selecionado no guia (não adianta tentar, o banco não
+// oferece exportação nenhuma).
+const AVISOS_BANCO = {
+  santander: {
+    bloqueado: true,
+    mensagem: 'O Santander não permite exportar o extrato em CSV nem OFX — nem pelo app, nem pelo site. Por enquanto não temos como importar automaticamente esse banco; lance as transações manualmente pelo Controle Financeiro.',
+  },
+  itau: {
+    bloqueado: false,
+    mensagem: 'Pelo app do Itaú (celular) não é possível exportar CSV/OFX — essa opção só existe no site (Internet Banking) acessado por um computador. Entre em itau.com.br pelo navegador do computador, abra o extrato e procure a opção de exportar.',
+  },
+};
 
 window.mostrarGuiaBanco = function(banco) {
   Object.keys(NOMES_BANCOS_GUIA).forEach(b => {
@@ -740,14 +770,36 @@ window.mostrarGuiaBanco = function(banco) {
   });
 
   const el = document.getElementById('importacao-guia-conteudo');
-  if (!el) return;
-  const nome = NOMES_BANCOS_GUIA[banco] || banco;
+  if (el) {
+    const nome = NOMES_BANCOS_GUIA[banco] || banco;
+    const aviso = AVISOS_BANCO[banco];
 
-  if (banco === 'nubank') {
-    el.innerHTML = `<div style="font-size:13px;font-weight:700;margin-bottom:.5rem">${esc(nome)}:</div>
-      <ol style="font-size:13px;color:var(--text-muted);line-height:1.9;padding-left:1.25rem;margin:0">${GUIA_EXPORTACAO_NUBANK.map(p => `<li>${esc(p)}</li>`).join('')}</ol>`;
-  } else {
-    el.innerHTML = `<div style="font-size:13px;font-weight:700;margin-bottom:.5rem">${esc(nome)}:</div>
-      <div style="font-size:13px;color:var(--text-muted);line-height:1.7">${esc(MENSAGEM_GUIA_GENERICA)}</div>`;
+    if (aviso) {
+      const cor = aviso.bloqueado ? 'var(--red)' : '#7A4010';
+      const fundo = aviso.bloqueado ? 'var(--red-light)' : 'var(--amber-light)';
+      const icone = aviso.bloqueado ? '🚫' : '⚠️';
+      el.innerHTML = `<div style="font-size:13px;font-weight:700;margin-bottom:.5rem">${esc(nome)}:</div>
+        <div style="color:${cor};background:${fundo};border-radius:8px;padding:8px 10px;font-size:12.5px;line-height:1.6">${icone} ${esc(aviso.mensagem)}</div>`;
+    } else if (banco === 'nubank') {
+      el.innerHTML = `<div style="font-size:13px;font-weight:700;margin-bottom:.5rem">${esc(nome)}:</div>
+        <ol style="font-size:13px;color:var(--text-muted);line-height:1.9;padding-left:1.25rem;margin:0">${GUIA_EXPORTACAO_NUBANK.map(p => `<li>${esc(p)}</li>`).join('')}</ol>`;
+    } else {
+      el.innerHTML = `<div style="font-size:13px;font-weight:700;margin-bottom:.5rem">${esc(nome)}:</div>
+        <div style="font-size:13px;color:var(--text-muted);line-height:1.7">${esc(MENSAGEM_GUIA_GENERICA)}</div>`;
+    }
   }
+
+  atualizarBotaoUploadImportacao(banco);
+};
+
+// Desabilita "Selecionar arquivo" quando o banco escolhido no guia não
+// oferece exportação nenhuma (ver AVISOS_BANCO) — evita o usuário tentar
+// um upload que sabemos de antemão que vai falhar.
+function atualizarBotaoUploadImportacao(banco) {
+  const btn = document.getElementById('importacao-btn-selecionar-arquivo');
+  if (!btn) return;
+  const bloqueado = !!(AVISOS_BANCO[banco] && AVISOS_BANCO[banco].bloqueado);
+  btn.disabled = bloqueado;
+  btn.style.opacity = bloqueado ? '.5' : '';
+  btn.style.cursor = bloqueado ? 'not-allowed' : '';
 };

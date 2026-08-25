@@ -1,15 +1,32 @@
 /* ═══════════════════════════════════════════════════════════
  * Eko Financeira — features/importacao/parser-csv.js
  * Parser de extratos em CSV — detecta automaticamente o banco de
- * origem pelo cabeçalho das colunas (Nubank; Inter e C6 caem no
- * mapeador genérico por enquanto — sem cabeçalho oficial
+ * origem pelo cabeçalho das colunas (Nubank; Inter, C6 e Bradesco
+ * caem no mapeador genérico por enquanto — sem cabeçalho oficial
  * confirmado, ver commit da Parte 1) e converte para o mesmo
  * formato de transações do parser OFX.
+ *
+ * Bancos brasileiros exportam CSV de formas bem diferentes — este
+ * parser não assume que a linha 1 é o cabeçalho nem que existe só
+ * uma tabela por arquivo:
+ *   - Texto solto antes/depois da tabela (título, filtro de
+ *     período, aviso de data de consulta, linha de "Total") é
+ *     ignorado: qualquer linha que não vire uma linha de dado
+ *     válida (data reconhecível) nem um novo cabeçalho válido é
+ *     descartada silenciosamente.
+ *   - Um mesmo arquivo pode ter mais de uma tabela (ex.: Bradesco,
+ *     que repete "Últimos Lançamentos" depois da tabela principal)
+ *     — cada linha que bate com um cabeçalho válido reinicia o
+ *     mapeamento de colunas usado dali pra frente.
  * ═══════════════════════════════════════════════════════════ */
 
 // Regras de exclusão automática (descrição contém, case-insensitive) —
 // mesma lista aplicada pelo parser OFX.
 const DESCRICOES_IGNORADAS = [/PAGAMENTO\s+FATURA/i, /PGTO\s+FATURA/i, /PAG\s+FATURA/i, /RENDIMENTO/i, /RENDTO/i];
+
+// Linha de marcador de saldo de abertura/fechamento (Bradesco: "COD. LANC.
+// 0") — não é uma transação de verdade, não tem Crédito nem Débito.
+const MARCADOR_SALDO = /^COD\.?\s*LANC\.?\s*0$/i;
 
 // Regras de sinalização para revisão manual — mesma lista do parser OFX.
 function precisaRevisar(descricao) {
@@ -23,7 +40,7 @@ function precisaRevisar(descricao) {
 }
 
 function deveIgnorar(descricao) {
-  return DESCRICOES_IGNORADAS.some(re => re.test(descricao || ''));
+  return DESCRICOES_IGNORADAS.some(re => re.test(descricao || '')) || MARCADOR_SALDO.test((descricao || '').trim());
 }
 
 // Linhas "Pagamento recebido"/"Pagamento efetuado" na fatura de cartão do
@@ -46,9 +63,12 @@ function normalizarDescricaoIOF(descricao) {
 }
 
 // ── CSV parsing (delimitador , ou ; · respeita campos entre aspas) ───────
-function detectarDelimitador(linhaHeader) {
-  const virgulas = (linhaHeader.match(/,/g) || []).length;
-  const pontoVirgulas = (linhaHeader.match(/;/g) || []).length;
+// Conta ocorrências no arquivo inteiro, não só na primeira linha — a
+// primeira linha de vários bancos (Bradesco, C6) é texto solto que não
+// necessariamente reflete o delimitador real da tabela.
+function detectarDelimitador(texto) {
+  const virgulas = (texto.match(/,/g) || []).length;
+  const pontoVirgulas = (texto.match(/;/g) || []).length;
   return pontoVirgulas > virgulas ? ';' : ',';
 }
 
@@ -73,6 +93,8 @@ function parseLinhaCSV(linha, delimitador) {
 }
 
 // ── Detecção de banco pelo cabeçalho ─────────────────────────────────────
+// Tentada linha a linha (ver parseCSV) até achar uma que mapeie — não
+// assume que o cabeçalho está numa posição fixa do arquivo.
 function detectarMapeamento(headerCols) {
   const normalizados = headerCols.map(c => c.trim().toLowerCase());
 
@@ -81,7 +103,7 @@ function detectarMapeamento(headerCols) {
   // preservado exatamente como veio da Parte 1.
   if (normalizados.join(',') === 'date,category,title,amount') {
     return {
-      banco: 'Nubank',
+      banco: 'Nubank', modo: 'valor',
       idxData: 0, idxCategoria: 1, idxDescricao: 2, idxValor: 3,
       inverterSinal: true, // export do Nubank: amount positivo = compra (gasto); ver Parte 1
       excecaoPagamento: false,
@@ -94,23 +116,48 @@ function detectarMapeamento(headerCols) {
   // este formato.
   if (normalizados.join(',') === 'date,title,amount') {
     return {
-      banco: 'Nubank',
+      banco: 'Nubank', modo: 'valor',
       idxData: 0, idxCategoria: -1, idxDescricao: 1, idxValor: 2,
       inverterSinal: true,
       excecaoPagamento: true,
     };
   }
 
-  // Genérico — Inter, C6 e qualquer outro banco caem aqui: tenta mapear
-  // colunas de data/valor/descrição por palavras-chave comuns no cabeçalho.
+  // Genérico — Inter, C6, Bradesco e qualquer outro banco caem aqui: tenta
+  // mapear colunas de data/valor/descrição por palavras-chave comuns no
+  // cabeçalho.
   const idxData = normalizados.findIndex(c => /data|date/.test(c));
-  const idxValor = normalizados.findIndex(c => /valor|amount|montante/.test(c));
-  const idxDescricao = normalizados.findIndex(c => /descri|title|hist[oó]rico|lan[çc]amento|estabelecimento|memo/.test(c));
+  if (idxData === -1) return null; // sem coluna de data reconhecível — não é um cabeçalho
+
+  // Ordem de preferência: colunas mais específicas ("título"/"histórico",
+  // que carregam o nome do estabelecimento/contraparte) antes de colunas
+  // mais genéricas ("descrição", que em alguns bancos é só o tipo da
+  // operação, ex. "TRANSF ENVIADA PIX" repetido em toda linha). Sempre
+  // exclui o índice já usado pela coluna de data — "Data Lançamento" (C6)
+  // contém a palavra "lançamento" e bateria com o candidato mais genérico.
+  const candidatosDescricao = [/t[ií]tulo/, /hist[oó]rico/, /descri/, /estabelecimento/, /memo/, /lan[çc]amento/];
+  let idxDescricao = -1;
+  for (const re of candidatosDescricao) {
+    idxDescricao = normalizados.findIndex((c, i) => i !== idxData && re.test(c));
+    if (idxDescricao !== -1) break;
+  }
+  if (idxDescricao === -1) return null; // sem coluna de descrição reconhecível
+
   const idxCategoria = normalizados.findIndex(c => /categ/.test(c));
 
-  if (idxData === -1 || idxValor === -1 || idxDescricao === -1) return null; // não deu pra mapear
+  // Modo 1: coluna única de valor com sinal (Nubank genérico, Inter, ...).
+  const idxValor = normalizados.findIndex(c => /valor|amount|montante/.test(c));
+  if (idxValor !== -1) {
+    return { banco: null, modo: 'valor', idxData, idxValor, idxDescricao, idxCategoria, inverterSinal: false };
+  }
 
-  return { banco: null, idxData, idxValor, idxDescricao, idxCategoria, inverterSinal: false };
+  // Modo 2: colunas separadas de crédito/entrada e débito/saída (Bradesco:
+  // "Crédito (R$)"/"Débito (R$)"; C6: "Entrada(R$)"/"Saída(R$)").
+  const idxEntrada = normalizados.findIndex(c => /cr[ée]dito|entrada/.test(c));
+  const idxSaida = normalizados.findIndex(c => /d[ée]bito|sa[ií]da/.test(c));
+  if (idxEntrada === -1 || idxSaida === -1) return null; // não deu pra mapear
+
+  return { banco: null, modo: 'entrada_saida', idxData, idxEntrada, idxSaida, idxDescricao, idxCategoria };
 }
 
 // ── Normalização de data e valor ─────────────────────────────────────────
@@ -127,6 +174,9 @@ function normalizarDataCSV(raw) {
   return '';
 }
 
+// Converte tanto formato BR (milhar '.', decimal ',' — ex. "2.004,18")
+// quanto formato US (decimal '.', sem separador de milhar — ex. "385.44"),
+// detectando pela presença de vírgula.
 function normalizarValorCSV(raw) {
   let s = String(raw || '').trim().replace(/R\$\s?/i, '').replace(/\s/g, '');
   if (!s) return 0;
@@ -134,42 +184,89 @@ function normalizarValorCSV(raw) {
   return parseFloat(s) || 0;
 }
 
+// Chave de deduplicação intra-arquivo: mesma data + valor + descrição crua
+// (case-insensitive) — usada quando o mesmo lançamento aparece em mais de
+// uma tabela do arquivo (ex.: Bradesco repete os últimos dias na tabela
+// "Últimos Lançamentos").
+function chaveDedupInterno(t) {
+  return `${t.data}|${t.valor}|${t.descricao.trim().toUpperCase()}`;
+}
+
 // Recebe o conteúdo do arquivo CSV já decodificado (string) e retorna o
-// array de transações no mesmo formato do parser OFX.
+// array de transações no mesmo formato do parser OFX. Processa o arquivo
+// linha a linha: cada linha é testada primeiro como dado (usando o
+// mapeamento de colunas ativo), depois — se não for um dado válido — como
+// um novo cabeçalho (o que permite mais de uma tabela no mesmo arquivo);
+// se não for nenhum dos dois, é descartada (texto solto, filtro, rodapé).
 export function parseCSV(texto) {
   const linhas = texto.split(/\r\n|\r|\n/).filter(l => l.trim() !== '');
   if (!linhas.length) return [];
 
-  const delimitador = detectarDelimitador(linhas[0]);
-  const headerCols = parseLinhaCSV(linhas[0], delimitador);
-  const mapa = detectarMapeamento(headerCols);
-  if (!mapa) return []; // cabeçalho não reconhecido — nenhuma coluna essencial identificada
+  const delimitador = detectarDelimitador(texto);
 
   const transacoes = [];
-  for (let i = 1; i < linhas.length; i++) {
-    const cols = parseLinhaCSV(linhas[i], delimitador);
-    let descricao = cols[mapa.idxDescricao] || '';
-    if (deveIgnorar(descricao)) continue;
+  let mapa = null;
+  let tabelaAtual = 0; // incrementa a cada novo cabeçalho reconhecido — ver dedup abaixo
 
-    const descricaoIOF = normalizarDescricaoIOF(descricao);
-    if (descricaoIOF) descricao = descricaoIOF;
+  for (const linha of linhas) {
+    const cols = parseLinhaCSV(linha, delimitador);
 
-    let valor = normalizarValorCSV(cols[mapa.idxValor]);
-    if (mapa.inverterSinal && !(mapa.excecaoPagamento && ehPagamentoFaturaNubank(descricao))) valor = -valor;
-    const data = normalizarDataCSV(cols[mapa.idxData]);
-    if (!data) continue; // linha sem data válida — não é uma transação utilizável
+    if (mapa) {
+      const data = normalizarDataCSV(cols[mapa.idxData]);
+      if (data) {
+        let descricao = cols[mapa.idxDescricao] || '';
+        if (deveIgnorar(descricao)) continue;
 
-    const transacao = {
-      data,
-      valor,
-      descricao,
-      tipo: valor < 0 ? 'gasto' : 'receita',
-      categoriaExtrato: mapa.idxCategoria > -1 ? (cols[mapa.idxCategoria] || '') : '',
-    };
-    if (precisaRevisar(descricao)) transacao.revisar = true;
+        const descricaoIOF = normalizarDescricaoIOF(descricao);
+        if (descricaoIOF) descricao = descricaoIOF;
 
-    transacoes.push(transacao);
+        let valor;
+        if (mapa.modo === 'entrada_saida') {
+          const entrada = normalizarValorCSV(cols[mapa.idxEntrada]);
+          const saida = normalizarValorCSV(cols[mapa.idxSaida]);
+          valor = entrada - saida;
+        } else {
+          valor = normalizarValorCSV(cols[mapa.idxValor]);
+          if (mapa.inverterSinal && !(mapa.excecaoPagamento && ehPagamentoFaturaNubank(descricao))) valor = -valor;
+        }
+
+        const transacao = {
+          data,
+          valor,
+          descricao,
+          tipo: valor < 0 ? 'gasto' : 'receita',
+          categoriaExtrato: mapa.idxCategoria > -1 ? (cols[mapa.idxCategoria] || '') : '',
+          _tabela: tabelaAtual,
+        };
+        if (precisaRevisar(descricao)) transacao.revisar = true;
+
+        transacoes.push(transacao);
+        continue;
+      }
+    }
+
+    // Não foi um dado válido (ou ainda não há mapeamento ativo) — tenta
+    // reconhecer esta linha como um (novo) cabeçalho.
+    const possivelMapa = detectarMapeamento(cols);
+    if (possivelMapa) { mapa = possivelMapa; tabelaAtual++; }
+    // Nem dado nem cabeçalho: texto solto, filtro de período, aviso,
+    // linha de "Total" etc — ignorada silenciosamente.
   }
 
-  return transacoes;
+  // Dedup só entre tabelas diferentes do mesmo arquivo (ex.: Bradesco
+  // repete os últimos lançamentos numa segunda tabela) — duas transações
+  // reais distintas que coincidem em data+valor+descrição dentro da MESMA
+  // tabela (ex.: dois PIX recebidos de mesmo valor no mesmo dia, de
+  // pessoas diferentes) não são mexidas, só a repetição entre tabelas é.
+  const tabelaPorChave = new Map();
+  const resultado = [];
+  for (const t of transacoes) {
+    const chave = chaveDedupInterno(t);
+    const tabelaAnterior = tabelaPorChave.get(chave);
+    if (tabelaAnterior !== undefined && tabelaAnterior !== t._tabela) continue;
+    if (tabelaAnterior === undefined) tabelaPorChave.set(chave, t._tabela);
+    const { _tabela, ...limpo } = t;
+    resultado.push(limpo);
+  }
+  return resultado;
 }
