@@ -119,11 +119,92 @@ function cfNomeMes(mes, ano) {
   return new Date(ano, mes, 1).toLocaleDateString('pt-BR', {month:'long', year:'numeric'});
 }
 
-// Busca de lançamentos — fora do escopo desta reestruturação (Parte 2 a
-// reintroduz). Placeholder para o botão não ficar sem handler.
+// ════ BUSCA GLOBAL DE LANÇAMENTOS ════════════════════════════
 window.abrirBuscaCF = function() {
-  toast('🔍 Busca em breve!');
+  const input = document.getElementById('cf-busca-input');
+  if (input) input.value = '';
+  const resultados = document.getElementById('cf-busca-resultados');
+  if (resultados) resultados.innerHTML = '<div class="empty-state">Digite para buscar</div>';
+  abrirOverlay('sheet-busca-cf');
+  if (input) setTimeout(() => input.focus(), 200);
 };
+
+window.fecharSheetBuscaCF = function() {
+  fecharOverlay('sheet-busca-cf');
+};
+
+window.buscarLancamentosCF = async function(termo) {
+  const resultados = document.getElementById('cf-busca-resultados');
+  if (!resultados) return;
+  const q = (termo || '').trim().toLowerCase();
+  if (!q) { resultados.innerHTML = '<div class="empty-state">Digite para buscar</div>'; return; }
+
+  const lancs = await getCFLancamentos();
+  const cats  = await getCFCategorias();
+  const todasCats = [...(cats.gasto||[]), ...(cats.receita||[])];
+
+  const encontrados = lancs.filter(l => {
+    const cat = todasCats.find(c => c.id === l.categoria);
+    const nomeCat = (cat ? cat.nome : (l.categoria || '')).toLowerCase();
+    const valorStr = String(l.valor).toLowerCase();
+    return nomeCat.includes(q) || valorStr.includes(q);
+  }).sort((a,b) => new Date(b.data||b.criadoEm) - new Date(a.data||a.criadoEm));
+
+  if (!encontrados.length) { resultados.innerHTML = '<div class="empty-state">Nenhum lançamento encontrado</div>'; return; }
+
+  resultados.innerHTML = `<div class="card" id="cf-busca-container" style="padding:1rem 1.125rem">${encontrados.map(l => {
+    const data = new Date(l.data || l.criadoEm).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit'});
+    const isReceita = l.tipo === 'receita';
+    const cat = todasCats.find(c => c.id === l.categoria);
+    const mesLabel = cfNomeMes(l.mes, l.ano).replace(/^\w/,c=>c.toUpperCase());
+    return `<div class="cf-busca-item" data-lancid="${l._id}" style="display:flex;align-items:center;justify-content:space-between;padding:.625rem 0;border-bottom:1px solid var(--border);cursor:pointer">
+      <div style="pointer-events:none">
+        <div style="font-size:13px;font-weight:600">${esc(cat ? cat.nome : l.categoria)}</div>
+        <div style="font-size:11px;color:var(--text-muted)">${data} · ${mesLabel}</div>
+      </div>
+      <div style="font-size:13px;font-weight:800;color:${isReceita?'var(--eko-green)':'var(--red)'};pointer-events:none">${isReceita?'+':'-'}${fmt(l.valor)}</div>
+    </div>`;
+  }).join('')}</div>`;
+
+  const container = document.getElementById('cf-busca-container');
+  if (container) {
+    container.addEventListener('click', function(e) {
+      const item = e.target.closest('.cf-busca-item');
+      if (!item) return;
+      const lanc = encontrados.find(l => l._id === item.dataset.lancid);
+      if (lanc) { fecharSheetBuscaCF(); abrirSheetLancamento(lanc); }
+    });
+  }
+};
+
+// Gesto de arrastar para fechar — mesmo comportamento do #sheet-lancamento
+(function initGestoFecharSheetBuscaCF() {
+  const wrap = document.getElementById('sheet-busca-cf');
+  const handle = wrap && wrap.querySelector('.sheet-handle');
+  const sheet  = wrap && wrap.querySelector('.sheet');
+  if (!handle || !sheet) return;
+  let startY = null;
+
+  handle.addEventListener('touchstart', e => {
+    startY = e.touches[0].clientY;
+    sheet.style.transition = 'none';
+  }, {passive:true});
+
+  handle.addEventListener('touchmove', e => {
+    if (startY === null) return;
+    const delta = e.touches[0].clientY - startY;
+    if (delta > 0) sheet.style.transform = `translateY(${delta}px)`;
+  }, {passive:true});
+
+  handle.addEventListener('touchend', e => {
+    if (startY === null) return;
+    const delta = e.changedTouches[0].clientY - startY;
+    sheet.style.transition = 'transform .2s';
+    sheet.style.transform = '';
+    if (delta > 100) fecharSheetBuscaCF();
+    startY = null;
+  }, {passive:true});
+})();
 
 window.abrirControleFinanceiro = async function() {
   ir('screen-controle');

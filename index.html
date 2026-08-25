@@ -1101,6 +1101,20 @@
   </div>
 </div>
 
+<!-- SHEET: Busca de lançamentos -->
+<div id="sheet-busca-cf" class="sheet-overlay hidden">
+  <div class="sheet" style="max-height:90vh">
+    <div class="sheet-handle"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+      <div style="font-size:17px;font-weight:800">🔍 Buscar lançamentos</div>
+      <button onclick="fecharSheetBuscaCF()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-muted);line-height:1;padding:4px">✕</button>
+    </div>
+    <input id="cf-busca-input" type="text" placeholder="Buscar lançamentos..." oninput="buscarLancamentosCF(this.value)"
+      style="width:100%;box-sizing:border-box;padding:12px 14px;font-size:15px;font-family:inherit;border:1.5px solid var(--border);border-radius:12px;background:var(--surface2);color:var(--text);outline:none;margin-bottom:1rem">
+    <div id="cf-busca-resultados"></div>
+  </div>
+</div>
+
 <!-- OVERLAY: Gerenciar Categorias -->
 <div id="overlay-cf-categorias" class="overlay hidden">
   <div class="sheet">
