@@ -1048,6 +1048,59 @@
   </div>
 </div>
 
+<!-- SHEET: Importar extrato -->
+<div id="sheet-importacao" class="sheet-overlay hidden">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+      <div style="font-size:17px;font-weight:800">📥 Importar extrato</div>
+      <button onclick="fecharOverlay('sheet-importacao')" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-muted);line-height:1;padding:4px">✕</button>
+    </div>
+
+    <div class="card" style="padding:1rem 1.125rem;margin-bottom:1rem">
+      <div style="font-size:13px;font-weight:800;margin-bottom:.5rem">📌 Como funciona</div>
+      <ul style="font-size:13px;color:var(--text-muted);line-height:1.8;padding-left:1.1rem;margin:0 0 .75rem">
+        <li>Exporte o extrato do seu banco (CSV ou OFX)</li>
+        <li>Importe aqui — processamos tudo no seu dispositivo</li>
+        <li>Revise e categorize cada transação antes de confirmar
+          <div style="color:#7A4010;background:var(--amber-light);border-radius:8px;padding:6px 10px;margin-top:4px;font-size:12px">⚠️ Verifique lançamentos duplicados — especialmente se você já registrou algo manualmente no mesmo período</div>
+        </li>
+        <li>🔒 Seus dados bancários nunca saem do seu celular</li>
+      </ul>
+      <div style="font-size:12px;color:var(--text-muted)">📄 Formatos aceitos: CSV e OFX</div>
+      <div style="font-size:12px;color:var(--text-muted)">⚠️ Nubank exporta apenas CSV</div>
+    </div>
+
+    <button onclick="document.getElementById('importacao-file').click()" class="btn btn-primary" style="width:100%;margin-bottom:1rem">📎 Selecionar arquivo</button>
+    <input type="file" id="importacao-file" accept=".ofx,.csv" onchange="handleArquivoImportacao(this)" style="display:none">
+
+    <details class="card" style="margin-bottom:0">
+      <summary style="font-size:13px;font-weight:800;cursor:pointer">📚 Como exportar do meu banco</summary>
+      <div style="margin-top:.875rem">
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:1rem">
+          <button id="importacao-guia-btn-nubank" onclick="mostrarGuiaBanco('nubank')" class="btn btn-sm btn-primary">Nubank</button>
+          <button id="importacao-guia-btn-itau" onclick="mostrarGuiaBanco('itau')" class="btn btn-sm" style="background:var(--surface);border:1px solid var(--border);color:var(--text)">Itaú</button>
+          <button id="importacao-guia-btn-bradesco" onclick="mostrarGuiaBanco('bradesco')" class="btn btn-sm" style="background:var(--surface);border:1px solid var(--border);color:var(--text)">Bradesco</button>
+          <button id="importacao-guia-btn-santander" onclick="mostrarGuiaBanco('santander')" class="btn btn-sm" style="background:var(--surface);border:1px solid var(--border);color:var(--text)">Santander</button>
+          <button id="importacao-guia-btn-inter" onclick="mostrarGuiaBanco('inter')" class="btn btn-sm" style="background:var(--surface);border:1px solid var(--border);color:var(--text)">Inter</button>
+          <button id="importacao-guia-btn-c6" onclick="mostrarGuiaBanco('c6')" class="btn btn-sm" style="background:var(--surface);border:1px solid var(--border);color:var(--text)">C6</button>
+          <button id="importacao-guia-btn-outro" onclick="mostrarGuiaBanco('outro')" class="btn btn-sm" style="background:var(--surface);border:1px solid var(--border);color:var(--text);grid-column:span 3">Outro banco</button>
+        </div>
+        <div id="importacao-guia-conteudo">
+          <div style="font-size:13px;font-weight:700;margin-bottom:.5rem">Nubank:</div>
+          <ol style="font-size:13px;color:var(--text-muted);line-height:1.9;padding-left:1.25rem;margin:0">
+            <li>Abra o app do Nubank</li>
+            <li>Toque em "Configurações" (ícone ⚙️)</li>
+            <li>Selecione "Exportar dados"</li>
+            <li>Escolha o período e toque em "Exportar CSV"</li>
+            <li>Salve o arquivo e importe aqui</li>
+          </ol>
+        </div>
+      </div>
+    </details>
+  </div>
+</div>
+
 <!-- OVERLAY: Gerenciar Categorias -->
 <div id="overlay-cf-categorias" class="overlay hidden">
   <div class="sheet">

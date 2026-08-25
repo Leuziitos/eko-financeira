@@ -26,12 +26,17 @@ import { normalizarDescricao } from './normalizer.js';
 import { verificarDuplicatas, gerarHash } from './deduplicator.js';
 import { categorizarTransacoes, salvarCatAprendida } from './categorizer.js';
 import { detectarIntegracoes, aplicarIntegracao, reverterIntegracao } from './integrations.js';
-import { getCFLancamentos, getCFCategorias, saveCFCategorias, cfChaveMes } from '../controle.js';
+import { getCFLancamentos, getCFCategorias, saveCFCategorias, cfChaveMes, renderDashboardControle } from '../controle.js';
 
 const ONBOARDING_KEY = 'eko_importacao_onboarding';
 const HISTORICO_KEY = 'eko_importacoes';
 const FONTES_KEY = 'eko_importacao_fontes';
 const LIMITE_TRANSACOES_AVISO = 500;
+
+// ── SHEET DE IMPORTAÇÃO (entrada a partir do Controle Financeiro) ─
+window.abrirSheetImportacao = function() {
+  abrirOverlay('sheet-importacao');
+};
 
 // ── ONBOARDING / NAVEGAÇÃO ───────────────────────────────────
 function mostrarConteudoImportacao() {
@@ -215,6 +220,7 @@ window.handleArquivoImportacao = async function(input) {
   const arquivo = input.files && input.files[0];
   input.value = ''; // permite selecionar o mesmo arquivo de novo depois
   if (!arquivo) return;
+  fecharOverlay('sheet-importacao');
 
   const ehOFX = /\.ofx$/i.test(arquivo.name || '');
   const ehCSV = /\.csv$/i.test(arquivo.name || '');
@@ -598,6 +604,7 @@ window.confirmarRevisaoImportacao = async function() {
     importacaoEstado = null;
     renderHistoricoImportacoes();
     renderDashboard(importacaoMesVis, importacaoAnoVis);
+    renderDashboardControle();
   } catch(e) {
     console.error('confirmarRevisaoImportacao', e);
     if (msgEl) { msgEl.className = 'msg error'; msgEl.textContent = 'Erro ao salvar. Tente novamente.'; }

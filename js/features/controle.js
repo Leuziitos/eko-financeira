@@ -119,16 +119,10 @@ function cfNomeMes(mes, ano) {
   return new Date(ano, mes, 1).toLocaleDateString('pt-BR', {month:'long', year:'numeric'});
 }
 
-// Busca de lançamentos e importação de extrato — fora do escopo desta
-// reestruturação (busca ainda não existe; importação será reintegrada
-// na Parte 2, ver js/main.js). Placeholders para os botões não ficarem
-// sem handler.
+// Busca de lançamentos — fora do escopo desta reestruturação (Parte 2 a
+// reintroduz). Placeholder para o botão não ficar sem handler.
 window.abrirBuscaCF = function() {
   toast('🔍 Busca em breve!');
-};
-
-window.abrirSheetImportacao = function() {
-  toast('📥 Importação em breve!');
 };
 
 window.abrirControleFinanceiro = async function() {
@@ -701,4 +695,4 @@ async function cfSugerirLancamento(tipo, valor, categoriaId, categoriaNome) {
   await renderHubControle();
 }
 
-export { getCFLancamentos, getCFCategorias, saveCFCategorias, cfChaveMes, renderHubControle, cfSugerirLancamento };
+export { getCFLancamentos, getCFCategorias, saveCFCategorias, cfChaveMes, renderHubControle, cfSugerirLancamento, renderDashboardControle };
