@@ -687,6 +687,8 @@ window.confirmarDesfazerImportacao = async function(importacaoId) {
 // Busca todos os lançamentos com esse importacaoId, desfaz os vínculos com
 // Dívidas/Metas/Reserva de cada um (campo vinculoModulo) e remove tudo em
 // lote — depois tira a entrada correspondente do histórico local.
+window.desfazerImportacao = desfazerImportacao;
+
 async function desfazerImportacao(importacaoId) {
   const q = query(collection(db, 'controle'), where('email', '==', store.sessao.email), where('importacaoId', '==', importacaoId));
   const snap = await getDocs(q);

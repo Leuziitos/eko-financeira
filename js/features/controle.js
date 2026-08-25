@@ -443,9 +443,17 @@ window.salvarLancamento = async function() {
 
 // ── Dashboard (resumo do mês, categorias, recentes, importações) ─
 window.navegarMesControle = async function(dir) {
-  cfMesVis += dir;
-  if (cfMesVis < 0) { cfMesVis = 11; cfAnoVis--; }
-  if (cfMesVis > 11) { cfMesVis = 0; cfAnoVis++; }
+  let mes = cfMesVis + dir;
+  let ano = cfAnoVis;
+  if (mes < 0) { mes = 11; ano--; }
+  if (mes > 11) { mes = 0; ano++; }
+
+  const agora = new Date();
+  const alemDoAtual = ano > agora.getFullYear() || (ano === agora.getFullYear() && mes > agora.getMonth());
+  if (alemDoAtual) return; // não permite navegar para meses futuros
+
+  cfMesVis = mes;
+  cfAnoVis = ano;
   await renderDashboardControle();
 };
 
@@ -584,11 +592,18 @@ function renderImportacoesSection() {
   }).join('');
 }
 
-// A reversão real depende do módulo de importação, que não está carregado
-// nesta reestruturação (ver js/main.js) — fica pronta para religar quando
-// o módulo for reintegrado.
-window.desfazerImportacaoCF = function(id) {
-  toast('↩️ Desfazer estará disponível quando a importação for reintegrada.');
+// desfazerImportacao() é implementada em importacao.js e exposta via
+// window.* (evita import circular — importacao.js já importa deste arquivo).
+window.desfazerImportacaoCF = async function(id) {
+  if (!confirm('Desfazer esta importação? Isso remove todos os lançamentos criados por ela do Controle Financeiro (e reverte pagamentos de dívida/meta/reserva vinculados, se houver).')) return;
+  if (typeof window.desfazerImportacao !== 'function') { toast('Importação não está disponível no momento.', 'erro'); return; }
+  try {
+    await window.desfazerImportacao(id);
+    toast('↩️ Importação desfeita', 'sucesso');
+    await renderDashboardControle();
+  } catch(e) {
+    toast('Erro ao desfazer a importação.', 'erro');
+  }
 };
 
 // ── Gerenciar categorias ──────────────────────────────────────
@@ -771,7 +786,7 @@ async function renderHubControle() {
     if(!doMes.length) {
       sub.innerHTML = '<span style="color:var(--amber)">Nenhum lançamento ainda</span>';
     } else {
-      sub.innerHTML = `Saldo: <strong style="color:${saldo>=0?'var(--eko-green)':'var(--red)'}">${fmt(saldo)}</strong>`;
+      sub.innerHTML = `Saldo: <strong class="${saldo>=0?'verde':'vermelho'}">${fmt(saldo)}</strong>`;
     }
   } catch(e){}
 }

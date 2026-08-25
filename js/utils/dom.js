@@ -38,3 +38,10 @@ export function btnDoClique() {
   return alvo && alvo.closest ? alvo.closest('button') : null;
 }
 export function liberarBotao(btn) { if (btn) btn.disabled = false; }
+
+// Fecha qualquer sheet aberto ao pressionar Escape
+document.addEventListener('keydown', function(e) {
+  if (e.key !== 'Escape') return;
+  const aberto = document.querySelector('.sheet-overlay:not(.hidden)');
+  if (aberto) fecharOverlay(aberto.id);
+});
