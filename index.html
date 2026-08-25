@@ -1176,6 +1176,47 @@
   </div>
 </div>
 
+<!-- OVERLAY: Revisão da importação -->
+<div id="overlay-importacao-revisao" class="overlay hidden">
+  <div class="sheet" style="max-height:95vh">
+    <div class="sheet-handle"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.25rem">
+      <div style="font-size:17px;font-weight:800">📋 Revisão da Importação</div>
+      <button onclick="cancelarRevisaoImportacao()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-muted);line-height:1;padding:4px">✕</button>
+    </div>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:1rem" id="importacao-revisao-subtitulo"></div>
+
+    <!-- Progresso (normalização + deduplicação + categorização) -->
+    <div id="importacao-progresso" style="display:none;text-align:center;padding:2rem 1rem;font-size:13px;color:var(--text-muted)"></div>
+
+    <!-- Corpo — só aparece depois do progresso terminar -->
+    <div id="importacao-revisao-corpo" style="display:none">
+      <!-- Seleção rápida -->
+      <div style="display:flex;gap:16px;margin-bottom:.75rem;font-size:12px;font-weight:600">
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="importacao-sel-todos" onchange="toggleSelecionarTodosImportacao(this)"> Selecionar todos</label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="importacao-sel-so-novos" onchange="toggleSoNovosImportacao(this)"> Só novos</label>
+      </div>
+
+      <!-- Filtro rápido -->
+      <div style="display:flex;gap:6px;margin-bottom:.875rem">
+        <button id="importacao-filtro-todos" onclick="filtrarRevisaoImportacao('todos')" class="btn btn-sm btn-primary" style="flex:1">Todos</button>
+        <button id="importacao-filtro-novos" onclick="filtrarRevisaoImportacao('novos')" class="btn btn-sm" style="flex:1;background:var(--surface);border:1px solid var(--border);color:var(--text)">Só novos</button>
+        <button id="importacao-filtro-duplicatas" onclick="filtrarRevisaoImportacao('duplicatas')" class="btn btn-sm" style="flex:1;background:var(--surface);border:1px solid var(--border);color:var(--text)">Só duplicatas</button>
+      </div>
+
+      <!-- Lista de transações -->
+      <div id="importacao-revisao-lista"></div>
+
+      <!-- Contador -->
+      <div style="text-align:center;font-size:12px;color:var(--text-muted);margin:.75rem 0" id="importacao-revisao-contador"></div>
+
+      <div id="importacao-revisao-msg" class="msg"></div>
+      <button onclick="confirmarRevisaoImportacao()" class="btn btn-primary" style="width:100%;margin-bottom:.5rem" id="importacao-btn-confirmar">Confirmar</button>
+      <button onclick="cancelarRevisaoImportacao()" class="btn" style="width:100%">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <!-- ════ FASE 3: AULAS PEF ═══════════════════════════════ -->
 <div id="screen-aulas" class="screen">
   <div class="topbar">
