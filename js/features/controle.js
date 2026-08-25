@@ -81,6 +81,11 @@ async function saveCFCategorias(cats) {
   try { await setDoc(doc(db,'users',store.sessao.email), {cfCategorias: cats}, {merge:true}); } catch(e){}
 }
 
+// Busca GLOBAL (todos os meses) — usada pela busca 🔍 (buscarLancamentosCF)
+// e por outras rotinas que precisam do histórico completo (frequência de
+// categoria em renderCategoriasBotoes, resumo do hub, lista por categoria).
+// O dashboard principal usa getCFLancamentosMes(), que busca só o mês
+// visível — mais rápido na primeira abertura da tela.
 async function getCFLancamentos() {
   if (cache.controle) return cache.controle;
   try {
@@ -90,6 +95,22 @@ async function getCFLancamentos() {
     snap.forEach(d => r.push({...d.data(), _id:d.id}));
     cache.controle = r.filter(l => !l.excluido);
     return cache.controle;
+  } catch(e) { return []; }
+}
+
+// Busca só os lançamentos de um mês (chaveMes = 'AAAA-MM'), com cache lazy
+// por mês em cache.controleMes — usada pelo dashboard (renderDashboardControle),
+// que só precisa do mês visível.
+async function getCFLancamentosMes(chaveMes) {
+  if (!cache.controleMes) cache.controleMes = {};
+  if (cache.controleMes[chaveMes]) return cache.controleMes[chaveMes];
+  try {
+    const q = query(collection(db,'controle'), where('email','==',store.sessao.email), where('chaveMes','==',chaveMes));
+    const snap = await getDocs(q);
+    const r = [];
+    snap.forEach(d => r.push({...d.data(), _id:d.id}));
+    cache.controleMes[chaveMes] = r.filter(l => !l.excluido);
+    return cache.controleMes[chaveMes];
   } catch(e) { return []; }
 }
 
@@ -104,6 +125,7 @@ async function saveCFLancamento(lanc) {
       const ref = await addDoc(collection(db,'controle'), data);
       lanc._id = ref.id;
     }
+    if (cache.controleMes) cache.controleMes[data.chaveMes] = null; // só o mês afetado
     cache.invalidar('controle');
   } catch(e) {
     console.error('saveCFLancamento:', e);
@@ -458,10 +480,9 @@ window.navegarMesControle = async function(dir) {
 };
 
 async function renderDashboardControle() {
-  const lancs = await getCFLancamentos();
-  const cats  = await getCFCategorias();
   const chave = cfChaveMes(cfAnoVis, cfMesVis);
-  const doMes = lancs.filter(l => l.chaveMes === chave);
+  const doMes = await getCFLancamentosMes(chave);
+  const cats  = await getCFCategorias();
 
   const mesEl = document.getElementById('cf-mes-label');
   if (mesEl) mesEl.textContent = cfNomeMes(cfMesVis, cfAnoVis).replace(/^\w/, c => c.toUpperCase());
@@ -766,6 +787,7 @@ window.excluirLancamentoCF = async function(id) {
       return;
     }
   }
+  if (cache.controleMes) cache.controleMes[cfChaveMes(cfAnoVis, cfMesVis)] = null; // só o mês afetado
   cache.invalidar('controle');
   toast('🗑️ Lançamento removido', 'sucesso');
   fecharOverlay('overlay-cf-lancamentos');

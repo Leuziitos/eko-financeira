@@ -33,6 +33,7 @@ export const cache = {
   diagnosticos: null,
   reserva: null,
   simulacoes: null,
-  controle: null,
+  controle: null, // busca global (todos os meses) — ver getCFLancamentos() em controle.js
+  controleMes: {}, // cache por chave de mês ('AAAA-MM') — ver getCFLancamentosMes() em controle.js
   invalidar(colecao) { this[colecao] = null; },
 };

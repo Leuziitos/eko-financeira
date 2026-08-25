@@ -666,6 +666,7 @@ async function confirmarImportacao(transacoesSelecionadas, fonte, periodo) {
   });
 
   cache.invalidar('controle');
+  cache.controleMes = {}; // um import pode cobrir vários meses — limpa o cache por mês inteiro
 
   return importacaoId;
 }
@@ -709,6 +710,7 @@ async function desfazerImportacao(importacaoId) {
   localStorage.setItem(HISTORICO_KEY, JSON.stringify(historico));
 
   cache.invalidar('controle');
+  cache.controleMes = {}; // os lançamentos removidos podem cobrir vários meses
 
   return lancamentos.length;
 }
