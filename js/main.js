@@ -18,7 +18,8 @@ import { ir } from './core/router.js';
 import { applyMoneyMask } from './utils/money.js';
 // Módulos de feature — importados também pelos efeitos
 // (registro dos window.* referenciados nos onclick do HTML)
-import { iniciarOnboarding } from './features/onboarding.js';
+import './features/onboarding.js';
+import './features/descontinuacao.js';
 import './features/feedback.js';
 import './features/aulas.js';
 import './features/controle.js';
@@ -45,9 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 async function init() {
-  const obDone = localStorage.getItem('eko_onboard_done');
-  if (!obDone) { iniciarOnboarding(); return; }
-  ir('screen-login'); // aguarda onAuthStateChanged
+  ir('screen-descontinuacao'); // app descontinuado — sem onboarding, sem login
 }
 
 onAuthStateChanged(auth, async (firebaseUser) => {
@@ -56,13 +55,9 @@ onAuthStateChanged(auth, async (firebaseUser) => {
     store.sessao = { email: firebaseUser.email, nome: '', renda: 0 };
     await carregarApp();
   } else {
-    // Não autenticado — vai para login (a menos que esteja no onboarding)
-    const obDone = localStorage.getItem('eko_onboard_done');
+    // Não autenticado — vai direto para a tela de descontinuação (sem login)
     const telaAtual = document.querySelector('.screen.active')?.id;
-    const telasPublicas = ['screen-onboarding', 'screen-termo', 'screen-politica'];
-    if (obDone && !telasPublicas.includes(telaAtual)) {
-      ir('screen-login');
-    }
+    if (telaAtual !== 'screen-descontinuacao') ir('screen-descontinuacao');
   }
 });
 

@@ -62,13 +62,13 @@ async function carregarApp() {
       });
     } catch(e){ console.error('onSnapshot metas',e); }
     try { await renderHub(); } catch(e) { console.error('renderHub error:', e); }
-    ir('screen-hub');
+    ir('screen-descontinuacao');
     // Prontuário e Diagnósticos não bloqueiam mais o boot — renderizam sob
     // demanda via onEnter (registrado abaixo), só quando o usuário navega
     // até essas telas.
   } catch(e) {
     console.error('carregarApp error:', e);
-    ir('screen-hub');
+    ir('screen-descontinuacao');
   }
 }
 

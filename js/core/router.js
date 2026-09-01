@@ -18,7 +18,7 @@ import { store } from './store.js';
 // duplicar a lista. IDs reais do index.html — não "screen-reset":
 // a tela de recuperação de senha é screen-esqueci-senha. screen-onboarding
 // entra porque roda sempre pré-login (ver main.js/init()).
-const TELAS_PUBLICAS = ['screen-login','screen-cadastro','screen-esqueci-senha','screen-termo','screen-politica','screen-onboarding'];
+const TELAS_PUBLICAS = ['screen-login','screen-cadastro','screen-esqueci-senha','screen-termo','screen-politica','screen-onboarding','screen-descontinuacao'];
 
 const _onEnterHooks = {};
 
@@ -29,10 +29,10 @@ export function onEnter(screenId, callback) {
 export function ir(id) {
   // Guard de autenticação — impede ativar tela protegida sem sessão
   if (!TELAS_PUBLICAS.includes(id) && !store.sessao) {
-    // Redireciona para login sem adicionar a tela protegida no histórico
-    history.replaceState({screen: 'screen-login'}, '', '#screen-login');
+    // Redireciona para a tela de descontinuação sem adicionar a tela protegida no histórico
+    history.replaceState({screen: 'screen-descontinuacao'}, '', '#screen-descontinuacao');
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-    const el = document.getElementById('screen-login');
+    const el = document.getElementById('screen-descontinuacao');
     if (el) { el.classList.add('active'); window.scrollTo(0,0); }
     return;
   }
@@ -80,9 +80,9 @@ window.addEventListener('popstate', function(e) {
   const targetScreen = (e.state && e.state.screen) ? e.state.screen : 'screen-hub';
   // Guard de autenticação — mesmo critério de ir(), aplicado ao back/forward
   if (!TELAS_PUBLICAS.includes(targetScreen) && !store.sessao) {
-    history.replaceState({screen: 'screen-login'}, '', '#screen-login');
+    history.replaceState({screen: 'screen-descontinuacao'}, '', '#screen-descontinuacao');
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-    const el = document.getElementById('screen-login');
+    const el = document.getElementById('screen-descontinuacao');
     if (el) { el.classList.add('active'); window.scrollTo(0,0); }
     return;
   }

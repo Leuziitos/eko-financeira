@@ -96,6 +96,31 @@
   </div>
 </div>
 
+<!-- DESCONTINUAÇÃO — tela única do app; substitui login/hub para todos os usuários -->
+<div id="screen-descontinuacao" class="screen">
+  <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1.25rem;box-sizing:border-box">
+    <div style="width:100%;max-width:400px">
+      <div class="hero">
+        <div style="font-size:44px;margin-bottom:.5rem">🌱</div>
+        <div class="hero-logo-eko" style="font-size:24px">Eko Financeira</div>
+      </div>
+      <div class="card card-accent" style="text-align:center">
+        <div style="font-size:15px;color:var(--text);line-height:1.6;margin-bottom:1rem">
+          O projeto <strong>Eko Financeira</strong> está sendo descontinuado.
+        </div>
+        <div style="font-size:14px;color:var(--text-muted);line-height:1.6;margin-bottom:1.5rem">
+          Antes de encerrarmos, gostaríamos de saber: <strong>você gostaria que continuássemos?</strong>
+        </div>
+        <div id="descontinuacao-botoes">
+          <button class="btn btn-primary" style="margin-bottom:.625rem" onclick="responderDescontinuacao('sim')">✅ Sim, quero que continue</button>
+          <button class="btn btn-danger" onclick="responderDescontinuacao('nao')">❌ Não preciso mais</button>
+        </div>
+        <div id="descontinuacao-resposta" class="msg success" style="display:none"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ESQUECI MINHA SENHA -->
 <div id="screen-esqueci-senha" class="screen">
   <div class="hero">
